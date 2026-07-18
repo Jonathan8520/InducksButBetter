@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>🦆 InducksButBetter</h1>
+  <h1>InducksButBetter</h1>
   <p><strong>A lightning-fast, modern, and serverless frontend for exploring the Disney Comics Database (I.N.D.U.C.K.S.)</strong></p>
 
   [![React](https://img.shields.io/badge/React_18.2-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
@@ -15,17 +15,16 @@ Welcome to **InducksButBetter**! This project is a complete reimagining of the c
 
 ---
 
-## ✨ Features
+## Features
 
-- ⚡ **Instant Search Experience:** Autocomplete for characters, authors, and publishers in milliseconds.
-- 📚 **"My Collection" Filter:** Paste your raw Inducks collection export and instantly filter stories to only show issues you actually own!
-- 💻 **Smart SQL Editor:** A built-in code editor with syntax highlighting, database schema-aware autocomplete, and auto-suggested tables for power users.
-- 🤖 **AI-Powered SQL Assistant:** Don't know SQL? Just ask the AI in plain English/French, and it will translate your request into a complex Inducks query!
-- 🌍 **Fully Internationalized:** Seamless switching between French and English.
-- 🎨 **Premium UI/UX:** A carefully crafted design system featuring glassmorphism, responsive layouts, and a beautiful dark mode.
-- ☁️ **100% Serverless:** Direct connection to a remote [Turso](https://turso.tech/) (SQLite) edge database. No heavy backend required!
+- **Instant search experience:** Autocomplete for characters, authors, and publishers in milliseconds.
+- **"My collection" filter:** Paste your raw Inducks collection export and instantly filter stories to only show issues you actually own!
+- **Smart SQL editor:** A built-in code editor with syntax highlighting, database schema-aware autocomplete, and auto-suggested tables for power users.
+- **AI-powered SQL assistant:** Don't know SQL? Just ask the AI in plain English/French, and it will translate your request into a complex Inducks query!
+- **Fully internationalized:** Seamless switching between French and English.
+- **100% Serverless:** Direct connection to a remote [Turso](https://turso.tech/) (SQLite) edge database. No heavy backend required!
 
-## 🚀 Quick Start
+## Quick start
 
 ### Prerequisites
 - [Node.js](https://nodejs.org/) 18+
@@ -51,13 +50,13 @@ The application will be available at `http://localhost:5173`.
 
 > **Note:** A minimal backend proxy runs on `http://localhost:3000` solely to proxy images from external providers and bypass CORS restrictions. All SQL queries are executed securely directly from the client!
 
-## 🏗️ Architecture & Optimizations
+## Architecture and optimizations
 
-- **Edge Database (`@libsql/client/web`)**: The app connects directly to Turso via HTTP.
-- **Aggressive Caching**: To preserve free-tier quotas, static metadata (countries, universes, languages) is cached via `sessionStorage`.
-- **JSON Injection**: The personal collection filter uses SQLite's `json_each()` function to pass thousands of issue codes to the database in a single, lightweight payload.
+- **Edge database (`@libsql/client/web`)**: The app connects directly to Turso via HTTP.
+- **Aggressive caching**: To preserve free-tier quotas, static metadata (countries, universes, languages) is cached via `sessionStorage`.
+- **JSON injection**: The personal collection filter uses SQLite's `json_each()` function to pass thousands of issue codes to the database in a single, lightweight payload.
 
-## 📦 Deployment (GitHub Pages)
+## Deployment (GitHub Pages)
 
 This project is fully automated for deployment on GitHub Pages using GitHub Actions!
 
@@ -68,8 +67,8 @@ This project is fully automated for deployment on GitHub Pages using GitHub Acti
 ---
 
 <div align="center">
-  <h3>🌟 Support the Project</h3>
-  <p>If you find this project useful or simply love Disney Comics, please consider <strong>giving it a star</strong>! It helps the project grow and motivates me to add more features. ⭐</p>
+  <h3>🌟 Support the project</h3>
+  <p>If you find this project useful or simply love Disney comics, please consider <strong>giving it a star</strong>! It helps the project grow and motivates me to add more features. ⭐</p>
   <br />
-  <i>Built with ❤️ for Disney Comics fans and collectors.</i>
+  <i>Built with ❤️ for Disney comics fans and collectors.</i>
 </div>

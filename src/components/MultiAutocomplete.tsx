@@ -61,7 +61,7 @@ export function MultiAutocomplete({
       } finally {
         setLoading(false)
       }
-    }, 300)
+    }, 1000)
 
     return () => clearTimeout(timer)
   }, [query, fetchOptions])

@@ -78,25 +78,15 @@ export async function autocompleteStorycode(q: string, lang: string = 'fr') {
         ORDER BY storycode ASC
         LIMIT 15
       )
-      SELECT DISTINCT
+      SELECT
         s.storycode as storycode,
         s.storycode as id,
-        COALESCE((
-          SELECT e.title
-          FROM inducks_entry e
-          JOIN inducks_issue i ON e.issuecode = i.issuecode
-          JOIN inducks_storyversion sv_t ON e.storyversioncode = sv_t.storyversioncode
-          JOIN inducks_publication pub ON i.publicationcode = pub.publicationcode
-          WHERE sv_t.storycode = s.storycode
-            AND e.title IS NOT NULL AND e.title != ''
-          ORDER BY CASE WHEN pub.languagecode = ? THEN 0 ELSE 1 END, e.entrycode
-          LIMIT 1
-        ), sh.title, 'Sans titre') as storyname
+        COALESCE(sh.title, 'Sans titre') as storyname
       FROM MatchedStories s
       JOIN inducks_storyheader sh ON s.storyheadercode = sh.storyheadercode
       ORDER BY s.storycode ASC
     `,
-    args: [`${q.trim()}%`, lang]
+    args: [`${q.trim()}%`]
   });
   return result.rows;
 }

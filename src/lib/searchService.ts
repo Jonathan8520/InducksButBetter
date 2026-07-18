@@ -71,10 +71,7 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
     const parts = code.split(/\s+/).filter(Boolean);
     
     if (parts.length > 0) {
-      const indexPattern = parts.map((part, i) => {
-        const cleaned = part.replace(/[^a-zA-Z0-9]/g, '%');
-        return i === 0 ? cleaned : ' %' + cleaned;
-      }).join('') + '%';
+      const indexPattern = parts.map((part) => part.replace(/[^a-zA-Z0-9]/g, '%')).join('%') + '%';
       
       where.push("s.storycode LIKE ?");
       p.push(indexPattern);

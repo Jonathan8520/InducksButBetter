@@ -62,7 +62,7 @@ export function Autocomplete({ placeholder, emptyMessage, fetchOptions, onSelect
       } finally {
         setLoading(false)
       }
-    }, 300)
+    }, 1000)
 
     return () => clearTimeout(timer)
   }, [query, fetchOptions])
