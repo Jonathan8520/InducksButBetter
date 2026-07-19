@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react"
-import { Sparkles, X, Send, Volume2, VolumeX, Trash2 } from "lucide-react"
+import { Sparkles, X, Send, Volume2, VolumeX, Trash2, Loader2 } from "lucide-react"
 import { useSpeechToText } from "@/hooks/useSpeechToText"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
-import { getApiUrl, fetchJson } from "@/lib/api"
 import { DEFAULT_DB_SCHEMA } from "@/lib/defaultSchema"
+import { useWebLLM, DEFAULT_MODEL } from "@/lib/useWebLLM"
 import { ChatBubble } from "@/components/ChatBubble"
 import { SqlCodeBlock } from "@/components/SqlCodeBlock"
 import { TypingIndicator } from "@/components/TypingIndicator"
@@ -30,34 +30,47 @@ export function AiAssistant({ onCopyToEditor }: AiAssistantProps) {
     { role: "assistant", content: t("ai.welcome") },
   ])
   const [input, setInput] = useState("")
-  const [loading, setLoading] = useState(false)
   const [isSpeakingEnabled, setIsSpeakingEnabled] = useState(false)
   const [modelName, setModelName] = useState<string | null>(null)
 
+  const { engine, loading: webllmLoading, progressText, progressPercent, isCached, init, generate } = useWebLLM()
+  const [hasStartedDownload, setHasStartedDownload] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
+
   const { isRecording, transcript, toggleRecording } = useSpeechToText()
   const scrollRef = useRef<HTMLDivElement>(null)
+  const shouldAutoScroll = useRef(true)
 
   useEffect(() => {
-    let active = true
-
-    fetchJson<{ model?: string }>("/api/llm-status")
-      .then((data) => {
-        if (active) setModelName(data.model || null)
-      })
-      .catch(() => {
-        if (active) setModelName(null)
-      })
-
-    return () => {
-      active = false
-    }
+    setModelName(DEFAULT_MODEL)
   }, [])
 
   useEffect(() => {
-    if (scrollRef.current) {
+    const el = scrollRef.current
+    if (!el) return
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = el
+      // If we are within 50px of the bottom, we keep auto-scrolling
+      shouldAutoScroll.current = scrollHeight - scrollTop - clientHeight < 50
+    }
+
+    el.addEventListener("scroll", handleScroll)
+    return () => el.removeEventListener("scroll", handleScroll)
+  }, [isOpen])
+
+  useEffect(() => {
+    if (scrollRef.current && shouldAutoScroll.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages, isOpen])
+
+  useEffect(() => {
+    if (isOpen && isCached && !engine && !hasStartedDownload) {
+      setHasStartedDownload(true)
+      init()
+    }
+  }, [isOpen, isCached, engine, hasStartedDownload, init])
 
   useEffect(() => {
     if (transcript) setInput(transcript)
@@ -82,39 +95,58 @@ export function AiAssistant({ onCopyToEditor }: AiAssistantProps) {
   }
 
   const handleSend = async () => {
-    if (!input.trim() || loading) return
+    if (isRecording) {
+      toggleRecording()
+    }
+    
+    if (!input.trim() || webllmLoading || isGenerating) return
 
     const userMessage: Message = { role: "user", content: input }
     setMessages((prev) => [...prev, userMessage])
     setInput("")
-    setLoading(true)
+    setIsGenerating(true)
 
     try {
-      const schemaData = await fetchJson<{ tables?: any[] }>("/api/schema")
-      const schema = Array.isArray(schemaData.tables)
-        ? schemaData.tables
-        : Object.entries(DEFAULT_DB_SCHEMA).map(([name, columns]) => ({
-            name,
-            rowCount: "?",
-            columns: columns.map((column) => ({ name: column, type: "TEXT", nullable: true, key: "" })),
-          }))
+      // Dense formatting to save tokens and simplify parsing for the AI
+      const schemaString = Object.entries(DEFAULT_DB_SCHEMA)
+        .map(([name, columns]) => `${name}(${columns.join(",")})`)
+        .join("; ");
 
-      const data = await fetchJson<{ response: string }>("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [...messages, userMessage],
-          schema,
-          lang: i18n.language,
-        }),
+      const systemPrompt = `Tu es un traducteur expert qui convertit le langage naturel en requêtes SQLite.
+Schéma de la base de données :
+${schemaString}
+
+RÈGLES ABSOLUES :
+1. Tu ne dois générer QUE du code SQL valide.
+2. PAS d'explications, PAS d'excuses, PAS de bonjour.
+3. Le résultat doit TOUJOURS être un bloc \`\`\`sql ... \`\`\`
+4. L'utilisateur te demande d'interroger la base, ne lui dis jamais que tu ne peux pas générer d'histoires. Fais juste la requête SELECT correspondante.`
+
+      // Prepare an empty bubble for the assistant's response
+      setMessages((prev) => [...prev, { role: "assistant", content: "" }])
+
+      // Intercept messages to inject the strict instruction into the final user message
+      const messagesToWebLLM = [...messages]
+      messagesToWebLLM.push({ 
+        role: "user", 
+        content: `Requête utilisateur : ${input}\n\n-> IMPORTANT: Réponds UNIQUEMENT par la requête SQL dans un bloc \`\`\`sql. AUCUN AUTRE TEXTE.` 
       })
 
-      setMessages((prev) => [...prev, { role: "assistant", content: data.response }])
-      speak(data.response)
-    } catch {
+      const responseText = await generate(messagesToWebLLM, systemPrompt, (currentText) => {
+        setMessages((prev) => {
+          const newMessages = [...prev]
+          const lastIndex = newMessages.length - 1
+          newMessages[lastIndex] = { ...newMessages[lastIndex], content: currentText }
+          return newMessages
+        })
+      })
+
+      speak(responseText)
+    } catch (e) {
+      console.error(e)
       setMessages((prev) => [...prev, { role: "assistant", content: t("ai.error") }])
     } finally {
-      setLoading(false)
+      setIsGenerating(false)
     }
   }
 
@@ -178,7 +210,52 @@ export function AiAssistant({ onCopyToEditor }: AiAssistantProps) {
           </CardHeader>
 
           {/* Messages */}
-          <CardContent className="p-0 flex-1 flex flex-col min-h-0 bg-surface">
+          <CardContent className="p-0 flex-1 flex flex-col min-h-0 bg-surface relative">
+            {!engine && (
+              <div className="absolute inset-0 z-10 bg-surface/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in-95 duration-500">
+                <div className="relative">
+                  <div className={cn("absolute inset-0 bg-blue-500 blur-xl opacity-20 rounded-full transition-opacity duration-1000", hasStartedDownload ? "opacity-50 animate-pulse" : "opacity-0")} />
+                  <Sparkles className={cn("w-12 h-12 text-blue-500 mb-4 relative z-10 transition-transform duration-700", hasStartedDownload && "scale-110 animate-pulse")} />
+                </div>
+                <h3 className="text-lg font-bold text-foreground mb-2">{t("ai.activate_title")}</h3>
+                <p className="text-sm text-zinc-400 mb-8 max-w-[250px]">
+                  {t("ai.activate_desc", { 
+                    size: modelName === 'Llama-3.2-3B-Instruct-q4f32_1-MLC' ? '~1.8 Go' : 
+                          modelName === 'TinyLlama-1.1B-Chat-v1.0-q4f32_1-MLC' ? '~600 Mo' : 
+                          '~850 Mo' 
+                  })}
+                </p>
+                {!hasStartedDownload ? (
+                  <Button 
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_25px_rgba(37,99,235,0.5)] transition-all duration-300 hover:-translate-y-0.5 rounded-xl"
+                    onClick={() => {
+                      setHasStartedDownload(true)
+                      init()
+                    }}
+                  >
+                    {t("ai.activate_btn")}
+                  </Button>
+                ) : (
+                  <div className="w-full flex flex-col gap-3 animate-in slide-in-from-bottom-2 fade-in duration-500">
+                    <div className="flex justify-between items-center text-xs font-medium text-zinc-300">
+                      <span className="flex items-center gap-2 truncate pr-4">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400 shrink-0" />
+                        <span className="truncate">{progressText === 'Initialisation...' ? t("ai.preparation") : progressText}</span>
+                      </span>
+                      <span className="tabular-nums font-bold text-blue-400 shrink-0">{progressPercent}%</span>
+                    </div>
+                    <div className="w-full h-2.5 bg-zinc-800/50 rounded-full overflow-hidden border border-zinc-700/50 shadow-inner">
+                      <div 
+                        className="h-full bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-300 ease-out relative" 
+                        style={{ width: `${progressPercent}%` }}
+                      >
+                        <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <ScrollArea className="flex-1 p-4" viewportRef={scrollRef}>
               <div className="flex flex-col gap-4">
                 {messages.map((m, i) => (
@@ -188,54 +265,56 @@ export function AiAssistant({ onCopyToEditor }: AiAssistantProps) {
                       : m.content}
                   </ChatBubble>
                 ))}
-                {loading && <TypingIndicator />}
+                {isGenerating && <TypingIndicator />}
               </div>
             </ScrollArea>
 
             {/* Input bar */}
-            <div className="p-3 bg-surface border-t border-border-subtle flex gap-2 items-center relative">
-              {isRecording && (
-                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-red-600 text-white px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-2 shadow-lg animate-bounce">
-                  <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
-                  {t("ai.listening")}
-                </div>
-              )}
-              <MicButton
-                isRecording={isRecording}
-                onClick={toggleRecording}
-                title={t("ai.dictate")}
-              />
-              <div className="flex-1 relative">
-                <Input
-                  placeholder={isRecording ? t("ai.listening_placeholder") : t("ai.placeholder")}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                  className={cn(
-                    "w-full h-10 rounded-xl border border-border-subtle bg-surface px-3 focus-visible:ring-primary/20 pr-9 transition-all",
-                    isRecording && "border-red-300 bg-red-50/20 placeholder:text-red-400 shadow-inner animate-pulse"
-                  )}
-                />
-                {input && !isRecording && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1 h-8 w-8 text-zinc-400 hover:text-zinc-600 rounded-lg"
-                    onClick={() => setInput("")}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
+            {engine && (
+              <div className="p-3 bg-surface border-t border-border-subtle flex gap-2 items-center relative">
+                {isRecording && (
+                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-red-600 text-white px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-2 shadow-lg animate-bounce">
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
+                    {t("ai.listening")}
+                  </div>
                 )}
+                <MicButton
+                  isRecording={isRecording}
+                  onClick={toggleRecording}
+                  title={t("ai.dictate")}
+                />
+                <div className="flex-1 relative">
+                  <Input
+                    placeholder={isRecording ? t("ai.listening_placeholder") : t("ai.placeholder")}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                    className={cn(
+                      "w-full h-10 rounded-xl border border-border-subtle bg-surface px-3 focus-visible:ring-primary/20 pr-9 transition-all",
+                      isRecording && "border-red-300 bg-red-50/20 placeholder:text-red-400 shadow-inner animate-pulse"
+                    )}
+                  />
+                  {input && !isRecording && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1 h-8 w-8 text-zinc-400 hover:text-zinc-600 rounded-lg"
+                      onClick={() => setInput("")}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                </div>
+                <Button
+                  size="icon"
+                  className="h-10 w-10 shrink-0 bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-600/20"
+                  onClick={handleSend}
+                  disabled={webllmLoading || isGenerating || !input.trim() || !engine}
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
               </div>
-              <Button
-                size="icon"
-                className="h-10 w-10 shrink-0 bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-600/20"
-                onClick={handleSend}
-                disabled={loading || isRecording || !input.trim()}
-              >
-                <Send className="w-4 h-4" />
-              </Button>
-            </div>
+            )}
           </CardContent>
         </Card>
       )}

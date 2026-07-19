@@ -48,22 +48,27 @@ export function MultiAutocomplete({
   React.useEffect(() => {
     if (query.length < 2) {
       setItems([])
+      setLoading(false)
       return
     }
 
+    let isActive = true;
     const timer = setTimeout(async () => {
       setLoading(true)
       try {
         const data = await fetchOptions(query)
-        setItems(data)
+        if (isActive) setItems(data)
       } catch (err) {
         console.error(err)
       } finally {
-        setLoading(false)
+        if (isActive) setLoading(false)
       }
-    }, 1000)
+    }, 300)
 
-    return () => clearTimeout(timer)
+    return () => {
+      isActive = false;
+      clearTimeout(timer)
+    }
   }, [query, fetchOptions])
 
   const handleSelect = (id: string, name: string) => {

@@ -53,8 +53,10 @@
     "results": "Results",
     "sort_by": "Sort by",
     "stories_found": "{{count}} stories found",
-    "no_results_title": "Ready to explore I.N.D.U.C.K.S?",
-    "no_results_desc": "Use the search settings on the left to explore the database.",
+    "no_results_title": "No results found",
+    "no_results_desc": "We couldn't find any stories matching your criteria. Try loosening your filters.",
+    "initial_title": "Ready to search?",
+    "initial_desc": "Fill out the form on the left and run the search to explore the Inducks database.",
     "page": "Page",
     "previous": "Previous",
     "next": "Next",
@@ -123,15 +125,23 @@
     "use": "Use",
     "listening": "Listening...",
     "dictate": "Dictate your query",
-    "listening_placeholder": "I'm listening..."
+    "listening_placeholder": "I'm listening...",
+    "activate_title": "Activate Local AI",
+    "activate_desc": "To work offline and for free, the AI ({{size}}) must be downloaded once. It will use your browser's power.",
+    "activate_btn": "Download and Activate",
+    "preparation": "Preparation..."
   },
   "sql": {
     "title": "SQL Editor",
-    "placeholder": "Enter your SQL query here...",
-    "run_query": "Run Query",
+    "placeholder": "Enter your SQLite query here (e.g., SELECT * FROM inducks_character LIMIT 10)",
+    "run_query": "Execute Query",
     "previous_query": "Previous query",
     "no_results": "No results",
-    "no_results_desc": "Run a query to see data."
+    "no_results_desc": "Execute a query to see the data.",
+    "tables": "Tables:",
+    "results_count_one": "1 result found",
+    "results_count_other": "{{count}} results found",
+    "query_success": "Query executed successfully."
   },
   "continents": {
     "europe": "Europe",
@@ -206,7 +216,7 @@
     "ru": "Russian",
     "pl": "Polish",
     "zh": "Chinese",
-    "ja": "Japanese"
+    "jp": "Japanese"
   },
   "collection": {
     "title": "My Inducks collection",

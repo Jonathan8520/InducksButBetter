@@ -52,7 +52,9 @@ The application will be available at `http://localhost:5173`.
 
 ## Architecture and optimizations
 
+- **Modular React architecture**: The search interface has been completely refactored. The business logic has been extracted into dedicated custom hooks (`useSearchFilters.ts`, `useSearchExecution.ts`, `useMetadata.ts`), and the UI has been split into independent sub-components (`SearchForm.tsx` and `SearchResults.tsx`).
 - **Edge database (`@libsql/client/web`)**: The app connects directly to Turso via HTTP.
+- **Vite bundle optimization (manualChunks)**: Code splitting is configured to separate dependencies (`react-vendor`, `ui-vendor`, `db-vendor`, `ai-vendor`) for faster initial page loads and optimal browser caching.
 - **Aggressive caching**: To preserve free-tier quotas, static metadata (countries, universes, languages) is cached via `sessionStorage`.
 - **JSON injection**: The personal collection filter uses SQLite's `json_each()` function to pass thousands of issue codes to the database in a single, lightweight payload.
 
@@ -70,5 +72,5 @@ This project is fully automated for deployment on GitHub Pages using GitHub Acti
   <h3>🌟 Support the project</h3>
   <p>If you find this project useful or simply love Disney comics, please consider <strong>giving it a star</strong>! It helps the project grow and motivates me to add more features. ⭐</p>
   <br />
-  <i>Built with ❤️ for Disney comics fans and collectors.</i>
+  <i>Built with ❤️ for Inducks contributors,Disney comics fans and collectors.</i>
 </div>

@@ -178,6 +178,8 @@ export function StoryResultCard({ row }: StoryResultCardProps) {
           <img
             src={thumbData && !imageError ? thumbData.preview : ""}
             alt=""
+            loading="lazy"
+            decoding="async"
             className={cn(
               "max-w-full max-h-full object-contain opacity-90 group-hover/thumb:opacity-100 transition-all duration-500 group-hover/thumb:scale-110",
               (!thumbData || imageError) && "hidden",

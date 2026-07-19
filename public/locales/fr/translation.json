@@ -53,8 +53,10 @@
     "results": "Résultats",
     "sort_by": "Trier par",
     "stories_found": "{{count}} histoires trouvées",
-    "no_results_title": "Prêt à explorer I.N.D.U.C.K.S ?",
-    "no_results_desc": "Utilisez les paramètres de recherche à gauche pour explorer la base de données.",
+    "no_results_title": "Aucun résultat trouvé",
+    "no_results_desc": "Nous n'avons trouvé aucune histoire correspondant à vos critères. Essayez d'alléger vos filtres.",
+    "initial_title": "Prêt à chercher ?",
+    "initial_desc": "Remplissez le formulaire à gauche et lancez la recherche pour explorer la base de données Inducks.",
     "page": "Page",
     "previous": "Précédent",
     "next": "Suivant",
@@ -134,15 +136,23 @@
     "use": "Utiliser",
     "listening": "À l'écoute...",
     "dictate": "Dicter votre requête",
-    "listening_placeholder": "Je vous écoute..."
+    "listening_placeholder": "Je vous écoute...",
+    "activate_title": "Activer l'IA Locale",
+    "activate_desc": "La première utilisation nécessite de télécharger un modèle d'IA ({{size}}) qui fonctionnera ensuite 100% hors-ligne dans votre navigateur.",
+    "activate_btn": "Télécharger et Activer",
+    "preparation": "Préparation..."
   },
   "sql": {
     "title": "Éditeur SQL",
-    "placeholder": "Entrez votre requête SQL ici...",
-    "run_query": "Exécuter la requête",
+    "placeholder": "Saisissez votre requête SQLite ici (ex: SELECT * FROM inducks_character LIMIT 10)",
+    "run_query": "Exécuter",
     "previous_query": "Requête précédente",
     "no_results": "Aucun résultat",
-    "no_results_desc": "Exécutez une requête pour afficher des données."
+    "no_results_desc": "Exécutez une requête pour afficher les données.",
+    "tables": "Tables :",
+    "results_count_one": "1 résultat trouvé",
+    "results_count_other": "{{count}} résultats trouvés",
+    "query_success": "Requête exécutée avec succès."
   },
   "continents": {
     "europe": "Europe",
@@ -217,7 +227,7 @@
     "ru": "Russe",
     "pl": "Polonais",
     "zh": "Chinois",
-    "ja": "Japonais"
+    "jp": "Japonais"
   },
   "collection": {
     "title": "Ma collection Inducks",

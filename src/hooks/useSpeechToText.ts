@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react"
 import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
 
 export function useSpeechToText() {
   const { i18n } = useTranslation()
@@ -32,6 +33,14 @@ export function useSpeechToText() {
     recognition.onerror = (e: any) => {
       console.error("WebSpeech Hook: Error", e.error)
       setIsRecording(false)
+      
+      if (e.error === 'not-allowed') {
+        toast.error("Accès au microphone refusé. Vérifiez les autorisations de votre navigateur.")
+      } else if (e.error === 'no-speech') {
+        toast.error("Aucune voix détectée. Parlez plus fort ou vérifiez votre micro.")
+      } else {
+        toast.error(`Erreur du microphone: ${e.error}`)
+      }
     }
 
     recognition.onend = () => {

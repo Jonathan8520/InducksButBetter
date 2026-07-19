@@ -59,7 +59,8 @@ export async function autocompletePerson(q: string) {
       SELECT personcode, fullname, nationalitycountrycode, fullname as displayname 
       FROM inducks_person 
       WHERE fullname LIKE ? OR personcode LIKE ? 
-      ORDER BY numberofindexedissues DESC 
+      GROUP BY personcode
+      ORDER BY MAX(numberofindexedissues) DESC 
       LIMIT 10
     `,
     args: [`%${q}%`, `%${q}%`]
@@ -69,24 +70,27 @@ export async function autocompletePerson(q: string) {
 
 export async function autocompleteStorycode(q: string, lang: string = 'fr') {
   if (!q || q.trim().length < 2) return [];
+  const qUpper = q.trim().toUpperCase();
+  const qUpperEnd = qUpper.slice(0, -1) + String.fromCharCode(qUpper.charCodeAt(qUpper.length - 1) + 1);
   const result = await tursoClient.execute({
     sql: `
       WITH MatchedStories AS (
         SELECT storycode, storyheadercode
         FROM inducks_story
-        WHERE storycode LIKE ?
+        WHERE storycode >= ? AND storycode < ?
         ORDER BY storycode ASC
         LIMIT 15
       )
       SELECT
         s.storycode as storycode,
         s.storycode as id,
-        COALESCE(sh.title, 'Sans titre') as storyname
+        MAX(COALESCE(sh.title, 'Sans titre')) as storyname
       FROM MatchedStories s
-      JOIN inducks_storyheader sh ON s.storyheadercode = sh.storyheadercode
+      LEFT JOIN inducks_storyheader sh ON s.storyheadercode = sh.storyheadercode
+      GROUP BY s.storycode
       ORDER BY s.storycode ASC
     `,
-    args: [`${q.trim()}%`]
+    args: [qUpper, qUpperEnd]
   });
   return result.rows;
 }

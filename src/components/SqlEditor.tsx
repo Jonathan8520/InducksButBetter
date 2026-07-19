@@ -12,8 +12,9 @@ import { SectionTitle } from "@/components/SectionTitle"
 import { SortableTh } from "@/components/SortableTh"
 import { EmptyState } from "@/components/EmptyState"
 import { useTheme } from "@/hooks/useTheme"
-import { getApiUrl, fetchJson } from "@/lib/api"
+import { tursoClient } from "@/lib/turso"
 import { DEFAULT_DB_SCHEMA } from "@/lib/defaultSchema"
+import { toast } from "sonner"
 
 interface SqlEditorProps {
   query: string
@@ -51,36 +52,60 @@ export function SqlEditor({ query, setQuery }: SqlEditorProps) {
   const [rotating, setRotating] = useState(false)
   const [dbSchema, setDbSchema] = useState<Record<string, string[]>>(DEFAULT_DB_SCHEMA)
 
-  // Fetch DB schema for autocompletion once on mount
+  const [columnOrder, setColumnOrder] = useState<string[]>([])
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set())
+
+  // Reset columns when results change
   useEffect(() => {
-    let active = true
-
-    fetchJson<{ tables?: Array<{ name: string; columns: string[] | Array<{ name: string }> }> }>("/api/schema")
-      .then((data) => {
-        if (!active) return
-        if (data.tables && Array.isArray(data.tables)) {
-          const schemaMap: Record<string, string[]> = {}
-          for (const table of data.tables) {
-            if (table.name && Array.isArray(table.columns)) {
-              schemaMap[table.name] = table.columns.map((c: any) =>
-                typeof c === "string" ? c : c.name ?? c
-              )
-            }
-          }
-          if (Object.keys(schemaMap).length > 0) {
-            setDbSchema(schemaMap)
-          }
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setDbSchema(DEFAULT_DB_SCHEMA)
-        }
-      })
-
-    return () => {
-      active = false
+    if (results.length > 0) {
+      setColumnOrder(Object.keys(results[0]))
+      setHiddenColumns(new Set())
+    } else {
+      setColumnOrder([])
+      setHiddenColumns(new Set())
     }
+  }, [results])
+
+  const visibleColumns = useMemo(() => {
+    return columnOrder.filter((col) => !hiddenColumns.has(col))
+  }, [columnOrder, hiddenColumns])
+
+  const handleHideColumn = (col: string) => {
+    setHiddenColumns((prev) => {
+      const next = new Set(prev)
+      next.add(col)
+      return next
+    })
+  }
+
+  const handleDragStart = (e: React.DragEvent<HTMLTableCellElement>, col: string) => {
+    e.dataTransfer.setData("text/plain", col)
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLTableCellElement>) => {
+    e.preventDefault() // Required to allow dropping
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLTableCellElement>, targetCol: string) => {
+    e.preventDefault()
+    const sourceCol = e.dataTransfer.getData("text/plain")
+    if (sourceCol === targetCol) return
+
+    setColumnOrder((prev) => {
+      const newOrder = [...prev]
+      const sourceIdx = newOrder.indexOf(sourceCol)
+      const targetIdx = newOrder.indexOf(targetCol)
+      if (sourceIdx !== -1 && targetIdx !== -1) {
+        newOrder.splice(sourceIdx, 1)
+        newOrder.splice(targetIdx, 0, sourceCol)
+      }
+      return newOrder
+    })
+  }
+
+  // Use default schema for autocompletion (standalone mode)
+  useEffect(() => {
+    setDbSchema(DEFAULT_DB_SCHEMA)
   }, [])
 
   const sqlExtension = useSqlExtension(dbSchema)
@@ -148,16 +173,18 @@ export function SqlEditor({ query, setQuery }: SqlEditorProps) {
     }
 
     try {
-      const data = await fetchJson<{ success: boolean; rows?: any[]; error?: string }>("/api/sql", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
-      })
-      if (data.success) {
-        setResults(data.rows || [])
-      } else {
-        setError(data.error || "Unexpected SQL response")
+      // Direct Turso connection for standalone mode
+      if (!query.trim().toLowerCase().startsWith("select")) {
+        throw new Error("Only SELECT queries are allowed.")
       }
+      const result = await tursoClient.execute({ sql: query, args: [] })
+      setResults(result.rows || [])
+      
+      const count = result.rows?.length || 0
+      toast.success(
+        t("sql.results_count", { count, defaultValue: `${count} result(s) found` }), 
+        { description: t("sql.query_success", { defaultValue: "Query executed successfully." }) }
+      )
     } catch (err: any) {
       setError(err?.message || "Unable to execute SQL query")
     } finally {
@@ -204,8 +231,6 @@ export function SqlEditor({ query, setQuery }: SqlEditorProps) {
     })
   }, [results, sortConfig])
 
-  const columns = results.length > 0 ? Object.keys(results[0]) : []
-
   const editorExtensions = useMemo(
     () => [sqlExtension, EditorView.lineWrapping],
     [sqlExtension]
@@ -217,7 +242,7 @@ export function SqlEditor({ query, setQuery }: SqlEditorProps) {
         <CardContent className="pt-6">
           <div className="flex flex-col gap-4">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <SectionTitle icon={DbIcon}>{t("sql.title")}</SectionTitle>
                 <a
@@ -252,21 +277,18 @@ export function SqlEditor({ query, setQuery }: SqlEditorProps) {
 
             {/* Schema hint */}
             {Object.keys(dbSchema).length > 0 && (
-              <div className="flex flex-wrap gap-1.5 text-[10px]">
-                <span className="text-text-hint font-medium">{t("sql.tables") || "Tables :"}</span>
-                {Object.keys(dbSchema).slice(0, 12).map((tbl) => (
+              <div className="flex overflow-x-auto gap-2 text-[10px] items-center pb-1 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+                <span className="text-text-hint font-medium whitespace-nowrap shrink-0">{t("sql.tables") || "Tables :"}</span>
+                {Object.keys(dbSchema).map((tbl) => (
                   <span
                     key={tbl}
-                    className="px-1.5 py-0.5 bg-surface-2 border border-border-subtle rounded font-mono text-primary cursor-pointer hover:bg-surface-3 transition-colors"
+                    className="px-2 py-0.5 bg-surface-2 border border-border-subtle rounded font-mono text-primary cursor-pointer hover:bg-surface-3 transition-colors whitespace-nowrap shrink-0"
                     onClick={() => setQuery(`SELECT * FROM ${tbl} LIMIT 20`)}
                     title={`Colonnes : ${dbSchema[tbl].join(", ")}`}
                   >
                     {tbl}
                   </span>
                 ))}
-                {Object.keys(dbSchema).length > 12 && (
-                  <span className="text-text-hint">+{Object.keys(dbSchema).length - 12}</span>
-                )}
               </div>
             )}
 
@@ -297,12 +319,7 @@ export function SqlEditor({ query, setQuery }: SqlEditorProps) {
               />
             </div>
 
-            <p className="text-[10px] text-text-hint text-right">
-              <kbd className="px-1.5 py-0.5 bg-surface-2 border border-border-subtle rounded font-mono">Ctrl</kbd>
-              {" + "}
-              <kbd className="px-1.5 py-0.5 bg-surface-2 border border-border-subtle rounded font-mono">Enter</kbd>
-              {" "}— {t("sql.run_query")}
-            </p>
+
           </div>
         </CardContent>
       </Card>
@@ -320,13 +337,17 @@ export function SqlEditor({ query, setQuery }: SqlEditorProps) {
             <table className="min-w-full text-sm text-left border-collapse">
               <thead className="sticky top-0 z-10 text-xs text-text-hint uppercase border-b border-border font-bold tracking-wider">
                 <tr>
-                  {columns.map((col) => (
+                  {visibleColumns.map((col) => (
                     <SortableTh
                       key={col}
                       col={col}
                       sortKey={sortConfig.key}
                       direction={sortConfig.direction}
                       onSort={handleSort}
+                      onHide={handleHideColumn}
+                      onDragStart={handleDragStart}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
                     />
                   ))}
                 </tr>
@@ -334,7 +355,7 @@ export function SqlEditor({ query, setQuery }: SqlEditorProps) {
               <tbody className="divide-y divide-border-subtle">
                 {sortedResults.map((row, i) => (
                   <tr key={i} className="bg-surface hover:bg-surface-2 transition-colors">
-                    {columns.map((col) => (
+                    {visibleColumns.map((col) => (
                       <td key={col} className="px-6 py-4 font-medium text-text-body whitespace-nowrap border-x border-border-subtle/50">
                         {String(row[col] ?? "")}
                       </td>

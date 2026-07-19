@@ -1,12 +1,9 @@
-import { useState } from "react"
+import { useState, lazy, Suspense } from "react"
 import { cn } from "@/lib/utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { AdvancedSearch } from "@/components/AdvancedSearch"
-import { SqlEditor } from "@/components/SqlEditor"
-import { AiAssistant } from "@/components/AiAssistant"
 import { ThemeToggle } from "@/components/ThemeToggle"
-import { BookOpen, LibraryBig, User, Cat, Database as DbIcon } from "lucide-react"
+import { BookOpen, LibraryBig, User, Cat, Database as DbIcon, Loader2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { useTheme } from "@/hooks/useTheme"
 import {
@@ -14,9 +11,20 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select"
 import { Toaster } from "sonner"
+
+// Lazy load heavy components to code-split the application
+const AdvancedSearch = lazy(() => import("@/components/AdvancedSearch").then(module => ({ default: module.AdvancedSearch })))
+const SqlEditor = lazy(() => import("@/components/SqlEditor").then(module => ({ default: module.SqlEditor })))
+const AiAssistant = lazy(() => import("@/components/AiAssistant").then(module => ({ default: module.AiAssistant })))
+
+// Reusable loading fallback
+const TabFallback = () => (
+  <div className="flex w-full h-full min-h-[300px] items-center justify-center text-primary/40">
+    <Loader2 className="w-8 h-8 animate-spin" />
+  </div>
+)
 
 function App() {
   const { i18n, t } = useTranslation();
@@ -29,7 +37,7 @@ function App() {
       <div id="main-content" className="flex flex-col h-screen overflow-hidden bg-background text-foreground">
         {/* Main Header */}
         <header className="px-4 lg:px-12 py-4 shrink-0 border-b border-border-subtle bg-background">
-          <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex flex-col gap-0.5">
               <div className="flex items-center gap-2">
                 <svg className="text-zinc-900 dark:text-white" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -119,12 +127,16 @@ function App() {
           {/* Content Viewport */}
           <div className="flex-1 min-h-0 overflow-hidden relative">
             <TabsContent value="stories" className="h-full m-0 p-0 border-none outline-none overflow-hidden">
-              <AdvancedSearch />
+              <Suspense fallback={<TabFallback />}>
+                <AdvancedSearch />
+              </Suspense>
             </TabsContent>
 
             <TabsContent value="sql" className="h-full m-0 p-0 border-none outline-none bg-surface overflow-auto">
               <div className="p-4 lg:px-12">
-                <SqlEditor query={sqlQuery} setQuery={setSqlQuery} />
+                <Suspense fallback={<TabFallback />}>
+                  <SqlEditor query={sqlQuery} setQuery={setSqlQuery} />
+                </Suspense>
               </div>
             </TabsContent>
 
@@ -145,7 +157,9 @@ function App() {
           </div>
         </Tabs>
         {activeTab === "sql" && (
-          <AiAssistant onCopyToEditor={(q) => setSqlQuery(q)} />
+          <Suspense fallback={null}>
+            <AiAssistant onCopyToEditor={(q) => setSqlQuery(q)} />
+          </Suspense>
         )}
       </div>
       <Toaster position="top-center" richColors />
@@ -154,3 +168,4 @@ function App() {
 }
 
 export default App
+
