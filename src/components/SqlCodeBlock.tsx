@@ -2,6 +2,10 @@ import { useState } from "react"
 import { Copy, Check, Database } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslation } from "react-i18next"
+import CodeMirror from "@uiw/react-codemirror"
+import { sql } from "@codemirror/lang-sql"
+import { oneDark } from "@codemirror/theme-one-dark"
+import { EditorView } from "@codemirror/view"
 
 interface SqlCodeBlockProps {
   code: string
@@ -23,7 +27,20 @@ export function SqlCodeBlock({ code, bubbleId, onCopyToEditor }: SqlCodeBlockPro
   return (
     <div className="my-2 flex flex-col gap-1">
       <div className="bg-zinc-950 text-zinc-300 p-3 rounded-lg font-mono text-[11px] relative overflow-x-auto group">
-        <pre className="whitespace-pre-wrap">{code}</pre>
+        <div className="rounded-lg overflow-hidden border border-zinc-800">
+          <CodeMirror
+            value={code}
+            extensions={[sql(), EditorView.editable.of(false), EditorView.lineWrapping]}
+            theme={oneDark}
+            basicSetup={{
+              lineNumbers: false,
+              foldGutter: false,
+              highlightActiveLine: false,
+              highlightActiveLineGutter: false,
+            }}
+            className="text-[12px] bg-zinc-950"
+          />
+        </div>
         <Button
           size="icon"
           variant="ghost"

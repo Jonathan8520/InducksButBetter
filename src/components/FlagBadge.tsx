@@ -18,6 +18,8 @@ export function FlagBadge({ country, name, className }: FlagBadgeProps) {
         src={`https://flagcdn.com/w20/${country.toLowerCase()}.png`}
         className="w-3.5 h-2.5 rounded-sm object-cover transition-transform hover:scale-110"
         alt={country}
+        loading="lazy"
+        decoding="async"
         onError={(e) => (e.currentTarget.style.display = "none")}
       />
       <span className="truncate max-w-[100px]">{name}</span>

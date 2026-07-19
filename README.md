@@ -50,10 +50,20 @@ The application will be available at `http://localhost:5173`.
 
 > **Note:** A minimal backend proxy runs on `http://localhost:3000` solely to proxy images from external providers and bypass CORS restrictions. All SQL queries are executed securely directly from the client!
 
+### Using a local database (ISV files)
+
+If you don't want to use Turso, or if you exceed the free-tier limits, you can import the raw Inducks database directly into your browser:
+1. Obtain the official Inducks ISV database dump (usually a ZIP file containing `.isv` files).
+2. Extract the `.isv` files to a folder on your computer.
+3. Click the **Import DB** button in the top right corner of the application.
+4. Select all the extracted `.isv` files. The app will parse them, create the tables, build necessary indexes for speed, and load the entire database into a dedicated **Web Worker**.
+5. Your searches will now be executed entirely offline, with results **streamed progressively** to the UI without ever freezing your browser!
+
 ## Architecture and optimizations
 
 - **Modular React architecture**: The search interface has been completely refactored. The business logic has been extracted into dedicated custom hooks (`useSearchFilters.ts`, `useSearchExecution.ts`, `useMetadata.ts`), and the UI has been split into independent sub-components (`SearchForm.tsx` and `SearchResults.tsx`).
 - **Edge database (`@libsql/client/web`)**: The app connects directly to Turso via HTTP.
+- **Web Worker Database Engine**: When using a local ISV database, `sql.js` operates entirely inside a Web Worker thread. Heavy SQL searches are executed asynchronously and streamed progressively to the UI, guaranteeing a flawless 60 FPS experience with no UI freezing.
 - **Vite bundle optimization (manualChunks)**: Code splitting is configured to separate dependencies (`react-vendor`, `ui-vendor`, `db-vendor`, `ai-vendor`) for faster initial page loads and optimal browser caching.
 - **Aggressive caching**: To preserve free-tier quotas, static metadata (countries, universes, languages) is cached via `sessionStorage`.
 - **JSON injection**: The personal collection filter uses SQLite's `json_each()` function to pass thousands of issue codes to the database in a single, lightweight payload.

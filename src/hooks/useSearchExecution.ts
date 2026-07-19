@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { tursoClient } from "@/lib/turso";
+import { executeQuery } from "@/lib/db";
 import { buildAdvancedSearchQuery, SearchFilters } from "@/lib/searchService";
 
 interface UseSearchExecutionProps {
@@ -59,11 +59,14 @@ export function useSearchExecution({ filters, pagesSliderMoved }: UseSearchExecu
 
       const { query, countQuery, params, countParams } = buildAdvancedSearchQuery(filtersForQuery);
 
-      // Run sequentially to prevent Turso OOM on heavy joins
-      const countResult = await tursoClient.execute({ sql: countQuery, args: countParams });
-      const rowsResult = await tursoClient.execute({ sql: query, args: params });
+      setResults([]);
+      
+      const countResult = await executeQuery({ sql: countQuery, args: countParams });
+      
+      await executeQuery({ sql: query, args: params }, (newRow) => {
+        setResults((prev) => [...prev, newRow]);
+      });
 
-      setResults(rowsResult.rows as any[]);
       setTotalCount(Number(countResult.rows[0]?.total || countResult.rows[0]?.COUNT || 0));
     } catch (err) {
       console.error(err);

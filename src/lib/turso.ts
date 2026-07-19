@@ -1,4 +1,5 @@
 import { createClient } from "@libsql/client/web";
+import { executeQuery } from "./db";
 
 const url = import.meta.env.VITE_TURSO_DATABASE_URL || "libsql://dummy.turso.io";
 const authToken = import.meta.env.VITE_TURSO_AUTH_TOKEN || "";
@@ -32,7 +33,7 @@ export const tursoClient = createClient({
 // Polyfill for autocomplete queries
 export async function autocompleteCharacter(q: string, lang: string = 'fr') {
   if (!q || q.length < 2) return [];
-  const result = await tursoClient.execute({
+  const result = await executeQuery({
     sql: `
       SELECT c.charactercode, COALESCE(cn.charactername, c.charactername) as charactername,
               (SELECT cu.sitecode || '|' || cu.url 
@@ -54,7 +55,7 @@ export async function autocompleteCharacter(q: string, lang: string = 'fr') {
 
 export async function autocompletePerson(q: string) {
   if (!q || q.length < 2) return [];
-  const result = await tursoClient.execute({
+  const result = await executeQuery({
     sql: `
       SELECT personcode, fullname, nationalitycountrycode, fullname as displayname 
       FROM inducks_person 
@@ -72,7 +73,7 @@ export async function autocompleteStorycode(q: string, lang: string = 'fr') {
   if (!q || q.trim().length < 2) return [];
   const qUpper = q.trim().toUpperCase();
   const qUpperEnd = qUpper.slice(0, -1) + String.fromCharCode(qUpper.charCodeAt(qUpper.length - 1) + 1);
-  const result = await tursoClient.execute({
+  const result = await executeQuery({
     sql: `
       WITH MatchedStories AS (
         SELECT storycode, storyheadercode
@@ -97,7 +98,7 @@ export async function autocompleteStorycode(q: string, lang: string = 'fr') {
 
 export async function autocompletePublisher(q: string) {
   const like = `%${q}%`;
-  const result = await tursoClient.execute({
+  const result = await executeQuery({
     sql: `
       SELECT publisherid, publishername
       FROM (

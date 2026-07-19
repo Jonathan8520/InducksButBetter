@@ -12,7 +12,7 @@ import { SectionTitle } from "@/components/SectionTitle"
 import { SortableTh } from "@/components/SortableTh"
 import { EmptyState } from "@/components/EmptyState"
 import { useTheme } from "@/hooks/useTheme"
-import { tursoClient } from "@/lib/turso"
+import { executeQuery } from "@/lib/db"
 import { DEFAULT_DB_SCHEMA } from "@/lib/defaultSchema"
 import { toast } from "sonner"
 
@@ -177,7 +177,7 @@ export function SqlEditor({ query, setQuery }: SqlEditorProps) {
       if (!query.trim().toLowerCase().startsWith("select")) {
         throw new Error("Only SELECT queries are allowed.")
       }
-      const result = await tursoClient.execute({ sql: query, args: [] })
+      const result = await executeQuery({ sql: query, args: [] })
       setResults(result.rows || [])
       
       const count = result.rows?.length || 0

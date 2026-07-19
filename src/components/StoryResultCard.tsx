@@ -290,16 +290,19 @@ export function StoryResultCard({ row }: StoryResultCardProps) {
                       <TooltipTrigger asChild>
                         <div className="flex items-center gap-1.5 cursor-pointer">
                           <div 
-                            className="w-4 h-4 rounded-full overflow-hidden border-zinc-200 dark:border-zinc-700 border bg-white dark:bg-zinc-800 shrink-0 shadow-sm"
+                            className="w-4 h-4 rounded-full overflow-hidden border-zinc-200 dark:border-zinc-700 border bg-zinc-100 dark:bg-zinc-800 shrink-0 shadow-sm relative flex items-center justify-center"
                             onClick={(e) => {
                               e.stopPropagation();
                               window.open(`https://inducks.org/character.php?c=${c.code}`, "_blank");
                             }}
                           >
+                            <span className="text-[6px] font-bold text-zinc-400 dark:text-zinc-500 absolute inset-0 flex items-center justify-center uppercase leading-none tracking-tighter">
+                              {c.code}
+                            </span>
                             <img 
                               src={charImageUrl}
                               alt={c.name}
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover z-10 relative"
                               onError={(e) => (e.currentTarget.style.display = 'none')}
                             />
                           </div>

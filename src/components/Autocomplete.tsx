@@ -1,5 +1,6 @@
 import * as React from "react"
 import { Check, ChevronDown, LibraryBig, Loader2, User, X } from "lucide-react"
+import { AvatarWithFallback } from "./AvatarWithFallback"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -186,14 +187,12 @@ export function Autocomplete({ placeholder, emptyMessage, fetchOptions, onSelect
                       <div className="flex items-center gap-3 w-full">
                         {!hideIcon && (
                           imageUrl ? (
-                            <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-surface-2 border border-border-subtle">
-                              <img 
-                                src={imageUrl} 
-                                alt="" 
-                                className="w-full h-full object-cover"
-                                onError={(e) => (e.currentTarget.style.display = 'none')}
-                              />
-                            </div>
+                            <AvatarWithFallback
+                              src={imageUrl}
+                              name={name}
+                              className="w-8 h-8"
+                              textClasses="text-[12px]"
+                            />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-surface-2 flex items-center justify-center shrink-0 border border-border-subtle">
                               {item.publisherid ? <LibraryBig className="w-4 h-4 text-text-secondary" /> : <User className="w-4 h-4 text-text-secondary" />}

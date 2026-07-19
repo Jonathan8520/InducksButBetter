@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { ThemeToggle } from "@/components/ThemeToggle"
+import { LocalDbUploader } from "@/components/LocalDbUploader"
 import { BookOpen, LibraryBig, User, Cat, Database as DbIcon, Loader2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { useTheme } from "@/hooks/useTheme"
@@ -53,6 +54,7 @@ function App() {
             </div>
 
             <div className="flex flex-row items-center gap-2">
+              <LocalDbUploader />
               <ThemeToggle />
               <Select
                 value={i18n.language}

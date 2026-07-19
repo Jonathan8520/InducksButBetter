@@ -127,7 +127,7 @@
     "dictate": "Dictate your query",
     "listening_placeholder": "I'm listening...",
     "activate_title": "Activate Local AI",
-    "activate_desc": "To work offline and for free, the AI ({{size}}) must be downloaded once. It will use your browser's power.",
+    "activate_desc": "To work offline and for free, the AI {{size}}must be downloaded once. It will use your browser's power.",
     "activate_btn": "Download and Activate",
     "preparation": "Preparation..."
   },
@@ -226,5 +226,19 @@
     "cancel": "Cancel",
     "save": "Save",
     "placeholder": ""
+  },
+  "localDb": {
+    "title": "Import Inducks Database",
+    "desc_1": "By default, InducksButBetter uses a remote public database which has usage limits. You can bypass these limits by using the raw Inducks ISV files locally!",
+    "desc_2": "Please download the official Inducks dump, extract the ZIP, and select all the <1>.isv</1> files here. We will generate the database in your browser's memory.",
+    "btn_import": "Import DB",
+    "btn_local": "Local DB",
+    "btn_select": "Select .isv files",
+    "tooltip_active": "Using local database",
+    "tooltip_upload": "Upload local database",
+    "progress_start": "Starting import...",
+    "progress_importing": "Importing {{table}}... ({{current}}/{{total}})",
+    "success": "Local ISV database loaded successfully!",
+    "error": "Failed to load ISV database."
   }
 }

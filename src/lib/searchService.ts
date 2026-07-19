@@ -42,6 +42,126 @@ export interface SearchQueryResponse {
   page: number;
 }
 
+export interface StorycodeCandidate {
+  unpacked: string;
+  packed: string;
+}
+
+/**
+ * Resolves a storycode search string into potential COA (Inducks) storycode candidates.
+ * Replicates the "smart search" heuristics of Inducks' coa/util14-storycode.php.
+ * 
+ * @param code The raw storycode typed by the user.
+ * @returns An array of unpacked and packed (alphanumeric lowercase) candidates.
+ */
+export function getStorycodeCandidates(code: string): StorycodeCandidate[] {
+  let h = code.trim();
+  h = h.replace(/\s+/g, ' ');
+
+  const candidates: string[] = [h];
+
+  // Heuristics matching Inducks COA util14-storycode.php
+  let heuristic = h;
+  
+  // 1. Normalize common publication prefix aliases
+  heuristic = heuristic.replace(/^w?\s?us\s/i, "W US "); // e.g. "US 1" -> "W US 1"
+  heuristic = heuristic.replace(/^w?\s?os\s/i, "W OS "); // e.g. "OS 1" -> "W OS 1"
+  heuristic = heuristic.replace(/^w?\s?wdcs/i, "W WDC ");
+  heuristic = heuristic.replace(/^w?\s?dda/i, "W OS ");
+  
+  heuristic = heuristic.replace(/\s+/g, ' ');
+  
+  // 2. Map old Dell Giant (W US) codes to their corresponding W OS issue number
+  heuristic = heuristic.replace(/^w us\s?1[ a-z-]*$/i, "W OS 386");
+  heuristic = heuristic.replace(/^w us\s?2[ a-z-]*$/i, "W OS 456");
+  heuristic = heuristic.replace(/^w us\s?3[ a-z-]*$/i, "W OS 495");
+  
+  // 3. Remove trailing publication indicator suffix: W ([a-z ]+ [0-9]+)( |-)[a-z]+ -> W \1
+  const wMatch = heuristic.match(/^w ([a-z ]+\s?[0-9]+)(?: |-)[a-z]+/i);
+  if (wMatch) {
+    heuristic = "W " + wMatch[1];
+  }
+  
+  // 4. Ensure space between country prefix and issue number: ^(.)([0-9]) -> \1 \2
+  heuristic = heuristic.replace(/^([a-z])([0-9])/i, "$1 $2");
+  
+  // 5. Map Italian Topolino series prefix: ^j -> I
+  heuristic = heuristic.replace(/^j\s/i, "I ");
+  
+  // 6. Strip leading zeros from issue numbers
+  heuristic = heuristic.replace(/^([hs]\s.*\s)0+/i, "$1");
+  heuristic = heuristic.replace(/^(w\s.*[a-z].*\s)0+/i, "$1");
+  
+  // 7. Normalize French PM (Parade du Journal de Mickey) and strip parts suffixes
+  heuristic = heuristic.replace(/f\s?pm/i, "F PM");
+  heuristic = heuristic.replace(/^(f\s[a-z]{2}\s[0-9]{5})[acde]/i, "$1");
+  
+  // 8. Italian Topolino shortcut: "I 123" or "I T 123" -> "I TL 123"
+  if (/^I [0-9]/i.test(heuristic)) {
+    heuristic = heuristic.replace(/^I\s/i, "I TL ");
+  }
+  if (/^I T\s/i.test(heuristic)) {
+    heuristic = heuristic.replace(/^I T\s/i, "I TL ");
+  }
+  
+  // 9. Dutch Donald Duck weekly (H) date format conversions
+  if (/^H ([0-9]{4})$/i.test(heuristic)) {
+    const digits = heuristic.substring(2);
+    heuristic = "H " + digits[0] + digits[1] + "0" + digits[2] + digits[3];
+  }
+  
+  heuristic = heuristic.replace(/^W FC/i, "W OS");
+  heuristic = heuristic.replace(/^([A-Za-z]+)-/i, "$1 ");
+  
+  // 10. Dutch HJR / HLN to H code conversions (e.g. HJR 1984 -> H 19084)
+  const hjr4Match = heuristic.match(/^HJR ([0-9]{4})$/i);
+  if (hjr4Match) {
+    heuristic = "H " + hjr4Match[1].substring(0, 2) + "0" + hjr4Match[1].substring(2);
+  } else {
+    const hjr5Match = heuristic.match(/^HJR ([0-9]{5})$/i);
+    if (hjr5Match) {
+      heuristic = "H " + hjr5Match[1];
+    } else {
+      const hln4Match = heuristic.match(/^HLN ([0-9]{4})$/i);
+      if (hln4Match) {
+        heuristic = "H " + hln4Match[1].substring(0, 2) + "0" + hln4Match[1].substring(2);
+      } else {
+        const hln5Match = heuristic.match(/^HLN ([0-9]{5})$/i);
+        if (hln5Match) {
+          heuristic = "H " + hln5Match[1];
+        }
+      }
+    }
+  }
+  
+  heuristic = heuristic.replace(/^HJR\s/i, "H ");
+  heuristic = heuristic.replace(/^HLN\s/i, "H ");
+  heuristic = heuristic.replace(/^W M\s?M\s?O\s?S/i, "W OS");
+  heuristic = heuristic.replace(/^W D\s?D\s?O\s?S/i, "W OS");
+  
+  heuristic = heuristic.replace(/^IS\s/i, "I ");
+  heuristic = heuristic.replace(/^WM\s/i, "W ");
+  heuristic = heuristic.replace(/^wdc/i, "W WDC");
+
+  if (heuristic !== h) {
+    candidates.push(heuristic);
+  }
+
+  // Pack the candidates: remove all whitespace, convert to lowercase, and strip special chars
+  const seen = new Set<string>();
+  const out: StorycodeCandidate[] = [];
+
+  for (const c of candidates) {
+    const packed = c.replace(/\s+/g, '').toLowerCase().replace(/[^a-z0-9\-]/g, '');
+    if (!seen.has(packed)) {
+      seen.add(packed);
+      out.push({ unpacked: c, packed });
+    }
+  }
+
+  return out;
+}
+
 export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryResponse {
   const pageSize = Math.max(1, parseInt(String(filters.rowsperpage || "24"), 10) || 24);
   const page = Math.max(1, parseInt(String(filters.page || "1"), 10) || 1);
@@ -53,34 +173,51 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
   const lang = filters.lang || "fr";
 
   if (filters.storycode) {
-    let code = filters.storycode.trim();
+    const code = filters.storycode.trim();
     
-    const lowerCode = code.toLowerCase();
-    if (/^(wdc|os|us|fc|dda|ym|yd)\d*/.test(lowerCode)) {
-      if (lowerCode.startsWith("wdc")) code = "W WDC " + code.substring(3).trim();
-      else if (lowerCode.startsWith("os")) code = "W OS " + code.substring(2).trim();
-      else if (lowerCode.startsWith("us")) code = "W US " + code.substring(2).trim();
-      else if (lowerCode.startsWith("fc")) code = "W OS " + code.substring(2).trim();
-      else if (lowerCode.startsWith("dda")) code = "W OS " + code.substring(3).trim();
-      else if (lowerCode.startsWith("ym")) code = "YM " + code.substring(2).trim();
-      else if (lowerCode.startsWith("yd")) code = "YD " + code.substring(2).trim();
-    } else if (lowerCode.startsWith("i") && lowerCode.length > 1 && /^\d/.test(lowerCode.substring(1).trim())) {
-      code = "I TL " + code.substring(1).trim();
+    // Check if we should do a basic prefix search or a smart search
+    let inducksCodesOnly = false;
+    if (code.length === 1 || (code.length <= 3 && (/^X/i.test(code) || /^[a-zA-Z]C/i.test(code)))) {
+      inducksCodesOnly = true;
     }
 
-    const parts = code.split(/\s+/).filter(Boolean);
-    
-    if (parts.length > 0) {
-      const prefixParts = parts.slice(0, 2);
-      const prefix = prefixParts.join(' ').toUpperCase();
+    if (inducksCodesOnly) {
+      const prefix = code.toUpperCase();
       const prefixEnd = prefix.slice(0, -1) + String.fromCharCode(prefix.charCodeAt(prefix.length - 1) + 1);
       where.push("s.storycode >= ? AND s.storycode < ?");
       p.push(prefix, prefixEnd);
 
-      const indexPattern = parts.map((part) => part.replace(/[^a-zA-Z0-9]/g, '%')).join('%') + '%';
-      
-      where.push("s.storycode LIKE ?");
-      p.push(indexPattern);
+      const stripped = prefix.replace(/\s+/g, '');
+      where.push("REPLACE(s.storycode, ' ', '') LIKE ?");
+      p.push(stripped + '%');
+    } else {
+      const candidates = getStorycodeCandidates(code);
+      if (candidates.length > 0) {
+        const rangeClauses: string[] = [];
+        const likeClauses: string[] = [];
+        
+        for (const cand of candidates) {
+          const parts = cand.unpacked.split(/\s+/).filter(Boolean);
+          if (parts.length > 0) {
+            const prefixParts = parts.slice(0, 2);
+            const prefix = prefixParts.join(' ').toUpperCase();
+            const prefixEnd = prefix.slice(0, -1) + String.fromCharCode(prefix.charCodeAt(prefix.length - 1) + 1);
+            
+            rangeClauses.push("(s.storycode >= ? AND s.storycode < ?)");
+            p.push(prefix, prefixEnd);
+          }
+          
+          likeClauses.push("REPLACE(s.storycode, ' ', '') LIKE ?");
+          p.push(cand.packed + '%');
+        }
+        
+        if (rangeClauses.length > 0) {
+          where.push("(" + rangeClauses.join(" OR ") + ")");
+        }
+        if (likeClauses.length > 0) {
+          where.push("(" + likeClauses.join(" OR ") + ")");
+        }
+      }
     }
   }
 
@@ -287,6 +424,8 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
   let orderBy = "s.firstpublicationdate DESC, s.storycode ASC";
   let sortJoins = "";
   
+  const isPreciseStorycodeSearch = filters.storycode && String(filters.storycode).trim().split(/\s+/).length >= 2;
+  
   if (sort === "pubdate_asc") {
     orderBy = "s.firstpublicationdate ASC, s.storycode ASC";
   } else if (sort === "title_az") {
@@ -301,6 +440,9 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
   } else if (sort === "pages_asc") {
     sortJoins = "LEFT JOIN (SELECT storycode, MIN(entirepages) as min_pages FROM inducks_storyversion GROUP BY storycode) sv_sort ON s.storycode = sv_sort.storycode";
     orderBy = "sv_sort.min_pages ASC, s.storycode ASC";
+  } else if (sort === "pubdate_desc" && isPreciseStorycodeSearch) {
+    // Optimization: if searching for a precise storycode, order by length to prioritize exact matches
+    orderBy = "LENGTH(s.storycode) ASC, s.storycode ASC";
   }
 
   const whereSql = where.length > 0 ? "WHERE " + where.join(" AND ") : "";
@@ -331,7 +473,7 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
       COALESCE(
         (SELECT e.title FROM inducks_entry e JOIN inducks_issue i ON e.issuecode = i.issuecode JOIN inducks_publication pub ON i.publicationcode = pub.publicationcode WHERE e.storyversioncode = sv.storyversioncode AND e.title IS NOT NULL AND e.title != '' ORDER BY CASE WHEN pub.languagecode = ? THEN 0 ELSE 1 END, e.entrycode ASC LIMIT 1),
         s.title,
-        'Sans titre'
+        NULL
       ) as story_title,
       COALESCE(
         (SELECT eu.sitecode || '|' || eu.url

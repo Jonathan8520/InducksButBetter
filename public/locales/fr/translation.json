@@ -138,7 +138,7 @@
     "dictate": "Dicter votre requête",
     "listening_placeholder": "Je vous écoute...",
     "activate_title": "Activer l'IA Locale",
-    "activate_desc": "La première utilisation nécessite de télécharger un modèle d'IA ({{size}}) qui fonctionnera ensuite 100% hors-ligne dans votre navigateur.",
+    "activate_desc": "La première utilisation nécessite de télécharger un modèle d'IA {{size}}qui fonctionnera ensuite 100% hors-ligne dans votre navigateur.",
     "activate_btn": "Télécharger et Activer",
     "preparation": "Préparation..."
   },
@@ -237,5 +237,19 @@
     "cancel": "Annuler",
     "save": "Sauvegarder",
     "placeholder": ""
+  },
+  "localDb": {
+    "title": "Importer la base de données Inducks",
+    "desc_1": "Par défaut, InducksButBetter utilise une base de données publique distante soumise à des quotas. Vous pouvez contourner cette limite en chargeant vos propres fichiers ISV !",
+    "desc_2": "Téléchargez le dump officiel de Inducks, extrayez l'archive et sélectionnez tous les fichiers <1>.isv</1> ici. La base sera entièrement générée dans la mémoire de votre navigateur.",
+    "btn_import": "Import DB",
+    "btn_local": "DB locale",
+    "btn_select": "Sélectionner fichiers .isv",
+    "tooltip_active": "Base locale en cours d'utilisation",
+    "tooltip_upload": "Charger une base de données locale",
+    "progress_start": "Démarrage de l'import...",
+    "progress_importing": "Import de {{table}}... ({{current}}/{{total}})",
+    "success": "Base de données ISV chargée avec succès !",
+    "error": "Échec du chargement de la base de données ISV."
   }
 }

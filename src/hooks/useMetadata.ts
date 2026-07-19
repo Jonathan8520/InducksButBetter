@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { tursoClient } from "@/lib/turso";
+import { executeQuery } from "@/lib/db";
 import { COMMON_LANGUAGES } from "@/lib/constants";
 import { MetaData } from "@/lib/types";
 
@@ -29,13 +29,13 @@ export function useMetadata() {
 
       try {
         const [kindsRes, countriesRes, universesRes, subseriesRes] = await Promise.all([
-          tursoClient.execute("SELECT DISTINCT kind FROM inducks_storyversion WHERE kind IS NOT NULL"),
-          tursoClient.execute({
+          executeQuery("SELECT DISTINCT kind FROM inducks_storyversion WHERE kind IS NOT NULL"),
+          executeQuery({
             sql: "SELECT c.countrycode, COALESCE(cn.countryname, c.countryname) as countryname FROM inducks_country c LEFT JOIN inducks_countryname cn ON c.countrycode = cn.countrycode AND cn.languagecode = ? ORDER BY countryname",
             args: [currentLang],
           }),
-          tursoClient.execute("SELECT universecode, universecomment as universename FROM inducks_universe ORDER BY universecomment"),
-          tursoClient.execute({
+          executeQuery("SELECT universecode, universecomment as universename FROM inducks_universe ORDER BY universecomment"),
+          executeQuery({
             sql: "SELECT subseriescode, subseriesname as label FROM inducks_subseriesname WHERE languagecode = ? OR languagecode = 'en' GROUP BY subseriescode ORDER BY CASE WHEN languagecode = ? THEN 0 ELSE 1 END, subseriesname",
             args: [currentLang, currentLang],
           }),

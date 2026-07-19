@@ -17,6 +17,16 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
+        timeout: 500,
+        proxyTimeout: 500,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, req, res) => {
+            if (!res.headersSent) {
+              res.writeHead(502, { 'Content-Type': 'text/plain' });
+              res.end('Proxy error: ' + (err as any).code);
+            }
+          });
+        }
       },
     },
   },

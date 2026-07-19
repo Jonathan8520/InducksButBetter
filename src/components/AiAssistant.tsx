@@ -107,20 +107,46 @@ export function AiAssistant({ onCopyToEditor }: AiAssistantProps) {
     setIsGenerating(true)
 
     try {
-      // Dense formatting to save tokens and simplify parsing for the AI
+      // Only send core tables to avoid confusing the small AI model
+      const coreTables = ['inducks_story', 'inducks_storyversion', 'inducks_character', 'inducks_person', 'inducks_publication', 'inducks_issue', 'inducks_storyjob', 'inducks_appearance'];
       const schemaString = Object.entries(DEFAULT_DB_SCHEMA)
+        .filter(([name]) => coreTables.includes(name))
         .map(([name, columns]) => `${name}(${columns.join(",")})`)
         .join("; ");
 
-      const systemPrompt = `Tu es un traducteur expert qui convertit le langage naturel en requêtes SQLite.
-Schéma de la base de données :
+      const systemPrompt = `Tu es un expert SQL pour la base de données Inducks (Disney comics).
+Schéma (simplifié) :
 ${schemaString}
 
+Relations clés :
+- inducks_story.storycode = inducks_storyversion.storycode
+- inducks_storyjob.storyversioncode = inducks_storyversion.storyversioncode
+- inducks_storyjob.personcode = inducks_person.personcode
+- inducks_appearance.storyversioncode = inducks_storyversion.storyversioncode
+- inducks_appearance.charactercode = inducks_character.charactercode
+
+Exemples de requêtes :
+Q: "Histoires écrites par Carl Barks"
+R: \`\`\`sql
+SELECT s.title, p.fullname FROM inducks_story s 
+JOIN inducks_storyversion sv ON s.storycode = sv.storycode 
+JOIN inducks_storyjob sj ON sv.storyversioncode = sj.storyversioncode 
+JOIN inducks_person p ON sj.personcode = p.personcode 
+WHERE p.fullname LIKE '%Barks%' LIMIT 10;
+\`\`\`
+Q: "Histoires avec Picsou"
+R: \`\`\`sql
+SELECT s.title FROM inducks_story s 
+JOIN inducks_storyversion sv ON s.storycode = sv.storycode 
+JOIN inducks_appearance a ON sv.storyversioncode = a.storyversioncode 
+JOIN inducks_character c ON a.charactercode = c.charactercode 
+WHERE c.charactername LIKE '%Scrooge%' LIMIT 10;
+\`\`\`
+
 RÈGLES ABSOLUES :
-1. Tu ne dois générer QUE du code SQL valide.
-2. PAS d'explications, PAS d'excuses, PAS de bonjour.
-3. Le résultat doit TOUJOURS être un bloc \`\`\`sql ... \`\`\`
-4. L'utilisateur te demande d'interroger la base, ne lui dis jamais que tu ne peux pas générer d'histoires. Fais juste la requête SELECT correspondante.`
+1. Comprends la demande PEU IMPORTE LA LANGUE (français, anglais, etc.).
+2. Tu ne dois générer QUE du code SQL SQLite valide.
+3. PAS d'explications ni de texte. TOUJOURS un bloc \`\`\`sql ... \`\`\`.`
 
       // Prepare an empty bubble for the assistant's response
       setMessages((prev) => [...prev, { role: "assistant", content: "" }])
@@ -220,9 +246,10 @@ RÈGLES ABSOLUES :
                 <h3 className="text-lg font-bold text-foreground mb-2">{t("ai.activate_title")}</h3>
                 <p className="text-sm text-zinc-400 mb-8 max-w-[250px]">
                   {t("ai.activate_desc", { 
-                    size: modelName === 'Llama-3.2-3B-Instruct-q4f32_1-MLC' ? '~1.8 Go' : 
-                          modelName === 'TinyLlama-1.1B-Chat-v1.0-q4f32_1-MLC' ? '~600 Mo' : 
-                          '~850 Mo' 
+                    size: modelName === 'Llama-3.2-3B-Instruct-q4f32_1-MLC' ? '(~1.8 Go) ' : 
+                          modelName === 'TinyLlama-1.1B-Chat-v1.0-q4f32_1-MLC' ? '(~600 Mo) ' : 
+                          modelName === 'Llama-3.2-1B-Instruct-q4f32_1-MLC' ? '(~850 Mo) ' :
+                          ''
                   })}
                 </p>
                 {!hasStartedDownload ? (
