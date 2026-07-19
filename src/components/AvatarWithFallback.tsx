@@ -8,6 +8,7 @@ interface AvatarWithFallbackProps {
   className?: string
   sizeClasses?: string
   textClasses?: string
+  square?: boolean
 }
 
 export function AvatarWithFallback({
@@ -16,7 +17,8 @@ export function AvatarWithFallback({
   alt = "",
   className,
   sizeClasses = "w-8 h-8",
-  textClasses = "text-[12px]"
+  textClasses = "text-[12px]",
+  square = false
 }: AvatarWithFallbackProps) {
   // Extract initials (up to 2 letters)
   const initials = name
@@ -30,7 +32,8 @@ export function AvatarWithFallback({
   return (
     <div 
       className={cn(
-        "rounded-full overflow-hidden border border-border-subtle bg-zinc-100 dark:bg-zinc-800 shrink-0 relative flex items-center justify-center",
+        square ? "rounded-md" : "rounded-full",
+        "overflow-hidden border border-border-subtle bg-zinc-100 dark:bg-zinc-800 shrink-0 relative flex items-center justify-center",
         sizeClasses,
         className
       )}

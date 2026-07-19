@@ -76,7 +76,7 @@ export async function autocompleteStorycode(q: string, lang: string = 'fr') {
   const result = await executeQuery({
     sql: `
       WITH MatchedStories AS (
-        SELECT storycode, storyheadercode
+        SELECT storycode, storyheadercode, title as story_title
         FROM inducks_story
         WHERE storycode >= ? AND storycode < ?
         ORDER BY storycode ASC
@@ -85,7 +85,14 @@ export async function autocompleteStorycode(q: string, lang: string = 'fr') {
       SELECT
         s.storycode as storycode,
         s.storycode as id,
-        MAX(COALESCE(sh.title, 'Sans titre')) as storyname
+        MAX(COALESCE(s.story_title, sh.title, 'Sans titre')) as storyname,
+        (SELECT eu.sitecode || '|' || eu.url
+         FROM inducks_storyversion sv_img
+         JOIN inducks_entry e_img ON sv_img.storyversioncode = e_img.storyversioncode
+         JOIN inducks_entryurl eu ON e_img.entrycode = eu.entrycode
+         WHERE sv_img.storycode = s.storycode
+           AND eu.sitecode IN ('webusers', 'thumbnails', 'thumbnails2', 'thumbnails3')
+         ORDER BY CASE WHEN eu.sitecode = 'webusers' THEN 0 ELSE 1 END LIMIT 1) as story_thumb
       FROM MatchedStories s
       LEFT JOIN inducks_storyheader sh ON s.storyheadercode = sh.storyheadercode
       GROUP BY s.storycode

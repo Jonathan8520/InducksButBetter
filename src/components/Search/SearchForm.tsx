@@ -129,7 +129,6 @@ export function SearchForm({
                 onInputChange={(val) => setFilters({ ...filters, storycode: val })}
                 onClear={() => setFilters({ ...filters, storycode: "" })}
                 type="stories"
-                hideIcon={true}
                 hideSearchIcon={true}
               />
             </div>
@@ -137,10 +136,10 @@ export function SearchForm({
             <div className="space-y-2">
               <Label className="text-sm font-medium text-foreground">{t("search.keywords")}</Label>
               <Input
+                variant="search"
                 placeholder={t("search.keywords_placeholder")}
                 value={filters.title}
                 onChange={(e) => setFilters({ ...filters, title: e.target.value })}
-                className="h-10 border-border-subtle rounded-xl bg-surface shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary transition-all hover:bg-surface-2 placeholder:text-text-hint"
               />
               <div className="flex flex-col gap-2 pt-1">
                 <div className="flex items-center gap-2 transition-opacity hover:opacity-100 opacity-80">
@@ -597,10 +596,11 @@ export function SearchForm({
                   <Label className="text-sm font-medium text-foreground">{t("search.pages")}</Label>
                   <div className="flex items-center gap-3">
                     <Input
+                      variant="search"
                       placeholder={t("search.pages_exact")}
                       value={filters.pagesExact}
                       onChange={(e) => setFilters({ ...filters, pagesExact: e.target.value })}
-                      className="h-10 w-24 text-sm font-medium border-border-subtle rounded-xl bg-surface shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary transition-all hover:bg-surface-2 placeholder:text-text-hint"
+                      className="w-24"
                     />
                     <span className="text-[10px] font-medium text-muted-foreground tracking-tight">
                       {t("search.pages_exact")}

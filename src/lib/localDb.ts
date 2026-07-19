@@ -39,13 +39,24 @@ export async function loadLocalDb(file: File): Promise<void> {
   throw new Error("loadLocalDb for direct sqlite file is not implemented in worker yet.");
 }
 
+let localDbStats: { count: number, size: number } | null = null;
+
 export function hasLocalDb(): boolean {
   return worker !== null;
+}
+
+export function getLocalDbStats() {
+  return localDbStats;
 }
 
 export async function loadFromIsvFiles(files: File[], onProgress?: (progress: {table: string, current: number, total: number}) => void): Promise<void> {
   const w = getWorker();
   onProgressCallback = onProgress || null;
+  
+  localDbStats = {
+    count: files.length,
+    size: files.reduce((acc, f) => acc + f.size, 0)
+  };
   
   return new Promise((resolve, reject) => {
     const id = ++queryIdCounter;

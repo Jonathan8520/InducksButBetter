@@ -69,6 +69,12 @@ export function SearchResults({
                 <SelectItem value="pages_asc" className="rounded-lg">
                   {t("sort.pages_asc")}
                 </SelectItem>
+                <SelectItem value="published_most" className="rounded-lg">
+                  {t("sort.published_most")}
+                </SelectItem>
+                <SelectItem value="published_least" className="rounded-lg">
+                  {t("sort.published_least")}
+                </SelectItem>
               </SelectContent>
             </Select>
           )}

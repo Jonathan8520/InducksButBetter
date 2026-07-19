@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Check, ChevronDown, LibraryBig, Loader2, User, X } from "lucide-react"
+import { Check, ChevronDown, LibraryBig, Loader2, User, X, BookOpen } from "lucide-react"
 import { AvatarWithFallback } from "./AvatarWithFallback"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -169,6 +169,18 @@ export function Autocomplete({ placeholder, emptyMessage, fetchOptions, onSelect
                     if (!imageUrl) {
                       imageUrl = `/api/proxy-image?url=${encodeURIComponent(`https://inducks.org/characterthumb.php?c=${item.charactercode}`)}`;
                     }
+                  } else if (item.storycode && item.story_thumb) {
+                    const parts = item.story_thumb.split('|');
+                    const url = parts.length > 1 ? parts[1] : parts[0];
+                    let baseUrl = url;
+                    if (!url.startsWith('http')) {
+                      if (parts[0] === 'webusers' && !url.startsWith('webusers/')) {
+                        baseUrl = `https://outducks.org/webusers/webusers/${url}`;
+                      } else {
+                        baseUrl = `https://outducks.org/${url.startsWith('/') ? url.substring(1) : url}`;
+                      }
+                    }
+                    imageUrl = `/api/proxy-image?url=${encodeURIComponent(`https://inducks.org/hr.php?normalsize=1&image=${baseUrl}`)}`;
                   }
 
                   return (
@@ -192,10 +204,17 @@ export function Autocomplete({ placeholder, emptyMessage, fetchOptions, onSelect
                               name={name}
                               className="w-8 h-8"
                               textClasses="text-[12px]"
+                              square={type === "stories"}
                             />
                           ) : (
-                            <div className="w-8 h-8 rounded-full bg-surface-2 flex items-center justify-center shrink-0 border border-border-subtle">
-                              {item.publisherid ? <LibraryBig className="w-4 h-4 text-text-secondary" /> : <User className="w-4 h-4 text-text-secondary" />}
+                            <div className={`w-8 h-8 ${type === "stories" ? "rounded-md" : "rounded-full"} bg-surface-2 flex items-center justify-center shrink-0 border border-border-subtle`}>
+                              {type === "stories" ? (
+                                <BookOpen className="w-4 h-4 text-text-secondary" />
+                              ) : item.publisherid ? (
+                                <LibraryBig className="w-4 h-4 text-text-secondary" />
+                              ) : (
+                                <User className="w-4 h-4 text-text-secondary" />
+                              )}
                             </div>
                           )
                         )}

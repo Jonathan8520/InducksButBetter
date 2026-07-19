@@ -78,7 +78,9 @@
     "title_az": "Title A-Z",
     "title_za": "Title Z-A",
     "pages_desc": "More pages",
-    "pages_asc": "Fewer pages"
+    "pages_asc": "Fewer pages",
+    "published_most": "Most published",
+    "published_least": "Least published"
   },
   "common": {
     "loading": "Loading...",
@@ -239,6 +241,8 @@
     "progress_start": "Starting import...",
     "progress_importing": "Importing {{table}}... ({{current}}/{{total}})",
     "success": "Local ISV database loaded successfully!",
-    "error": "Failed to load ISV database."
+    "error": "Failed to load ISV database.",
+    "already_imported": "Warning: You have already imported a local database. Importing new files will replace the current one.",
+    "imported_stats": "Currently loaded files: {{count}} (Total size: {{size}})"
   }
 }

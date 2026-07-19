@@ -75,7 +75,9 @@
     "title_az": "Titre A-Z",
     "title_za": "Titre Z-A",
     "pages_desc": "Plus de pages",
-    "pages_asc": "Moins de pages"
+    "pages_asc": "Moins de pages",
+    "published_most": "Le plus publié",
+    "published_least": "Le moins publié"
   },
   "common": {
     "loading": "Chargement...",
@@ -250,6 +252,8 @@
     "progress_start": "Démarrage de l'import...",
     "progress_importing": "Import de {{table}}... ({{current}}/{{total}})",
     "success": "Base de données ISV chargée avec succès !",
-    "error": "Échec du chargement de la base de données ISV."
+    "error": "Échec du chargement de la base de données ISV.",
+    "already_imported": "Attention : Vous avez déjà importé une base de données. Importer de nouveaux fichiers remplacera la base actuelle.",
+    "imported_stats": "Fichiers actuellement chargés : {{count}} (Poids total : {{size}})"
   }
 }

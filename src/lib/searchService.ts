@@ -147,6 +147,7 @@ export function getStorycodeCandidates(code: string): StorycodeCandidate[] {
     candidates.push(heuristic);
   }
 
+
   // Pack the candidates: remove all whitespace, convert to lowercase, and strip special chars
   const seen = new Set<string>();
   const out: StorycodeCandidate[] = [];
@@ -435,11 +436,13 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
     sortJoins = "LEFT JOIN inducks_storyheader sh_sort ON s.storyheadercode = sh_sort.storyheadercode";
     orderBy = "sh_sort.title DESC, s.storycode ASC";
   } else if (sort === "pages_desc") {
-    sortJoins = "LEFT JOIN (SELECT storycode, MAX(entirepages) as max_pages FROM inducks_storyversion GROUP BY storycode) sv_sort ON s.storycode = sv_sort.storycode";
-    orderBy = "sv_sort.max_pages DESC, s.storycode ASC";
+    orderBy = "(SELECT MAX(entirepages) FROM inducks_storyversion WHERE storycode = s.storycode) DESC, s.storycode ASC";
   } else if (sort === "pages_asc") {
-    sortJoins = "LEFT JOIN (SELECT storycode, MIN(entirepages) as min_pages FROM inducks_storyversion GROUP BY storycode) sv_sort ON s.storycode = sv_sort.storycode";
-    orderBy = "sv_sort.min_pages ASC, s.storycode ASC";
+    orderBy = "(SELECT MIN(entirepages) FROM inducks_storyversion WHERE storycode = s.storycode) ASC, s.storycode ASC";
+  } else if (sort === "published_most") {
+    orderBy = "(SELECT COUNT(e_sort.entrycode) FROM inducks_entry e_sort JOIN inducks_storyversion sv_sort ON e_sort.storyversioncode = sv_sort.storyversioncode WHERE sv_sort.storycode = s.storycode) DESC, s.storycode ASC";
+  } else if (sort === "published_least") {
+    orderBy = "(SELECT COUNT(e_sort.entrycode) FROM inducks_entry e_sort JOIN inducks_storyversion sv_sort ON e_sort.storyversioncode = sv_sort.storyversioncode WHERE sv_sort.storycode = s.storycode) ASC, s.storycode ASC";
   } else if (sort === "pubdate_desc" && isPreciseStorycodeSearch) {
     // Optimization: if searching for a precise storycode, order by length to prioritize exact matches
     orderBy = "LENGTH(s.storycode) ASC, s.storycode ASC";

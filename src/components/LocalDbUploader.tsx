@@ -1,5 +1,5 @@
 import { useRef, useState } from "react"
-import { loadFromIsvFiles, hasLocalDb } from "@/lib/localDb"
+import { loadFromIsvFiles, hasLocalDb, getLocalDbStats } from "@/lib/localDb"
 import { Database, Loader2, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { useTranslation, Trans } from "react-i18next"
@@ -21,6 +21,16 @@ export function LocalDbUploader() {
   const { t } = useTranslation()
 
   const [progressMsg, setProgressMsg] = useState<string | null>(null)
+  const stats = getLocalDbStats()
+
+  const formatBytes = (bytes: number, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  }
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
@@ -48,33 +58,33 @@ export function LocalDbUploader() {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!isLoading) setIsOpen(open)
-    }}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <button
           className={`flex items-center gap-2 px-3 py-2 h-10 text-sm font-medium rounded-xl border transition-all ${
-            isActive 
+            isActive && !isLoading
               ? "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20 hover:bg-green-500/20" 
+              : isLoading 
+              ? "bg-primary/10 text-primary border-primary/20"
               : "bg-surface/80 text-muted-foreground border-border-subtle hover:bg-surface-2 hover:text-foreground"
           }`}
           title={isActive ? t('localDb.tooltip_active') : t('localDb.tooltip_upload')}
         >
-          {isActive ? (
+          {isLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : isActive ? (
             <Database className="w-4 h-4" />
           ) : (
             <Upload className="w-4 h-4" />
           )}
           <span className="hidden sm:inline">
-            {isActive ? t('localDb.btn_local') : t('localDb.btn_import')}
+            {isLoading ? "Importing..." : isActive ? t('localDb.btn_local') : t('localDb.btn_import')}
           </span>
         </button>
       </DialogTrigger>
       
       <DialogContent 
         className="w-[calc(100%-2rem)] sm:max-w-md rounded-xl"
-        onInteractOutside={(e) => isLoading && e.preventDefault()}
-        onEscapeKeyDown={(e) => isLoading && e.preventDefault()}
       >
         <DialogHeader>
           <DialogTitle>{t('localDb.title')}</DialogTitle>
@@ -86,6 +96,16 @@ export function LocalDbUploader() {
               <div>
                 <Trans i18nKey="localDb.desc_2" components={{ 1: <code /> }} />
               </div>
+              {isActive && (
+                <div className="mt-4 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400 text-sm">
+                  <p>{t('localDb.already_imported')}</p>
+                  {stats && (
+                    <p className="mt-1 opacity-90 font-medium">
+                      {t('localDb.imported_stats', { count: stats.count, size: formatBytes(stats.size) })}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </DialogDescription>
         </DialogHeader>
