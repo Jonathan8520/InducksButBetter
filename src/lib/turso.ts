@@ -126,3 +126,22 @@ export async function autocompletePublisher(q: string) {
   });
   return result.rows;
 }
+
+export async function autocompletePublicationTitle(q: string) {
+  const like = `%${q}%`;
+  const result = await executeQuery({
+    sql: `
+      SELECT DISTINCT p.publicationcode as value, pn.publicationname || ' (' || p.publicationcode || ')' as label
+      FROM inducks_publication p
+      JOIN inducks_publicationname pn ON p.publicationcode = pn.publicationcode
+      WHERE pn.publicationname LIKE ? OR p.publicationcode LIKE ?
+      ORDER BY pn.publicationname
+      LIMIT 10
+    `,
+    args: [like, like]
+  });
+  return result.rows.map((r: any) => ({
+    publicationcode: r.value,
+    publicationname: r.label
+  }));
+}

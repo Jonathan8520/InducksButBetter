@@ -63,7 +63,29 @@
     "read_more": "Read more",
     "read_less": "Less",
     "none": "None",
-    "error_fetch": "Error: Failed to fetch data."
+    "error_fetch": "Error: Failed to fetch data.",
+    "publications_title": "Publications Search",
+    "issue_number": "Issue number",
+    "issue_number_placeholder": "Ex: 123, 1A...",
+    "indexer": "Indexer",
+    "indexer_placeholder": "Ex: Wizyx...",
+    "issue_collects": "This issue collects one or several other issue(s)",
+    "specific_title": "Specific issue title",
+    "specific_title_placeholder": "Ex: Walt Disney's Comics and Stories...",
+    "seldom_fields": "Not often or seldom used fields",
+    "pages_min": "Pages min",
+    "pages_max": "Pages max",
+    "price": "Price",
+    "price_placeholder": "Ex: 5.50 FRF, 2.50 EUR...",
+    "attached": "Attached item / gadget",
+    "attached_placeholder": "Ex: stickers, toy...",
+    "dimensions": "Dimensions / Format",
+    "dimensions_placeholder": "Ex: 17x25, A4...",
+    "show_covers": "Show covers",
+    "rows_per_page": "Results per page",
+    "title_pub_label": "Series or issue title",
+    "title_pub_placeholder": "Ex: Four Color, US/FC...",
+    "publications_found": "{{count}} publications found"
   },
   "roles": {
     "any": "Any",
@@ -80,7 +102,10 @@
     "pages_desc": "More pages",
     "pages_asc": "Fewer pages",
     "published_most": "Most published",
-    "published_least": "Least published"
+    "published_least": "Least published",
+    "country_code": "Country & Code",
+    "date_asc": "Date (oldest)",
+    "date_desc": "Date (newest)"
   },
   "common": {
     "loading": "Loading...",
@@ -97,7 +122,8 @@
     "art": "Art",
     "pages": "p.",
     "no_description": "No description available for this story.",
-    "read_more": "Read more"
+    "read_more": "Read more",
+    "other_publications": "Other publications"
   },
   "tabs": {
     "stories": "Stories",

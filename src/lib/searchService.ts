@@ -527,9 +527,10 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
        FROM inducks_storyjob sj 
        JOIN inducks_person p ON sj.personcode = p.personcode 
        WHERE sj.storyversioncode = sv.storyversioncode) as creators,
-      (SELECT GROUP_CONCAT(app_c.charactercode || '|' || COALESCE((SELECT charactername FROM inducks_charactername cn WHERE cn.charactercode = app_c.charactercode AND cn.languagecode = ? AND cn.preferred = 'Y' LIMIT 1), c.charactername) || '|' || COALESCE(app_c.appearancecomment, '') || '|' || COALESCE(c.charactercomment, '') || '|' || COALESCE((SELECT url FROM inducks_characterurl cu WHERE cu.charactercode = app_c.charactercode LIMIT 1), ''), ';')
+      (SELECT GROUP_CONCAT(app_c.charactercode || '|' || COALESCE(cn.charactername, c.charactername) || '|' || COALESCE(app_c.appearancecomment, '') || '|' || COALESCE(cn.characternamecomment, c.charactercomment, '') || '|' || COALESCE((SELECT url FROM inducks_characterurl cu WHERE cu.charactercode = app_c.charactercode LIMIT 1), ''), ';')
        FROM (SELECT charactercode, appearancecomment, number FROM inducks_appearance WHERE storyversioncode = sv.storyversioncode ORDER BY number ASC) app_c
        JOIN inducks_character c ON app_c.charactercode = c.charactercode
+       LEFT JOIN inducks_charactername cn ON app_c.charactercode = cn.charactercode AND cn.languagecode = ? AND cn.preferred = 'Y'
       ) as character_list,
       (SELECT GROUP_CONCAT(DISTINCT p_c.countrycode || '|' || p_c.title) 
        FROM inducks_entry e_c 
@@ -553,4 +554,185 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
   `;
 
   return { query: mainQuery, countQuery, params: [...p, pageSize, offset, lang, lang, lang, lang, lang, lang], countParams: p, pageSize, page };
+}
+
+export interface PublicationsSearchFilters {
+  country?: string;
+  title?: string;
+  issuenumber?: string;
+  dateAfter?: string;
+  dateBefore?: string;
+  publisherid?: string;
+  indexer?: string;
+  collects?: boolean | string;
+  specificTitle?: string;
+  pagesMin?: number;
+  pagesMax?: number;
+  price?: string;
+  attached?: string;
+  size?: string;
+  showCovers?: boolean | string;
+  sort?: string;
+  page?: number | string;
+  rowsperpage?: string;
+  lang?: string;
+}
+
+export function buildPublicationsSearchQuery(filters: PublicationsSearchFilters): SearchQueryResponse {
+  const pageSize = Math.max(1, parseInt(String(filters.rowsperpage || "24"), 10) || 24);
+  const page = Math.max(1, parseInt(String(filters.page || "1"), 10) || 1);
+  const offset = (page - 1) * pageSize;
+
+  const where: string[] = [];
+  const p: any[] = [];
+
+  if (filters.country) {
+    where.push("p.countrycode = ?");
+    p.push(filters.country);
+  }
+
+  if (filters.title) {
+    const like = `%${filters.title.trim()}%`;
+    where.push("(pn.publicationname LIKE ? OR i.title LIKE ? OR p.publicationcode LIKE ?)");
+    p.push(like, like, like);
+  }
+
+  if (filters.issuenumber) {
+    where.push("i.issuenumber = ?");
+    p.push(filters.issuenumber.trim());
+  }
+
+  if (filters.dateAfter) {
+    where.push("i.oldestdate >= ?");
+    p.push(filters.dateAfter.trim());
+  }
+
+  if (filters.dateBefore) {
+    where.push("i.oldestdate <= ?");
+    p.push(filters.dateBefore.trim());
+  }
+
+  if (filters.publisherid) {
+    where.push(`EXISTS (
+      SELECT 1 FROM inducks_publishingjob pj 
+      WHERE pj.issuecode = i.issuecode AND pj.publisherid = ?
+    )`);
+    p.push(filters.publisherid.trim());
+  }
+
+  if (filters.indexer) {
+    const like = `%${filters.indexer.trim()}%`;
+    where.push(`EXISTS (
+      SELECT 1 FROM inducks_issuejob ij 
+      JOIN inducks_person per ON ij.personcode = per.personcode 
+      WHERE ij.issuecode = i.issuecode AND ij.inxtransletcol = 'i' AND per.fullname LIKE ?
+    )`);
+    p.push(like);
+  }
+
+  if (filters.collects === true || filters.collects === "true") {
+    where.push(`EXISTS (
+      SELECT 1 FROM inducks_issuecollecting ic 
+      WHERE ic.collectingissuecode = i.issuecode
+    )`);
+  }
+
+  if (filters.specificTitle) {
+    where.push("i.title LIKE ?");
+    p.push(`%${filters.specificTitle.trim()}%`);
+  }
+
+  if (filters.pagesMin !== undefined) {
+    where.push("i.pages >= ?");
+    p.push(filters.pagesMin);
+  }
+
+  if (filters.pagesMax !== undefined) {
+    where.push("i.pages <= ?");
+    p.push(filters.pagesMax);
+  }
+
+  if (filters.price) {
+    where.push("i.price LIKE ?");
+    p.push(`%${filters.price.trim()}%`);
+  }
+
+  if (filters.attached) {
+    where.push("i.attached LIKE ?");
+    p.push(`%${filters.attached.trim()}%`);
+  }
+
+  if (filters.size) {
+    where.push("i.size LIKE ?");
+    p.push(`%${filters.size.trim()}%`);
+  }
+
+  const whereClause = where.length > 0 ? "WHERE " + where.join(" AND ") : "";
+
+  let orderBy = "p.countrycode ASC, i.issuecode ASC";
+  const sort = filters.sort || "country_code";
+  if (sort === "date_asc") {
+    orderBy = "i.oldestdate ASC, i.issuecode ASC";
+  } else if (sort === "date_desc") {
+    orderBy = "i.oldestdate DESC, i.issuecode ASC";
+  } else if (sort === "pages_asc") {
+    orderBy = "i.pages ASC, i.issuecode ASC";
+  } else if (sort === "pages_desc") {
+    orderBy = "i.pages DESC, i.issuecode ASC";
+  }
+
+  const countQuery = `
+    SELECT COUNT(*) as total
+    FROM inducks_issue i
+    JOIN inducks_publication p ON i.publicationcode = p.publicationcode
+    LEFT JOIN inducks_publicationname pn ON p.publicationcode = pn.publicationcode
+    ${whereClause}
+  `;
+
+  const mainQuery = `
+    WITH MatchedIssues AS (
+      SELECT i.issuecode
+      FROM inducks_issue i
+      JOIN inducks_publication p ON i.publicationcode = p.publicationcode
+      LEFT JOIN inducks_publicationname pn ON p.publicationcode = pn.publicationcode
+      ${whereClause}
+      ORDER BY ${orderBy}
+      LIMIT ? OFFSET ?
+    )
+    SELECT 
+      i.issuecode, 
+      i.issuenumber, 
+      i.title as issue_title, 
+      i.pages, 
+      i.price, 
+      i.attached, 
+      i.size, 
+      i.oldestdate,
+      p.publicationcode, 
+      p.countrycode, 
+      p.languagecode, 
+      pn.publicationname as series_title,
+      (SELECT iu.sitecode || '|' || iu.url 
+       FROM inducks_issueurl iu 
+       WHERE iu.issuecode = i.issuecode 
+       ORDER BY CASE WHEN iu.sitecode = 'webusers' THEN 0 ELSE 1 END LIMIT 1) as issue_thumb,
+      (SELECT pub.publishername 
+       FROM inducks_publishingjob pj 
+       JOIN inducks_publisher pub ON pj.publisherid = pub.publisherid 
+       WHERE pj.issuecode = i.issuecode LIMIT 1) as publishername
+    FROM MatchedIssues mi
+    JOIN inducks_issue i ON mi.issuecode = i.issuecode
+    JOIN inducks_publication p ON i.publicationcode = p.publicationcode
+    LEFT JOIN inducks_publicationname pn ON p.publicationcode = pn.publicationcode
+    ORDER BY ${orderBy}
+  `;
+
+  return { 
+    query: mainQuery, 
+    countQuery, 
+    params: [...p, pageSize, offset], 
+    countParams: p, 
+    pageSize, 
+    page 
+  };
 }

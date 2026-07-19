@@ -254,7 +254,30 @@ export function StoryResultCard({ row }: StoryResultCardProps) {
                     {publications.slice(0, 3).map((p: any, i: number) => (
                       <FlagBadge key={i} country={p.country} name={p.name} />
                     ))}
-                    {publications.length > 3 && <span className="text-[9px] text-zinc-400">+{publications.length - 3}</span>}
+                    {publications.length > 3 && (
+                      <Tooltip delayDuration={200}>
+                        <TooltipTrigger asChild>
+                          <span className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-help self-center ml-1">
+                            +{publications.length - 3}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-[320px] max-h-[240px] overflow-y-auto p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-xl" asChild>
+                          <div className="flex flex-col gap-2">
+                            <p className="font-bold text-xs text-zinc-700 dark:text-zinc-300 border-b pb-1 mb-1">
+                              {t('story.other_publications') || 'Autres publications'}
+                            </p>
+                            <div className="flex flex-col gap-1.5">
+                              {publications.slice(3).map((p: any, i: number) => (
+                                <div key={i} className="flex items-center gap-2 text-xs">
+                                  <FlagBadge country={p.country} name={p.name} />
+                                  <span className="text-zinc-600 dark:text-zinc-400 truncate">{p.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                   </div>
                 ) : (
                   <span className="ml-1 text-zinc-400 italic">{t('story.none')}</span>
@@ -319,8 +342,11 @@ export function StoryResultCard({ row }: StoryResultCardProps) {
                       </TooltipTrigger>
                       <TooltipContent className="max-w-[300px] text-xs leading-relaxed">
                         <div className="flex flex-col gap-0.5">
-                          <p className="font-bold">{c.name}</p>
-                          {c.charComment && <p className="text-zinc-600 italic leading-snug">{c.charComment}</p>}
+                          <p className="font-bold">
+                            {c.name}
+                            <span className="ml-1 text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">({c.code})</span>
+                          </p>
+                          {c.charComment && <p className="text-zinc-600 dark:text-zinc-400 italic leading-snug">{c.charComment}</p>}
                         </div>
                         <TooltipArrow className="fill-popover" />
                       </TooltipContent>

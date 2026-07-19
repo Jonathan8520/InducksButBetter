@@ -9,17 +9,21 @@ import { StoryResultCard } from "@/components/StoryResultCard";
 import StoryResultSkeleton from "@/components/StoryResultSkeleton";
 import { SearchFilters } from "@/lib/searchService";
 
-interface SearchResultsProps {
+interface SearchResultsProps<TFilters = any> {
   results: any[];
   totalCount: number;
   loading: boolean;
-  filters: SearchFilters;
-  setFilters: React.Dispatch<React.SetStateAction<SearchFilters>>;
-  handleSearch: (e?: React.FormEvent | null, overrideFilters?: SearchFilters) => Promise<void>;
+  filters: TFilters;
+  setFilters: React.Dispatch<React.SetStateAction<TFilters>>;
+  handleSearch: (e?: React.FormEvent | null, overrideFilters?: TFilters) => Promise<void>;
   isInitialState: boolean;
+  sortOptions?: { value: string; labelKey: string }[];
+  renderResultCard?: (row: any, index: number) => React.ReactNode;
+  renderSkeleton?: (index: number) => React.ReactNode;
+  foundLabel?: string;
 }
 
-export function SearchResults({
+export function SearchResults<TFilters extends { sort?: string; page?: number | string; rowsperpage?: string | number } = any>({
   results,
   totalCount,
   loading,
@@ -27,11 +31,31 @@ export function SearchResults({
   setFilters,
   handleSearch,
   isInitialState,
-}: SearchResultsProps) {
+  sortOptions,
+  renderResultCard,
+  renderSkeleton,
+  foundLabel,
+}: SearchResultsProps<TFilters>) {
   const { t } = useTranslation();
   const rowsPerPage = parseInt(String(filters.rowsperpage || "24"), 10) || 24;
   const currentPage = parseInt(String(filters.page || "1"), 10) || 1;
   const totalPages = Math.ceil(totalCount / rowsPerPage);
+
+  const defaultSortOptions = [
+    { value: "pubdate_desc", labelKey: "sort.pubdate_desc" },
+    { value: "pubdate_asc", labelKey: "sort.pubdate_asc" },
+    { value: "title_az", labelKey: "sort.title_az" },
+    { value: "title_za", labelKey: "sort.title_za" },
+    { value: "pages_desc", labelKey: "sort.pages_desc" },
+    { value: "pages_asc", labelKey: "sort.pages_asc" },
+    { value: "published_most", labelKey: "sort.published_most" },
+    { value: "published_least", labelKey: "sort.published_least" },
+  ];
+
+  const actualSortOptions = sortOptions || defaultSortOptions;
+  const actualRenderCard = renderResultCard || ((row: any, i: number) => <StoryResultCard row={row} />);
+  const actualRenderSkeleton = renderSkeleton || ((i: number) => <StoryResultSkeleton key={i} />);
+  const actualFoundLabel = foundLabel !== undefined ? foundLabel : t("search.stories_found", { count: totalCount });
 
   return (
     <div className="flex-1 flex flex-col min-w-0 h-full">
@@ -51,37 +75,18 @@ export function SearchResults({
                 <SelectValue placeholder={t("search.sort_by")} />
               </SelectTrigger>
               <SelectContent className="rounded-xl border-border-subtle bg-surface">
-                <SelectItem value="pubdate_desc" className="rounded-lg">
-                  {t("sort.pubdate_desc")}
-                </SelectItem>
-                <SelectItem value="pubdate_asc" className="rounded-lg">
-                  {t("sort.pubdate_asc")}
-                </SelectItem>
-                <SelectItem value="title_az" className="rounded-lg">
-                  {t("sort.title_az")}
-                </SelectItem>
-                <SelectItem value="title_za" className="rounded-lg">
-                  {t("sort.title_za")}
-                </SelectItem>
-                <SelectItem value="pages_desc" className="rounded-lg">
-                  {t("sort.pages_desc")}
-                </SelectItem>
-                <SelectItem value="pages_asc" className="rounded-lg">
-                  {t("sort.pages_asc")}
-                </SelectItem>
-                <SelectItem value="published_most" className="rounded-lg">
-                  {t("sort.published_most")}
-                </SelectItem>
-                <SelectItem value="published_least" className="rounded-lg">
-                  {t("sort.published_least")}
-                </SelectItem>
+                {actualSortOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value} className="rounded-lg">
+                    {t(opt.labelKey)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           )}
         </div>
         {totalCount > 0 && (
           <Badge variant="secondary" className="bg-primary text-primary-foreground border-none px-3 font-bold">
-            {t("search.stories_found", { count: totalCount })}
+            {actualFoundLabel}
           </Badge>
         )}
       </div>
@@ -90,9 +95,7 @@ export function SearchResults({
         {loading ? (
           <ScrollArea className="h-full pr-4">
             <div className="grid grid-cols-1 gap-6 pb-12 opacity-70">
-              {[1, 2, 3, 4].map((i) => (
-                <StoryResultSkeleton key={i} />
-              ))}
+              {[1, 2, 3, 4].map((i) => actualRenderSkeleton(i))}
             </div>
           </ScrollArea>
         ) : results.length > 0 ? (
@@ -100,11 +103,11 @@ export function SearchResults({
             <div className="grid grid-cols-1 gap-6 pb-12">
               {results.map((row: any, i: number) => (
                 <div
-                  key={row.storycode || i}
+                  key={row.issuecode || row.storycode || i}
                   className="animate-fade-in-up"
                   style={{ animationDelay: `${Math.min(i * 50, 300)}ms` }}
                 >
-                  <StoryResultCard row={row} />
+                  {actualRenderCard(row, i)}
                 </div>
               ))}
             </div>

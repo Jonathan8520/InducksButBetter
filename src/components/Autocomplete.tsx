@@ -26,7 +26,7 @@ interface AutocompleteProps {
   onSelect: (value: string, label: string) => void
   onInputChange?: (value: string) => void
   onClear?: () => void
-  type?: "characters" | "authors" | "stories" | "publishers"
+  type?: "characters" | "authors" | "stories" | "publishers" | "publications"
   hideIcon?: boolean
   hideSearchIcon?: boolean
   showClear?: boolean
@@ -144,8 +144,8 @@ export function Autocomplete({ placeholder, emptyMessage, fetchOptions, onSelect
             <CommandList>
               <CommandGroup>
                 {items.map((item) => {
-                  const id = item.charactercode || item.personcode || item.storycode || item.publisherid;
-                  let name = item.charactername || item.fullname || item.storyname || item.publishername || item.storycode;
+                  const id = item.charactercode || item.personcode || item.storycode || item.publisherid || item.publicationcode;
+                  let name = item.charactername || item.fullname || item.storyname || item.publishername || item.storycode || item.publicationname;
                   
                   // For stories, the ID (code) is what users usually search for
                   if (type === "stories") {

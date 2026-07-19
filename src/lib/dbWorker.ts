@@ -18,6 +18,9 @@ self.onmessage = async (e: MessageEvent) => {
         });
         
         db = new SQL.Database();
+        db.run("PRAGMA journal_mode = OFF;");
+        db.run("PRAGMA synchronous = OFF;");
+        db.run("PRAGMA temp_store = MEMORY;");
         let processed = 0;
         
         for (const file of files as File[]) {
@@ -36,6 +39,7 @@ self.onmessage = async (e: MessageEvent) => {
           db.run("BEGIN TRANSACTION;");
           
           const stmt = db.prepare(`INSERT INTO ${tableName} VALUES (${columns.map(() => "?").join(",")});`);
+          const colCount = columns.length;
           
           const stream = file.stream().pipeThrough(new TextDecoderStream());
           const reader = stream.getReader();
@@ -48,16 +52,27 @@ self.onmessage = async (e: MessageEvent) => {
             const lines = (partialLine + value).split('\n');
             partialLine = lines.pop() || "";
             
-            for (const line of lines) {
-              if (!line.trim()) continue;
-              const values = line.split('^').map(v => v.replace(/\r$/, ''));
-              stmt.run(columns.map((_, i) => values[i] !== undefined ? values[i] : null));
+            for (let j = 0; j < lines.length; j++) {
+              const line = lines[j];
+              if (!line || line === "\r") continue;
+              const cleanLine = line.endsWith('\r') ? line.slice(0, -1) : line;
+              const values = cleanLine.split('^');
+              const boundValues = new Array(colCount);
+              for (let i = 0; i < colCount; i++) {
+                boundValues[i] = values[i] !== undefined ? values[i] : null;
+              }
+              stmt.run(boundValues);
             }
           }
           
-          if (partialLine.trim()) {
-            const values = partialLine.split('^').map(v => v.replace(/\r$/, ''));
-            stmt.run(columns.map((_, i) => values[i] !== undefined ? values[i] : null));
+          if (partialLine && partialLine !== "\r") {
+            const cleanLine = partialLine.endsWith('\r') ? partialLine.slice(0, -1) : partialLine;
+            const values = cleanLine.split('^');
+            const boundValues = new Array(colCount);
+            for (let i = 0; i < colCount; i++) {
+              boundValues[i] = values[i] !== undefined ? values[i] : null;
+            }
+            stmt.run(boundValues);
           }
           
           stmt.free();
@@ -72,7 +87,7 @@ self.onmessage = async (e: MessageEvent) => {
           inducks_storyversion: ["storycode", "storyversioncode", "entirepages"],
           inducks_storyjob: ["storyversioncode", "personcode"],
           inducks_entry: ["storyversioncode", "issuecode"],
-          inducks_issue: ["issuecode", "publicationcode"],
+          inducks_issue: ["issuecode", "publicationcode", "oldestdate", "pages"],
           inducks_publication: ["publicationcode", "countrycode", "languagecode"],
           inducks_herocharacter: ["storycode", "charactercode"],
           inducks_character: ["charactercode"],
@@ -87,8 +102,9 @@ self.onmessage = async (e: MessageEvent) => {
           inducks_storydescription: ["storyversioncode"],
           inducks_charactername: ["charactercode"],
           inducks_characterurl: ["charactercode"],
-          inducks_publishingjob: ["storyversioncode", "publisherid"],
-          inducks_storycodes: ["storycode", "alternativecode"]
+          inducks_publishingjob: ["issuecode", "publisherid"],
+          inducks_storycodes: ["storycode", "alternativecode"],
+          inducks_issueurl: ["issuecode"]
         };
 
         db.run("BEGIN TRANSACTION;");

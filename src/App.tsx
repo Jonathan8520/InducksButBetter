@@ -21,6 +21,7 @@ import { Toaster } from "sonner"
 const AdvancedSearch = lazy(() => import("@/components/AdvancedSearch").then(module => ({ default: module.AdvancedSearch })))
 const SqlEditor = lazy(() => import("@/components/SqlEditor").then(module => ({ default: module.SqlEditor })))
 const AiAssistant = lazy(() => import("@/components/AiAssistant").then(module => ({ default: module.AiAssistant })))
+const PublicationsSearch = lazy(() => import("@/components/Publications/PublicationsSearch").then(module => ({ default: module.PublicationsSearch })))
 
 // Reusable loading fallback
 const TabFallback = () => (
@@ -146,9 +147,10 @@ function App() {
               </div>
             </TabsContent>
 
-            <TabsContent value="publications" className="h-full m-0 p-0 flex-1 data-[state=active]:flex flex-col items-center justify-center bg-surface-2/80 text-text-hint gap-4 min-h-[400px]">
-              <LibraryBig className="w-12 h-12 opacity-20 text-blue-600 animate-pulse" />
-              <p className="font-bold italic text-lg text-center px-4 text-text-body">{t('tabs.coming_soon.publications')}</p>
+            <TabsContent value="publications" className="h-full m-0 p-0 border-none outline-none overflow-hidden">
+              <Suspense fallback={<TabFallback />}>
+                <PublicationsSearch />
+              </Suspense>
             </TabsContent>
 
             <TabsContent value="authors" className="h-full m-0 p-0 flex-1 data-[state=active]:flex flex-col items-center justify-center bg-surface-2/80 text-text-hint gap-4 min-h-[400px]">
@@ -169,10 +171,11 @@ function App() {
           )}
         </div>
         
-        {/* Global Footer for legal mentions */}
+        {/* Global Footer for legal mentions (temporairement caché)
         <footer className="px-4 py-4 shrink-0 border-t border-border-subtle bg-surface flex justify-center items-center text-xs text-text-hint">
           <LegalModal />
         </footer>
+        */}
       </div>
       <Toaster position="top-center" richColors />
     </TooltipProvider>

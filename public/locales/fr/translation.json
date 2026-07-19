@@ -60,7 +60,29 @@
     "page": "Page",
     "previous": "Précédent",
     "next": "Suivant",
-    "error_fetch": "Erreur : impossible de récupérer les données."
+    "error_fetch": "Erreur : impossible de récupérer les données.",
+    "publications_title": "Recherche de Publications",
+    "issue_number": "Numéro de parution",
+    "issue_number_placeholder": "Ex : 123, 1A...",
+    "indexer": "Indexeur",
+    "indexer_placeholder": "Ex : Wizyx...",
+    "issue_collects": "Ce numéro en recueille un ou plusieurs autres",
+    "specific_title": "Titre spécifique du numéro",
+    "specific_title_placeholder": "Ex : Picsou Magazine...",
+    "seldom_fields": "Champs peu utilisés",
+    "pages_min": "Pages min",
+    "pages_max": "Pages max",
+    "price": "Prix",
+    "price_placeholder": "Ex : 5.50 FRF, 2.50 EUR...",
+    "attached": "Objet attaché / gadget",
+    "attached_placeholder": "Ex : autocollants, gadget...",
+    "dimensions": "Dimensions / Format",
+    "dimensions_placeholder": "Ex : 17x25, A4...",
+    "show_covers": "Afficher les couvertures",
+    "rows_per_page": "Résultats par page",
+    "title_pub_label": "Titre de la série ou du numéro",
+    "title_pub_placeholder": "Ex : Mickey Parade, FR/MP...",
+    "publications_found": "{{count}} publications trouvées"
   },
   "roles": {
     "any": "N'importe",
@@ -77,7 +99,10 @@
     "pages_desc": "Plus de pages",
     "pages_asc": "Moins de pages",
     "published_most": "Le plus publié",
-    "published_least": "Le moins publié"
+    "published_least": "Le moins publié",
+    "country_code": "Pays & Code",
+    "date_asc": "Date (anciennes)",
+    "date_desc": "Date (récentes)"
   },
   "common": {
     "loading": "Chargement...",
@@ -96,7 +121,8 @@
     "no_description": "Aucune description disponible pour cette histoire.",
     "read_more": "Lire plus",
     "read_less": "Moins",
-    "none": "Aucune"
+    "none": "Aucune",
+    "other_publications": "Autres publications"
   },
   "kinds": {
     "s": "Histoire",
