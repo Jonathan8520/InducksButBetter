@@ -1,5 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { Loader2, Plus, Settings, X } from "lucide-react";
 import { parseISO, format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { initialFilters } from "@/hooks/useSearchFilters";
 import { MetaData, COUNTRY_CONTINENTS } from "@/lib/types";
 import { AUTHOR_NATIONALITIES, KIND_LABELS } from "@/lib/constants";
 import { autocompleteStorycode, autocompletePublisher, autocompletePerson, autocompleteCharacter } from "@/lib/turso";
+import { getFlagUrl } from "@/lib/utils";
 
 interface SearchFormProps {
   filters: SearchFilters;
@@ -41,8 +43,6 @@ interface SearchFormProps {
   meta: MetaData;
   setResults: React.Dispatch<React.SetStateAction<any[]>>;
   setTotalCount: React.Dispatch<React.SetStateAction<number>>;
-  collectionDialogOpen: boolean;
-  setCollectionDialogOpen: (open: boolean) => void;
 }
 
 export function SearchForm({
@@ -66,8 +66,6 @@ export function SearchForm({
   meta,
   setResults,
   setTotalCount,
-  collectionDialogOpen,
-  setCollectionDialogOpen,
 }: SearchFormProps) {
   const { t, i18n } = useTranslation();
 
@@ -77,41 +75,6 @@ export function SearchForm({
         <h2 className="text-sm font-semibold text-foreground flex items-center gap-3">
           {t("search.title")}
         </h2>
-        <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-text-secondary hover:text-text-body">
-              <Settings className="w-4 h-4" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Paramètres Inducks</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="cookie">Cookie Inducks (coa-session, etc.)</Label>
-                <Input
-                  id="cookie"
-                  placeholder="Collez votre cookie ici..."
-                  value={cookieValue}
-                  onChange={(e) => setCookieValue(e.target.value)}
-                />
-                <p className="text-[10px] text-muted-foreground leading-relaxed">
-                  Ce cookie permet d'accéder aux images haute résolution. Récupérez-le dans l'onglet Application &gt; Cookies de l'inspecteur sur{" "}
-                  <a href="https://inducks.org" target="_blank" rel="noreferrer" className="text-blue-500 underline">
-                    inducks.org
-                  </a>
-                  .
-                </p>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={saveCookie} disabled={isSavingCookie}>
-                {isSavingCookie ? <Loader2 className="w-4 h-4 animate-spin" /> : "Enregistrer"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
 
       <ScrollArea className="flex-1">
@@ -241,10 +204,10 @@ export function SearchForm({
                         const saved = localStorage.getItem("inducks_collection_issues");
                         const parsed = saved ? JSON.parse(saved) : [];
                         if (!Array.isArray(parsed) || parsed.length === 0) {
-                          setCollectionDialogOpen(true);
+                          toast.error("Votre collection est vide. Vous pouvez l'importer dans les Paramètres (icône engrenage en haut à droite).");
                         }
                       } catch (e) {
-                        setCollectionDialogOpen(true);
+                        toast.error("Votre collection est vide. Vous pouvez l'importer dans les Paramètres (icône engrenage en haut à droite).");
                       }
                     }
                   }}
@@ -252,14 +215,6 @@ export function SearchForm({
                 <label htmlFor="collection" className="text-[12px] text-text-secondary cursor-pointer flex-1">
                   {t("search.only_collection")}
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setCollectionDialogOpen(true)}
-                  className="p-1 text-text-secondary hover:text-text-body transition-colors rounded hover:bg-surface-2"
-                  title="Gérer ma collection"
-                >
-                  <Settings className="w-3 h-3" />
-                </button>
               </div>
             </div>
 
@@ -272,7 +227,7 @@ export function SearchForm({
                   group: t(`continents.${COUNTRY_CONTINENTS[c.countrycode.toLowerCase()] || "other"}`),
                   icon: (
                     <img
-                      src={`https://flagcdn.com/w20/${c.countrycode.toLowerCase()}.png`}
+                      src={getFlagUrl(c.countrycode)}
                       className="w-4 h-3 rounded-xs"
                       alt=""
                     />
@@ -429,7 +384,7 @@ export function SearchForm({
                   group: t(`continents.${COUNTRY_CONTINENTS[n.code] || "other"}`),
                   icon: (
                     <img
-                      src={`https://flagcdn.com/w20/${n.code === "uk" ? "gb" : n.code}.png`}
+                      src={getFlagUrl(n.code)}
                       className="w-4 h-3 rounded-xs object-cover"
                       alt=""
                       onError={(e) => (e.currentTarget.style.display = "none")}

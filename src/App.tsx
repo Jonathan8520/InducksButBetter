@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from "react"
+import { useState, useEffect, lazy, Suspense } from "react"
 import { cn } from "@/lib/utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -6,15 +6,10 @@ import { ThemeToggle } from "@/components/ThemeToggle"
 import { LocalDbUploader } from "@/components/LocalDbUploader"
 import { GoogleAnalytics } from "@/components/GoogleAnalytics"
 import { LegalModal } from "@/components/LegalModal"
-import { BookOpen, LibraryBig, User, Cat, Database as DbIcon, Loader2 } from "lucide-react"
+import { BookOpen, LibraryBig, User, Cat, Database as DbIcon, Loader2, Settings as SettingsIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { useTheme } from "@/hooks/useTheme"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
 import { Toaster } from "sonner"
 
 // Lazy load heavy components to code-split the application
@@ -22,6 +17,7 @@ const AdvancedSearch = lazy(() => import("@/components/AdvancedSearch").then(mod
 const SqlEditor = lazy(() => import("@/components/SqlEditor").then(module => ({ default: module.SqlEditor })))
 const AiAssistant = lazy(() => import("@/components/AiAssistant").then(module => ({ default: module.AiAssistant })))
 const PublicationsSearch = lazy(() => import("@/components/Publications/PublicationsSearch").then(module => ({ default: module.PublicationsSearch })))
+const Settings = lazy(() => import("@/components/Settings").then(module => ({ default: module.Settings })))
 
 // Reusable loading fallback
 const TabFallback = () => (
@@ -34,7 +30,44 @@ function App() {
   const { i18n, t } = useTranslation();
   useTheme(); // initialise theme from localStorage / system preference
   const [activeTab, setActiveTab] = useState("stories");
+  const [prevTab, setPrevTab] = useState("stories");
   const [sqlQuery, setSqlQuery] = useState("SELECT * FROM inducks_story LIMIT 10");
+
+  useEffect(() => {
+    const handleUrlRouting = () => {
+      const path = window.location.pathname;
+      const hash = window.location.hash;
+      if (path === "/settings" || path.endsWith("/settings") || hash === "#/settings") {
+        setActiveTab("settings");
+      } else if (path === "/entries" || path.endsWith("/entries") || hash === "#/entries") {
+        setActiveTab("stories");
+      } else {
+        const expectedTab = hash.replace("#/", "");
+        if (expectedTab && ["stories", "publications", "authors", "characters", "sql"].includes(expectedTab)) {
+          setActiveTab(expectedTab);
+        }
+      }
+    };
+
+    handleUrlRouting();
+    window.addEventListener("popstate", handleUrlRouting);
+    window.addEventListener("hashchange", handleUrlRouting);
+    return () => {
+      window.removeEventListener("popstate", handleUrlRouting);
+      window.removeEventListener("hashchange", handleUrlRouting);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "settings") {
+      if (window.location.hash !== "#/settings" && !window.location.pathname.endsWith("/settings")) {
+        window.history.pushState(null, "", "#/settings");
+      }
+    } else {
+      const urlTab = activeTab === "stories" ? "entries" : activeTab;
+      window.history.pushState(null, "", `#/${urlTab}`);
+    }
+  }, [activeTab]);
 
   return (
     <TooltipProvider>
@@ -59,77 +92,67 @@ function App() {
             </div>
 
             <div className="flex flex-row items-center gap-2">
-              <LocalDbUploader />
-              <ThemeToggle />
-              <Select
-                value={i18n.language}
-                onValueChange={(lang) => i18n.changeLanguage(lang)}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  if (activeTab === "settings") {
+                    setActiveTab(prevTab);
+                  } else {
+                    setPrevTab(activeTab);
+                    setActiveTab("settings");
+                  }
+                }}
+                className={cn(
+                  "h-10 w-10 text-text-secondary hover:text-text-body hover:bg-surface-2 rounded-xl transition-all border border-transparent",
+                  activeTab === "settings" && "border-border-subtle bg-surface-2 text-primary"
+                )}
+                title={t("settings.title") || "Paramètres"}
               >
-                <SelectTrigger className="w-full sm:w-[180px] h-10 border-border-subtle bg-surface/80 rounded-xl hover:bg-surface-2 transition-all font-medium text-sm">
-                  <div className="flex items-center gap-2">
-                    {i18n.language === 'fr' ? (
-                      <img src="https://flagcdn.com/w20/fr.png" className="w-4 h-3 rounded-xs" alt="" />
-                    ) : (
-                      <img src="https://flagcdn.com/w20/us.png" className="w-4 h-3 rounded-xs" alt="" />
-                    )}
-                    <span>{i18n.language === 'fr' ? 'Français (FR)' : 'English (US)'}</span>
-                  </div>
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border-border-subtle bg-surface">
-                  <SelectItem value="fr" className="rounded-lg">
-                    <div className="flex items-center gap-2 whitespace-nowrap">
-                      <img src="https://flagcdn.com/w20/fr.png" className="w-4 h-3 rounded-xs" alt="" />
-                      <span>Français (FR)</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="en" className="rounded-lg">
-                    <div className="flex items-center gap-2 whitespace-nowrap">
-                      <img src="https://flagcdn.com/w20/us.png" className="w-4 h-3 rounded-xs" alt="" />
-                      <span>English (US)</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+                <SettingsIcon className="w-5 h-5" />
+              </Button>
             </div>
           </div>
         </header>
 
         {/* Navigation Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-          <div className="px-4 lg:px-12 shrink-0 flex w-full bg-surface border-b border-border-subtle py-2">
-            <TabsList className="bg-surface-2/90 gap-1 h-12 p-1.5 rounded-2xl border border-border-subtle shadow-inner w-full flex justify-between items-center">
-              <TabsTrigger
-                value="stories"
-                className="data-[state=active]:bg-surface data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-xl px-2 sm:px-6 py-2 flex gap-1.5 sm:gap-2 items-center justify-center text-xs sm:text-sm font-medium transition-all flex-1"
-              >
-                <BookOpen className={cn("w-4 h-4 shrink-0", activeTab === "stories" ? "block" : "hidden sm:block")} /> <span className="truncate">{t('tabs.stories')}</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="publications"
-                className="rounded-xl px-2 sm:px-6 py-2 flex gap-1.5 sm:gap-2 items-center justify-center text-xs sm:text-sm font-medium opacity-60 hover:opacity-100 data-[state=active]:opacity-100 data-[state=active]:bg-surface data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all flex-1"
-              >
-                <LibraryBig className={cn("w-4 h-4 shrink-0", activeTab === "publications" ? "block" : "hidden sm:block")} /> <span className="truncate">{t('tabs.publications')}</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="authors"
-                className="rounded-xl px-2 sm:px-6 py-2 flex gap-1.5 sm:gap-2 items-center justify-center text-xs sm:text-sm font-medium opacity-60 hover:opacity-100 data-[state=active]:opacity-100 data-[state=active]:bg-surface data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all flex-1"
-              >
-                <User className={cn("w-4 h-4 shrink-0", activeTab === "authors" ? "block" : "hidden sm:block")} /> <span className="truncate">{t('tabs.authors')}</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="characters"
-                className="rounded-xl px-2 sm:px-6 py-2 flex gap-1.5 sm:gap-2 items-center justify-center text-xs sm:text-sm font-medium opacity-60 hover:opacity-100 data-[state=active]:opacity-100 data-[state=active]:bg-surface data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all flex-1"
-              >
-                <Cat className={cn("w-4 h-4 shrink-0", activeTab === "characters" ? "block" : "hidden sm:block")} /> <span className="truncate">{t('tabs.characters')}</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="sql"
-                className="rounded-xl px-2 sm:px-6 py-2 flex gap-1.5 sm:gap-2 items-center justify-center text-xs sm:text-sm font-medium opacity-60 hover:opacity-100 data-[state=active]:opacity-100 data-[state=active]:bg-surface data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all flex-1"
-              >
-                <DbIcon className={cn("w-4 h-4 shrink-0", activeTab === "sql" ? "block" : "hidden sm:block")} /> <span className="truncate">{t('tabs.sql')}</span>
-              </TabsTrigger>
-            </TabsList>
-          </div>
+          {activeTab !== "settings" && (
+            <div className="px-4 lg:px-12 shrink-0 flex w-full bg-surface border-b border-border-subtle py-2">
+              <TabsList className="bg-surface-2/90 gap-1 h-12 p-1.5 rounded-2xl border border-border-subtle shadow-inner w-full flex justify-between items-center">
+                <TabsTrigger
+                  value="stories"
+                  className="data-[state=active]:bg-surface data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-xl px-2 sm:px-6 py-2 flex gap-1.5 sm:gap-2 items-center justify-center text-xs sm:text-sm font-medium transition-all flex-1"
+                >
+                  <BookOpen className={cn("w-4 h-4 shrink-0", activeTab === "stories" ? "block" : "hidden sm:block")} /> <span className="truncate">{t('tabs.stories')}</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="publications"
+                  className="rounded-xl px-2 sm:px-6 py-2 flex gap-1.5 sm:gap-2 items-center justify-center text-xs sm:text-sm font-medium opacity-60 hover:opacity-100 data-[state=active]:opacity-100 data-[state=active]:bg-surface data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all flex-1"
+                >
+                  <LibraryBig className={cn("w-4 h-4 shrink-0", activeTab === "publications" ? "block" : "hidden sm:block")} /> <span className="truncate">{t('tabs.publications')}</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="authors"
+                  className="rounded-xl px-2 sm:px-6 py-2 flex gap-1.5 sm:gap-2 items-center justify-center text-xs sm:text-sm font-medium opacity-60 hover:opacity-100 data-[state=active]:opacity-100 data-[state=active]:bg-surface data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all flex-1"
+                >
+                  <User className={cn("w-4 h-4 shrink-0", activeTab === "authors" ? "block" : "hidden sm:block")} /> <span className="truncate">{t('tabs.authors')}</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="characters"
+                  className="rounded-xl px-2 sm:px-6 py-2 flex gap-1.5 sm:gap-2 items-center justify-center text-xs sm:text-sm font-medium opacity-60 hover:opacity-100 data-[state=active]:opacity-100 data-[state=active]:bg-surface data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all flex-1"
+                >
+                  <Cat className={cn("w-4 h-4 shrink-0", activeTab === "characters" ? "block" : "hidden sm:block")} /> <span className="truncate">{t('tabs.characters')}</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="sql"
+                  className="rounded-xl px-2 sm:px-6 py-2 flex gap-1.5 sm:gap-2 items-center justify-center text-xs sm:text-sm font-medium opacity-60 hover:opacity-100 data-[state=active]:opacity-100 data-[state=active]:bg-surface data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all flex-1"
+                >
+                  <DbIcon className={cn("w-4 h-4 shrink-0", activeTab === "sql" ? "block" : "hidden sm:block")} /> <span className="truncate">{t('tabs.sql')}</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          )}
 
           {/* Content Viewport */}
           <div className="flex-1 min-h-0 overflow-hidden relative">
@@ -161,6 +184,12 @@ function App() {
             <TabsContent value="characters" className="h-full m-0 p-0 flex-1 data-[state=active]:flex flex-col items-center justify-center bg-surface-2/80 text-text-hint gap-4 min-h-[400px]">
               <Cat className="w-12 h-12 opacity-20 text-blue-600 animate-pulse" />
               <p className="font-bold italic text-lg text-center px-4 text-text-body">{t('tabs.coming_soon.characters')}</p>
+            </TabsContent>
+
+            <TabsContent value="settings" className="h-full m-0 p-0 border-none outline-none overflow-auto bg-surface-2/40">
+              <Suspense fallback={<TabFallback />}>
+                <Settings />
+              </Suspense>
             </TabsContent>
           </div>
         </Tabs>

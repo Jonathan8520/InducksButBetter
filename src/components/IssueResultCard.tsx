@@ -8,9 +8,10 @@ import { FlagBadge } from "@/components/FlagBadge"
 
 interface IssueResultCardProps {
   row: any
+  onSelect?: (issuecode: string) => void
 }
 
-export function IssueResultCard({ row }: IssueResultCardProps) {
+export function IssueResultCard({ row, onSelect }: IssueResultCardProps) {
   const { t, i18n } = useTranslation();
   const [imageError, setImageError] = React.useState(false);
   const [imageLoaded, setImageLoaded] = React.useState(false);
@@ -84,7 +85,7 @@ export function IssueResultCard({ row }: IssueResultCardProps) {
         {/* Left: Cover Thumbnail */}
         <div
           className="w-[140px] sm:w-[180px] shrink-0 border-r border-zinc-100 dark:border-zinc-700 relative cursor-pointer flex items-center justify-center p-1 group/thumb overflow-hidden bg-zinc-50 dark:bg-zinc-800"
-          onClick={() => window.open(issueUrl, "_blank")}
+          onClick={() => onSelect ? onSelect(row.issuecode) : window.open(issueUrl, "_blank")}
         >
           {thumbData && !imageError && !imageLoaded && (
             <div className="absolute inset-1 rounded animate-shimmer" />
@@ -126,7 +127,7 @@ export function IssueResultCard({ row }: IssueResultCardProps) {
 
         {/* Right: Content */}
         <div className="flex-1 flex flex-col min-w-0 p-5 gap-3">
-          <div className="min-w-0 flex-1 cursor-pointer" onClick={() => window.open(issueUrl, "_blank")}>
+          <div className="min-w-0 flex-1 cursor-pointer" onClick={() => onSelect ? onSelect(row.issuecode) : window.open(issueUrl, "_blank")}>
             <div className="flex items-center gap-2 mb-1">
               <FlagBadge country={row.countrycode} name={row.countrycode.toUpperCase()} />
               <span className="text-[11px] font-mono text-zinc-400 dark:text-zinc-500 font-semibold tracking-wider">

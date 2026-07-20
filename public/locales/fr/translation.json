@@ -80,7 +80,7 @@
     "dimensions_placeholder": "Ex : 17x25, A4...",
     "show_covers": "Afficher les couvertures",
     "rows_per_page": "Résultats par page",
-    "title_pub_label": "Titre de la série ou du numéro",
+    "title_pub_label": "Titre de la publication",
     "title_pub_placeholder": "Ex : Mickey Parade, FR/MP...",
     "publications_found": "{{count}} publications trouvées"
   },
@@ -259,17 +259,32 @@
   },
   "collection": {
     "title": "Ma collection Inducks",
-    "description": "Collez ici la liste de vos numéros possédés, tels qu'exportés depuis Inducks (un code par ligne).",
+    "description": "Collez la liste des codes de numéros de votre collection (ex: FR/MP 300 ou au format d'export brut d'Inducks).",
     "alert_unavailable": "Cette fonctionnalité n'est pas encore implémentée.",
-    "saved_count": "Vous avez actuellement {{count}} numéros enregistrés dans votre navigateur.",
     "cancel": "Annuler",
     "save": "Sauvegarder",
-    "placeholder": ""
+    "saved_count": "Vous avez actuellement {{count}} numéros enregistrés dans votre navigateur.",
+    "saved_success": "Collection sauvegardée avec succès !",
+    "placeholder": "FR/MP 300\nFR/PM 2000\nUS/WDC 100"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "subtitle": "Gérez les préférences de l'application et vos sources de données.",
+    "general": "Général",
+    "general_desc": "Langue de l'interface et thème d'affichage.",
+    "language": "Langue",
+    "theme": "Thème d'affichage",
+    "inducks_cookie": "Cookie Inducks",
+    "cookie_desc": "Ce cookie permet d'accéder aux images haute résolution d'Inducks.",
+    "cookie_saved": "Cookie sauvegardé !",
+    "download_isv": "Télécharger les fichiers ISV",
+    "links": "Liens utiles & communauté",
+    "links_desc": "Rejoignez la communauté Inducks ou contribuez au projet."
   },
   "localDb": {
-    "title": "Importer la base de données Inducks",
+    "title": "Base de données Inducks locale",
     "desc_1": "Par défaut, InducksButBetter utilise une base de données publique distante soumise à des quotas. Vous pouvez contourner cette limite en chargeant vos propres fichiers ISV !",
-    "desc_2": "Téléchargez le dump officiel de Inducks, extrayez l'archive et sélectionnez tous les fichiers <1>.isv</1> ici. La base sera entièrement générée dans la mémoire de votre navigateur.",
+    "desc_2": "Sélectionnez tous les fichiers .isv extraits du dump officiel. La base sera entièrement stockée en local.",
     "btn_import": "Import DB",
     "btn_local": "DB locale",
     "btn_select": "Sélectionner fichiers .isv",

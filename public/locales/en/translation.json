@@ -76,7 +76,7 @@
     "pages_min": "Pages min",
     "pages_max": "Pages max",
     "price": "Price",
-    "price_placeholder": "Ex: 5.50 FRF, 2.50 EUR...",
+    "price_placeholder": "Ex: 1.00 USD, 0.75 GBP...",
     "attached": "Attached item / gadget",
     "attached_placeholder": "Ex: stickers, toy...",
     "dimensions": "Dimensions / Format",
@@ -248,15 +248,30 @@
   },
   "collection": {
     "title": "My Inducks collection",
-    "description": "Paste the list of your owned issues here, as exported from Inducks (one code per line).",
+    "description": "Paste the list of issue codes of your collection (e.g., FR/MP 300, or raw Inducks export format).",
     "alert_unavailable": "This feature is not yet implemented.",
-    "saved_count": "You currently have {{count}} issues saved in your browser.",
     "cancel": "Cancel",
     "save": "Save",
-    "placeholder": ""
+    "saved_count": "You currently have {{count}} issues saved in your browser.",
+    "saved_success": "Collection saved successfully!",
+    "placeholder": "FR/MP 300\nFR/PM 2000\nUS/WDC 100"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage application preferences and data sources.",
+    "general": "General",
+    "general_desc": "Interface language and theme preferences.",
+    "language": "Language",
+    "theme": "Display Theme",
+    "inducks_cookie": "Inducks cookie",
+    "cookie_desc": "This cookie allows you to load high-resolution cover images from Inducks.",
+    "cookie_saved": "Cookie saved!",
+    "download_isv": "Download ISV files",
+    "links": "Useful Links & community",
+    "links_desc": "Join the Inducks community or contribute to the project."
   },
   "localDb": {
-    "title": "Import Inducks Database",
+    "title": "Import Inducks database",
     "desc_1": "By default, InducksButBetter uses a remote public database which has usage limits. You can bypass these limits by using the raw Inducks ISV files locally!",
     "desc_2": "Please download the official Inducks dump, extract the ZIP, and select all the <1>.isv</1> files here. We will generate the database in your browser's memory.",
     "btn_import": "Import DB",

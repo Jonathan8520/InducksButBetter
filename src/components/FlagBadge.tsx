@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils"
+import { cn, getFlagUrl } from "@/lib/utils"
 
 interface FlagBadgeProps {
   country: string
@@ -15,7 +15,7 @@ export function FlagBadge({ country, name, className }: FlagBadgeProps) {
       )}
     >
       <img
-        src={`https://flagcdn.com/w20/${country.toLowerCase()}.png`}
+        src={getFlagUrl(country)}
         className="w-3.5 h-2.5 rounded-sm object-cover transition-transform hover:scale-110"
         alt={country}
         loading="lazy"

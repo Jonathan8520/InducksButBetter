@@ -15,9 +15,11 @@ import { FlagBadge } from "@/components/FlagBadge"
 
 interface StoryResultCardProps {
   row: any
+  onSelect?: (storycode: string) => void
+  onSelectCharacter?: (code: string, name: string) => void
 }
 
-export function StoryResultCard({ row }: StoryResultCardProps) {
+export function StoryResultCard({ row, onSelect, onSelectCharacter }: StoryResultCardProps) {
   const { t, i18n } = useTranslation();
   const [isExpanded, setIsExpanded] = React.useState(false);
   const textRef = React.useRef<HTMLDivElement>(null);
@@ -169,7 +171,7 @@ export function StoryResultCard({ row }: StoryResultCardProps) {
         {/* Left: Thumbnail */}
         <div
           className="w-[200px] shrink-0 border-r border-zinc-100 dark:border-zinc-700 relative cursor-pointer flex items-center justify-center p-1 group/thumb overflow-hidden bg-zinc-50 dark:bg-zinc-800"
-          onClick={() => window.open(storyUrl, "_blank")}
+          onClick={() => onSelect ? onSelect(row.storycode) : window.open(storyUrl, "_blank")}
         >
           {/* Shimmer skeleton while image loads */}
           {thumbData && !imageError && !imageLoaded && (
@@ -214,7 +216,7 @@ export function StoryResultCard({ row }: StoryResultCardProps) {
         <div className="flex-1 flex flex-col min-w-0">
           <div className="p-5 flex-1 flex flex-col gap-4">
             <div className="flex justify-between items-start">
-              <div className="min-w-0 flex-1 cursor-pointer" onClick={() => window.open(storyUrl, "_blank")}>
+              <div className="min-w-0 flex-1 cursor-pointer" onClick={() => onSelect ? onSelect(row.storycode) : window.open(storyUrl, "_blank")}>
                 {row.hero_name && (
                   <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1.5 block">
                     {cleanText(row.hero_name)}
@@ -316,7 +318,8 @@ export function StoryResultCard({ row }: StoryResultCardProps) {
                             className="w-4 h-4 rounded-full overflow-hidden border-zinc-200 dark:border-zinc-700 border bg-zinc-100 dark:bg-zinc-800 shrink-0 shadow-sm relative flex items-center justify-center"
                             onClick={(e) => {
                               e.stopPropagation();
-                              window.open(`https://inducks.org/character.php?c=${c.code}`, "_blank");
+                              if (onSelectCharacter) onSelectCharacter(c.code, c.name);
+                              else window.open(`https://inducks.org/character.php?c=${c.code}`, "_blank");
                             }}
                           >
                             <span className="text-[6px] font-bold text-zinc-400 dark:text-zinc-500 absolute inset-0 flex items-center justify-center uppercase leading-none tracking-tighter">
@@ -333,7 +336,8 @@ export function StoryResultCard({ row }: StoryResultCardProps) {
                             className="text-[10px] text-blue-600 hover:text-blue-700 hover:underline font-medium whitespace-nowrap"
                             onClick={(e) => {
                               e.stopPropagation();
-                              window.open(`https://inducks.org/character.php?c=${c.code}`, "_blank");
+                              if (onSelectCharacter) onSelectCharacter(c.code, c.name);
+                              else window.open(`https://inducks.org/character.php?c=${c.code}`, "_blank");
                             }}
                           >
                             {c.name}

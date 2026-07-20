@@ -1,3 +1,5 @@
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
+
 interface CreatorBadgeProps {
   code: string
   name: string
@@ -11,26 +13,36 @@ export function CreatorBadge({ code, name, size = "md" }: CreatorBadgeProps) {
   )}`
 
   return (
-    <a
-      href={`https://inducks.org/creator.php?c=${code}`}
-      target="_blank"
-      rel="noreferrer"
-      className="inline-flex items-center gap-1 bg-surface border border-border-subtle px-1.5 py-0.5 rounded-md shadow-sm hover:border-blue-300 dark:hover:border-blue-700 hover:bg-surface-2 transition-all"
-    >
-      <div className={`${avatarSize} rounded-full overflow-hidden border border-border-subtle bg-zinc-100 dark:bg-zinc-800 shrink-0 relative flex items-center justify-center`}>
-        <span className="text-[8px] font-bold text-zinc-400 dark:text-zinc-500 absolute inset-0 flex items-center justify-center uppercase">
-          {name.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2)}
-        </span>
-        <img
-          src={photoUrl}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          className="w-full h-full object-cover z-10 relative"
-          onError={(e) => (e.currentTarget.style.display = "none")}
-        />
-      </div>
-      <span className="text-text-secondary font-medium text-[11px]">{name}</span>
-    </a>
+    <Tooltip delayDuration={300}>
+      <TooltipTrigger asChild>
+        <a
+          href={`https://inducks.org/creator.php?c=${code}`}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 bg-surface border border-border-subtle px-1.5 py-0.5 rounded-md shadow-sm hover:border-blue-300 dark:hover:border-blue-700 hover:bg-surface-2 transition-all cursor-pointer"
+        >
+          <div className={`${avatarSize} rounded-full overflow-hidden border border-border-subtle bg-zinc-100 dark:bg-zinc-800 shrink-0 relative flex items-center justify-center`}>
+            <span className="text-[8px] font-bold text-zinc-400 dark:text-zinc-500 absolute inset-0 flex items-center justify-center uppercase">
+              {name.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2)}
+            </span>
+            <img
+              src={photoUrl}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="w-full h-full object-cover z-10 relative"
+              onError={(e) => (e.currentTarget.style.display = "none")}
+            />
+          </div>
+          <span className="text-text-secondary font-medium text-[11px]">{name}</span>
+        </a>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-[300px] text-xs leading-relaxed">
+        <div className="flex flex-col gap-0.5">
+          <p className="font-bold text-foreground">{name}</p>
+          <p className="text-[10px] text-muted-foreground font-mono">{code}</p>
+        </div>
+      </TooltipContent>
+    </Tooltip>
   )
 }

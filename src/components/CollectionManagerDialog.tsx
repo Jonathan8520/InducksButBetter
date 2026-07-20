@@ -37,8 +37,17 @@ export function CollectionManagerDialog({ open, onOpenChange }: CollectionManage
   const handleSave = () => {
     // Extract non-empty lines, trim them
     const issues = inputText
-      .split(/[\n,;]+/)
-      .map(line => line.trim())
+      .split(/[\n;]+/)
+      .map(line => {
+        const trimmed = line.trim();
+        if (trimmed.includes("^")) {
+          const parts = trimmed.split("^");
+          if (parts.length >= 2 && parts[0] && parts[1]) {
+            return `${parts[0].trim().toUpperCase()}/${parts[1].trim()}`;
+          }
+        }
+        return trimmed;
+      })
       .filter(line => line.length > 0);
     
     localStorage.setItem("inducks_collection_issues", JSON.stringify(issues));

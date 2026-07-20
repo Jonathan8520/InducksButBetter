@@ -14,6 +14,8 @@ import { PublicationsSearchFilters } from "@/lib/searchService";
 import { MetaData, COUNTRY_CONTINENTS } from "@/lib/types";
 import { autocompletePublisher, autocompletePerson, autocompletePublicationTitle } from "@/lib/turso";
 
+import { getFlagUrl } from "@/lib/utils";
+
 interface PublicationsSearchFormProps {
   filters: PublicationsSearchFilters;
   setFilters: React.Dispatch<React.SetStateAction<PublicationsSearchFilters>>;
@@ -61,7 +63,7 @@ export function PublicationsSearchForm({
                     <SelectItem key={c.countrycode} value={c.countrycode}>
                       <div className="flex items-center gap-2">
                         <img
-                          src={`https://flagcdn.com/w20/${c.countrycode.toLowerCase()}.png`}
+                          src={getFlagUrl(c.countrycode)}
                           className="w-4 h-3 rounded-xs shrink-0"
                           alt=""
                         />
@@ -179,28 +181,16 @@ export function PublicationsSearchForm({
               </div>
             </div>
 
-            {/* Pages Min/Max */}
-            <div className="space-y-2 col-span-1 md:col-span-2 grid grid-cols-2 gap-4 pt-2 border-t border-border-subtle">
-              <div className="space-y-2">
-                <Label className="text-[11px] text-text-secondary">{t("search.pages_min") || "Pages : min"}</Label>
-                <Input
-                  variant="search"
-                  type="number"
-                  placeholder="Min"
-                  value={filters.pagesMin !== undefined ? filters.pagesMin : ""}
-                  onChange={(e) => setFilters({ ...filters, pagesMin: e.target.value ? parseInt(e.target.value) : undefined })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[11px] text-text-secondary">{t("search.pages_max") || "Pages : max"}</Label>
-                <Input
-                  variant="search"
-                  type="number"
-                  placeholder="Max"
-                  value={filters.pagesMax !== undefined ? filters.pagesMax : ""}
-                  onChange={(e) => setFilters({ ...filters, pagesMax: e.target.value ? parseInt(e.target.value) : undefined })}
-                />
-              </div>
+            {/* Pages */}
+            <div className="space-y-2 col-span-1 md:col-span-2 pt-2 border-t border-border-subtle">
+              <Label className="text-sm font-medium text-foreground">{t("search.pages") || "Pages"}</Label>
+              <Input
+                variant="search"
+                type="number"
+                placeholder={t("search.pages_placeholder") || "Ex: 48..."}
+                value={filters.pages !== undefined ? filters.pages : ""}
+                onChange={(e) => setFilters({ ...filters, pages: e.target.value ? parseInt(e.target.value) : undefined })}
+              />
             </div>
 
             {/* Price */}
@@ -236,35 +226,16 @@ export function PublicationsSearchForm({
               />
             </div>
 
-            {/* Display options: Show Covers & Rows count */}
-            <div className="col-span-1 md:col-span-2 pt-4 border-t border-border-subtle grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="showCovers"
-                  checked={filters.showCovers !== false}
-                  onCheckedChange={(checked) => setFilters({ ...filters, showCovers: checked !== false })}
-                />
-                <label htmlFor="showCovers" className="text-xs text-text-secondary cursor-pointer">
-                  {t("search.show_covers") || "Afficher les couvertures"}
-                </label>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-[11px] text-text-secondary">{t("search.rows_per_page") || "Éléments par page"}</Label>
-                <Select
-                  value={filters.rowsperpage || "24"}
-                  onValueChange={(val) => setFilters({ ...filters, rowsperpage: val })}
-                >
-                  <SelectTrigger className="h-9 border-border-subtle rounded-xl bg-surface hover:bg-surface-2">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="24">24</SelectItem>
-                    <SelectItem value="48">48</SelectItem>
-                    <SelectItem value="96">96</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Display options: Show Covers */}
+            <div className="col-span-1 md:col-span-2 pt-4 border-t border-border-subtle flex items-center gap-2">
+              <Checkbox
+                id="showCovers"
+                checked={filters.showCovers !== false}
+                onCheckedChange={(checked) => setFilters({ ...filters, showCovers: checked !== false })}
+              />
+              <label htmlFor="showCovers" className="text-xs text-text-secondary cursor-pointer">
+                {t("search.show_covers") || "Afficher les couvertures"}
+              </label>
             </div>
 
           </form>

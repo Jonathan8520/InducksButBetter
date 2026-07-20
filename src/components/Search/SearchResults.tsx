@@ -20,6 +20,8 @@ interface SearchResultsProps<TFilters = any> {
   sortOptions?: { value: string; labelKey: string }[];
   renderResultCard?: (row: any, index: number) => React.ReactNode;
   renderSkeleton?: (index: number) => React.ReactNode;
+  onSelect?: (code: string) => void;
+  onSelectCharacter?: (code: string, name: string) => void;
   foundLabel?: string;
 }
 
@@ -35,6 +37,8 @@ export function SearchResults<TFilters extends { sort?: string; page?: number | 
   renderResultCard,
   renderSkeleton,
   foundLabel,
+  onSelect,
+  onSelectCharacter,
 }: SearchResultsProps<TFilters>) {
   const { t } = useTranslation();
   const rowsPerPage = parseInt(String(filters.rowsperpage || "24"), 10) || 24;
@@ -53,7 +57,7 @@ export function SearchResults<TFilters extends { sort?: string; page?: number | 
   ];
 
   const actualSortOptions = sortOptions || defaultSortOptions;
-  const actualRenderCard = renderResultCard || ((row: any, i: number) => <StoryResultCard row={row} />);
+  const actualRenderCard = renderResultCard || ((row: any, i: number) => <StoryResultCard row={row} onSelect={onSelect} onSelectCharacter={onSelectCharacter} />);
   const actualRenderSkeleton = renderSkeleton || ((i: number) => <StoryResultSkeleton key={i} />);
   const actualFoundLabel = foundLabel !== undefined ? foundLabel : t("search.stories_found", { count: totalCount });
 

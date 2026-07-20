@@ -8,6 +8,8 @@ import { SearchResults } from "@/components/Search/SearchResults";
 import { IssueResultCard } from "@/components/IssueResultCard";
 import IssueResultSkeleton from "@/components/IssueResultSkeleton";
 import { buildPublicationsSearchQuery, PublicationsSearchFilters } from "@/lib/searchService";
+import { StoryDetail } from "@/components/Search/StoryDetail";
+import { IssueDetail } from "./IssueDetail";
 
 const initialFilters: PublicationsSearchFilters = {
   country: "",
@@ -19,8 +21,7 @@ const initialFilters: PublicationsSearchFilters = {
   indexer: "",
   collects: false,
   specificTitle: "",
-  pagesMin: undefined,
-  pagesMax: undefined,
+  pages: undefined,
   price: "",
   attached: "",
   size: "",
@@ -38,6 +39,9 @@ export function PublicationsSearch() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [lastFilters, setLastFilters] = useState<PublicationsSearchFilters | null>(null);
+
+  const [selectedStorycode, setSelectedStorycode] = useState<string | null>(null);
+  const [selectedIssuecode, setSelectedIssuecode] = useState<string | null>(null);
 
   const performSearch = async (searchFilters: PublicationsSearchFilters) => {
     setLoading(true);
@@ -90,6 +94,33 @@ export function PublicationsSearch() {
     { value: "pages_desc", labelKey: "sort.pages_desc" },
   ];
 
+  if (selectedIssuecode) {
+    return (
+      <div className="h-full overflow-auto bg-surface-2/20">
+        <IssueDetail
+          issuecode={selectedIssuecode}
+          onBack={() => setSelectedIssuecode(null)}
+          onSelectStory={(code) => {
+            setSelectedStorycode(code);
+            setSelectedIssuecode(null);
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (selectedStorycode) {
+    return (
+      <div className="h-full overflow-auto bg-surface-2/20">
+        <StoryDetail
+          storycode={selectedStorycode}
+          onBack={() => setSelectedStorycode(null)}
+          onSelectIssue={(code) => setSelectedIssuecode(code)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col overflow-auto lg:overflow-hidden">
       <div className="flex-1 flex flex-col lg:flex-row min-h-0 p-4 lg:p-8 gap-8 px-4 lg:px-12">
@@ -110,9 +141,10 @@ export function PublicationsSearch() {
           handleSearch={handleSearch}
           isInitialState={lastFilters === null}
           sortOptions={sortOptions}
-          renderResultCard={(row) => <IssueResultCard row={row} />}
+          renderResultCard={(row) => <IssueResultCard row={row} onSelect={(code) => setSelectedIssuecode(code)} />}
           renderSkeleton={(i) => <IssueResultSkeleton key={i} />}
           foundLabel={t("search.publications_found", { count: totalCount, defaultValue: `${totalCount} publications trouvées` })}
+          onSelect={(code) => setSelectedIssuecode(code)}
         />
       </div>
     </div>

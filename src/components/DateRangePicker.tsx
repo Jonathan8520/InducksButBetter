@@ -41,6 +41,16 @@ export function DateRangePicker({
   ];
 
   const [month, setMonth] = React.useState<Date | undefined>(date?.from);
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   React.useEffect(() => {
     if (date?.from) {
@@ -105,7 +115,7 @@ export function DateRangePicker({
               onMonthChange={setMonth}
               selected={date}
               onSelect={setDate}
-              numberOfMonths={2}
+              numberOfMonths={isMobile ? 1 : 2}
               locale={i18n.language === 'fr' ? fr : enUS}
               captionLayout="dropdown-buttons"
               fromYear={1930}

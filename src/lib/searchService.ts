@@ -512,7 +512,16 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
                 OR TRIM(sd.desctext) LIKE ',%' OR TRIM(sd.desctext) LIKE '%.%'
            THEN NULL
            ELSE sd.desctext
-         END FROM inducks_storydescription sd WHERE sd.storyversioncode = sv.storyversioncode ORDER BY CASE WHEN sd.languagecode = ? THEN 0 ELSE 1 END LIMIT 1),
+         END FROM inducks_storydescription sd 
+         WHERE sd.storyversioncode = sv.storyversioncode 
+         ORDER BY 
+           CASE 
+             WHEN sd.languagecode = ? THEN 0 
+             WHEN sd.languagecode = 'en' THEN 1 
+             ELSE 2 
+           END ASC,
+           sd.desctext ASC
+         LIMIT 1),
         (SELECT CASE
            WHEN TRIM(sv.plotsummary) LIKE 'Art:%' OR TRIM(sv.plotsummary) LIKE 'Script:%' OR TRIM(sv.plotsummary) LIKE 'Plot:%' OR TRIM(sv.plotsummary) LIKE 'Des:%' OR TRIM(sv.plotsummary) LIKE 'Desenhos:%' OR TRIM(sv.plotsummary) LIKE 'Roteiro:%'
                 OR TRIM(sv.plotsummary) LIKE 'Ink:%' OR TRIM(sv.plotsummary) LIKE 'Pencils:%' OR TRIM(sv.plotsummary) LIKE 'Pencil:%' OR TRIM(sv.plotsummary) LIKE 'Inks:%' OR TRIM(sv.plotsummary) LIKE 'Colors:%'
@@ -566,8 +575,7 @@ export interface PublicationsSearchFilters {
   indexer?: string;
   collects?: boolean | string;
   specificTitle?: string;
-  pagesMin?: number;
-  pagesMax?: number;
+  pages?: number;
   price?: string;
   attached?: string;
   size?: string;
@@ -642,14 +650,9 @@ export function buildPublicationsSearchQuery(filters: PublicationsSearchFilters)
     p.push(`%${filters.specificTitle.trim()}%`);
   }
 
-  if (filters.pagesMin !== undefined) {
-    where.push("i.pages >= ?");
-    p.push(filters.pagesMin);
-  }
-
-  if (filters.pagesMax !== undefined) {
-    where.push("i.pages <= ?");
-    p.push(filters.pagesMax);
+  if (filters.pages !== undefined) {
+    where.push("i.pages = ?");
+    p.push(filters.pages);
   }
 
   if (filters.price) {

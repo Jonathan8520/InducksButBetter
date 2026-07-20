@@ -103,21 +103,37 @@ export function MultiAutocomplete({
           onClick={() => {}}
         >
           <div className="flex flex-wrap gap-1.5 flex-1 text-left min-w-0">
-            {selected.slice(0, maxDisplay).map((id) => (
-              <Badge
-                key={id}
-                variant="secondary"
-                className="bg-surface-2 text-text-body shadow-sm border border-border-subtle hover:border-border transition-all text-[10px] font-bold tracking-tight rounded-lg px-2 py-0.5 flex items-center gap-1 group shrink-0"
-              >
-                <span>{selectedLabels[id] || id}</span>
-                <span
-                  className="cursor-pointer text-text-secondary hover:text-destructive transition-colors -mr-1 p-0.5"
-                  onMouseDown={(e) => handleRemove(id, e)}
+            {selected.slice(0, maxDisplay).map((id) => {
+              const showAvatar = type === "characters";
+              const avatarUrl = showAvatar 
+                ? `/api/proxy-image?url=${encodeURIComponent(`https://inducks.org/characterthumb.php?c=${id}`)}` 
+                : null;
+              return (
+                <Badge
+                  key={id}
+                  variant="secondary"
+                  className="bg-surface-2 text-text-body shadow-sm border border-border-subtle hover:border-border transition-all text-[10px] font-bold tracking-tight rounded-lg px-2 py-0.5 flex items-center gap-1.5 group shrink-0"
                 >
-                  <X className="w-3 h-3" />
-                </span>
-              </Badge>
-            ))}
+                  {showAvatar && avatarUrl && (
+                    <img 
+                      src={avatarUrl} 
+                      alt="" 
+                      className="w-3.5 h-3.5 rounded-full object-cover bg-zinc-200 dark:bg-zinc-800 shrink-0"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  )}
+                  <span>{selectedLabels[id] || id}</span>
+                  <span
+                    className="cursor-pointer text-text-secondary hover:text-destructive transition-colors -mr-1 p-0.5"
+                    onMouseDown={(e) => handleRemove(id, e)}
+                  >
+                    <X className="w-3 h-3" />
+                  </span>
+                </Badge>
+              );
+            })}
              
             {selected.length > maxDisplay && (
               <Badge variant="secondary" className="bg-surface-2 border border-dashed border-border-subtle text-text-secondary shadow-sm text-[10px] font-bold rounded-lg px-2 py-0.5 flex items-center h-5">
