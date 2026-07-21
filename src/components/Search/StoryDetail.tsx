@@ -153,7 +153,7 @@ export function StoryDetail({ storycode, onBack, onSelectIssue, onSelectCharacte
               )}
               <div className="flex items-center gap-1.5 ml-2">
                 <Badge variant="secondary" className="font-medium text-[10px]">
-                  {story.kind ? t(`kinds.${story.kind}`, story.kind) : t("kinds.s")}
+                  {story.kind ? (t(`kinds.${story.kind}`, story.kind) as string) : (t("kinds.s") as string)}
                 </Badge>
                 {(story.entirepages || story.brokenpagenumerator) && (
                   <Badge variant="outline" className="font-medium text-[10px] gap-1 bg-surface">
