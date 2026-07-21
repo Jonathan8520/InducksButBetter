@@ -79,13 +79,32 @@ export function IssueResultCard({ row, onSelect }: IssueResultCardProps) {
     };
   }, [row.issue_thumb]);
 
+  const handleClick = () => {
+    if (onSelect) {
+      onSelect(row.issuecode);
+    } else {
+      window.open(issueUrl, "_blank");
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleClick();
+    }
+  };
+
   return (
-    <Card className="group overflow-hidden border-zinc-200 dark:border-zinc-700 shadow-sm hover:shadow-lg transition-all duration-300 rounded-lg bg-white dark:bg-zinc-900">
+    <Card
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      className="group overflow-hidden border-zinc-200 dark:border-zinc-700 shadow-sm hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-800 hover:bg-zinc-50/10 dark:hover:bg-zinc-800/10 transition-all duration-300 rounded-lg bg-white dark:bg-zinc-900 cursor-pointer active:scale-[0.995] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+    >
       <CardContent className="p-0 flex flex-row">
         {/* Left: Cover Thumbnail */}
         <div
-          className="w-[140px] sm:w-[180px] shrink-0 border-r border-zinc-100 dark:border-zinc-700 relative cursor-pointer flex items-center justify-center p-1 group/thumb overflow-hidden bg-zinc-50 dark:bg-zinc-800"
-          onClick={() => onSelect ? onSelect(row.issuecode) : window.open(issueUrl, "_blank")}
+          className="w-[140px] sm:w-[180px] shrink-0 border-r border-zinc-100 dark:border-zinc-700 relative flex items-center justify-center p-1 group/thumb overflow-hidden bg-zinc-50 dark:bg-zinc-800"
         >
           {thumbData && !imageError && !imageLoaded && (
             <div className="absolute inset-1 rounded animate-shimmer" />
@@ -127,7 +146,7 @@ export function IssueResultCard({ row, onSelect }: IssueResultCardProps) {
 
         {/* Right: Content */}
         <div className="flex-1 flex flex-col min-w-0 p-5 gap-3">
-          <div className="min-w-0 flex-1 cursor-pointer" onClick={() => onSelect ? onSelect(row.issuecode) : window.open(issueUrl, "_blank")}>
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1">
               <FlagBadge country={row.countrycode} name={row.countrycode.toUpperCase()} />
               <span className="text-[11px] font-mono text-zinc-400 dark:text-zinc-500 font-semibold tracking-wider">

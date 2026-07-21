@@ -411,7 +411,7 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
       const saved = localStorage.getItem("inducks_collection_issues");
       const parsed = saved ? JSON.parse(saved) : [];
       if (Array.isArray(parsed) && parsed.length > 0) {
-        where.push(`EXISTS (SELECT 1 FROM inducks_entry c_entry WHERE c_entry.storycode = s.storycode AND c_entry.issuecode IN (SELECT value FROM json_each(?)))`);
+        where.push(`EXISTS (SELECT 1 FROM inducks_entry c_entry JOIN inducks_storyversion c_sv ON c_entry.storyversioncode = c_sv.storyversioncode WHERE c_sv.storycode = s.storycode AND c_entry.issuecode IN (SELECT value FROM json_each(?)))`);
         p.push(JSON.stringify(parsed));
       } else {
         where.push("1 = 0");
@@ -543,9 +543,10 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
       ) as character_list,
       (SELECT GROUP_CONCAT(DISTINCT p_c.countrycode || '|' || p_c.title) 
        FROM inducks_entry e_c 
+       JOIN inducks_storyversion sv_c ON e_c.storyversioncode = sv_c.storyversioncode
        JOIN inducks_issue i_c ON e_c.issuecode = i_c.issuecode 
        JOIN inducks_publication p_c ON i_c.publicationcode = p_c.publicationcode 
-       WHERE e_c.storyversioncode = sv.storyversioncode) as publication_list,
+       WHERE sv_c.storycode = s.storycode) as publication_list,
       (SELECT app_h.charactercode 
        FROM inducks_appearance app_h 
        WHERE app_h.storyversioncode = sv.storyversioncode AND app_h.number = 0 
@@ -579,7 +580,6 @@ export interface PublicationsSearchFilters {
   price?: string;
   attached?: string;
   size?: string;
-  showCovers?: boolean | string;
   sort?: string;
   page?: number | string;
   rowsperpage?: string;

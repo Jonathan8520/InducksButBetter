@@ -8,9 +8,19 @@ import { SearchResults } from "./Search/SearchResults";
 import { StoryDetail } from "./Search/StoryDetail";
 import { IssueDetail } from "./Publications/IssueDetail";
 
-export function AdvancedSearch() {
-  const [selectedStorycode, setSelectedStorycode] = useState<string | null>(null);
-  const [selectedIssuecode, setSelectedIssuecode] = useState<string | null>(null);
+interface AdvancedSearchProps {
+  selectedStorycode: string | null;
+  setSelectedStorycode: (code: string | null) => void;
+  selectedIssuecode: string | null;
+  setSelectedIssuecode: (code: string | null) => void;
+}
+
+export function AdvancedSearch({
+  selectedStorycode,
+  setSelectedStorycode,
+  selectedIssuecode,
+  setSelectedIssuecode
+}: AdvancedSearchProps) {
   const { meta } = useMetadata();
   const {
     filters,

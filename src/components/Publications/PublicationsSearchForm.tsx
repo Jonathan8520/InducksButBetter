@@ -226,17 +226,7 @@ export function PublicationsSearchForm({
               />
             </div>
 
-            {/* Display options: Show Covers */}
-            <div className="col-span-1 md:col-span-2 pt-4 border-t border-border-subtle flex items-center gap-2">
-              <Checkbox
-                id="showCovers"
-                checked={filters.showCovers !== false}
-                onCheckedChange={(checked) => setFilters({ ...filters, showCovers: checked !== false })}
-              />
-              <label htmlFor="showCovers" className="text-xs text-text-secondary cursor-pointer">
-                {t("search.show_covers") || "Afficher les couvertures"}
-              </label>
-            </div>
+
 
           </form>
         </div>

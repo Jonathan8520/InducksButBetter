@@ -112,7 +112,7 @@ export function Settings() {
       if (saved) {
         const parsed = JSON.parse(saved)
         if (Array.isArray(parsed)) {
-          setCollectionText(parsed.join("\n"))
+          setCollectionText(parsed.map((code) => `${code}^1`).join("\n"))
           setCollectionCount(parsed.length)
         }
       }
@@ -128,13 +128,13 @@ export function Settings() {
         const trimmed = line.trim();
         if (trimmed.includes("^")) {
           const parts = trimmed.split("^");
-          if (parts.length >= 2 && parts[0] && parts[1]) {
-            return `${parts[0].trim().toUpperCase()}/${parts[1].trim()}`;
+          if (parts[0]) {
+            return parts[0].trim();
           }
         }
-        return trimmed;
+        return null;
       })
-      .filter((line) => line.length > 0)
+      .filter((line): line is string => line !== null && line.length > 0)
 
     localStorage.setItem("inducks_collection_issues", JSON.stringify(issues))
     setCollectionCount(issues.length)
@@ -146,6 +146,16 @@ export function Settings() {
     { value: "dark", icon: Moon, label: t("theme.dark") || "Sombre" },
     { value: "system", icon: Monitor, label: t("theme.system") || "Système" },
   ] as const
+
+  const languagesList = [
+    { code: "fr", name: "Français (FR)", flag: "https://flagcdn.com/w20/fr.png" },
+    { code: "en", name: "English (US)", flag: "https://flagcdn.com/w20/us.png" },
+    { code: "de", name: "Deutsch (DE)", flag: "https://flagcdn.com/w20/de.png" },
+    { code: "es", name: "Español (ES)", flag: "https://flagcdn.com/w20/es.png" },
+    { code: "it", name: "Italiano (IT)", flag: "https://flagcdn.com/w20/it.png" },
+    { code: "pt", name: "Português (PT)", flag: "https://flagcdn.com/w20/pt.png" },
+  ];
+  const currentLang = languagesList.find(l => l.code === i18n.language) || languagesList[1];
 
   return (
     <div className="w-full max-w-4xl mx-auto p-4 lg:p-8 space-y-8 pb-20">
@@ -177,26 +187,22 @@ export function Settings() {
                 <SelectTrigger className="w-full h-10 border-border-subtle bg-surface/50 rounded-xl hover:bg-surface-2">
                   <div className="flex items-center gap-2">
                     <img 
-                      src={i18n.language === 'fr' ? 'https://flagcdn.com/w20/fr.png' : 'https://flagcdn.com/w20/us.png'} 
+                      src={currentLang.flag} 
                       className="w-4 h-3 rounded-xs shrink-0 object-cover" 
                       alt="" 
                     />
-                    <span>{i18n.language === 'fr' ? 'Français (FR)' : 'English (US)'}</span>
+                    <span>{currentLang.name}</span>
                   </div>
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-border-subtle bg-surface">
-                  <SelectItem value="fr" className="rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <img src="https://flagcdn.com/w20/fr.png" className="w-4 h-3 rounded-xs shrink-0 object-cover" alt="" />
-                      <span>Français (FR)</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="en" className="rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <img src="https://flagcdn.com/w20/us.png" className="w-4 h-3 rounded-xs shrink-0 object-cover" alt="" />
-                      <span>English (US)</span>
-                    </div>
-                  </SelectItem>
+                  {languagesList.map((l) => (
+                    <SelectItem key={l.code} value={l.code} className="rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <img src={l.flag} className="w-4 h-3 rounded-xs shrink-0 object-cover" alt="" />
+                        <span>{l.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -244,7 +250,7 @@ export function Settings() {
                 className="h-10 border-border-subtle bg-surface/50 rounded-xl"
               />
               <p className="text-[10px] text-muted-foreground leading-normal">
-                {t("search.cookie_help") ||
+                {t("settings.cookie_help") ||
                   "Ce cookie permet d'accéder aux images haute résolution. Récupérez-le dans l'inspecteur du navigateur sur inducks.org."}
               </p>
             </div>
@@ -256,7 +262,7 @@ export function Settings() {
         </Card>
 
         {/* Card 4: Local Database */}
-        <Card className="rounded-2xl border-border-subtle bg-surface shadow-sm md:col-span-2">
+        <Card className="rounded-2xl border-border-subtle bg-surface shadow-sm">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Database className="w-4 h-4 text-primary" />
@@ -327,7 +333,7 @@ export function Settings() {
         </Card>
 
         {/* Card 3: Personal Collection */}
-        <Card className="rounded-2xl border-border-subtle bg-surface shadow-sm md:col-span-2">
+        <Card className="rounded-2xl border-border-subtle bg-surface shadow-sm">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Database className="w-4 h-4 text-primary" />

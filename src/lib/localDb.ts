@@ -42,7 +42,7 @@ export async function loadLocalDb(file: File): Promise<void> {
 let localDbStats: { count: number, size: number } | null = null;
 
 export function hasLocalDb(): boolean {
-  return worker !== null;
+  return worker !== null && localDbStats !== null;
 }
 
 export function getLocalDbStats() {
@@ -75,6 +75,7 @@ export function unloadLocalDb() {
     // We don't wait for response, we just terminate it
     worker.terminate();
     worker = null;
+    localDbStats = null;
   }
 }
 

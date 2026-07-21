@@ -42,13 +42,13 @@ export function CollectionManagerDialog({ open, onOpenChange }: CollectionManage
         const trimmed = line.trim();
         if (trimmed.includes("^")) {
           const parts = trimmed.split("^");
-          if (parts.length >= 2 && parts[0] && parts[1]) {
-            return `${parts[0].trim().toUpperCase()}/${parts[1].trim()}`;
+          if (parts[0]) {
+            return parts[0].trim();
           }
         }
-        return trimmed;
+        return null;
       })
-      .filter(line => line.length > 0);
+      .filter((line): line is string => line !== null && line.length > 0);
     
     localStorage.setItem("inducks_collection_issues", JSON.stringify(issues));
     setIssueCount(issues.length);

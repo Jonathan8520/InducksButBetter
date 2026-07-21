@@ -163,15 +163,32 @@ export function StoryResultCard({ row, onSelect, onSelectCharacter }: StoryResul
     };
   }, [row.story_thumb]);
 
+  const handleClick = () => {
+    if (onSelect) {
+      onSelect(row.storycode);
+    } else {
+      window.open(storyUrl, "_blank");
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleClick();
+    }
+  };
+
   return (
     <Card
-      className="group overflow-hidden border-zinc-200 dark:border-zinc-700 shadow-sm hover:shadow-lg transition-all duration-300 rounded-lg bg-white dark:bg-zinc-900"
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      className="group overflow-hidden border-zinc-200 dark:border-zinc-700 shadow-sm hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-800 hover:bg-zinc-50/10 dark:hover:bg-zinc-800/10 transition-all duration-300 rounded-lg bg-white dark:bg-zinc-900 cursor-pointer active:scale-[0.995] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
     >
       <CardContent className="p-0 flex flex-row">
         {/* Left: Thumbnail */}
         <div
-          className="w-[200px] shrink-0 border-r border-zinc-100 dark:border-zinc-700 relative cursor-pointer flex items-center justify-center p-1 group/thumb overflow-hidden bg-zinc-50 dark:bg-zinc-800"
-          onClick={() => onSelect ? onSelect(row.storycode) : window.open(storyUrl, "_blank")}
+          className="w-[200px] shrink-0 border-r border-zinc-100 dark:border-zinc-700 relative flex items-center justify-center p-1 group/thumb overflow-hidden bg-zinc-50 dark:bg-zinc-800"
         >
           {/* Shimmer skeleton while image loads */}
           {thumbData && !imageError && !imageLoaded && (
@@ -216,7 +233,7 @@ export function StoryResultCard({ row, onSelect, onSelectCharacter }: StoryResul
         <div className="flex-1 flex flex-col min-w-0">
           <div className="p-5 flex-1 flex flex-col gap-4">
             <div className="flex justify-between items-start">
-              <div className="min-w-0 flex-1 cursor-pointer" onClick={() => onSelect ? onSelect(row.storycode) : window.open(storyUrl, "_blank")}>
+              <div className="min-w-0 flex-1">
                 {row.hero_name && (
                   <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1.5 block">
                     {cleanText(row.hero_name)}

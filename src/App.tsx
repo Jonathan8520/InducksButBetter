@@ -6,11 +6,12 @@ import { ThemeToggle } from "@/components/ThemeToggle"
 import { LocalDbUploader } from "@/components/LocalDbUploader"
 import { GoogleAnalytics } from "@/components/GoogleAnalytics"
 import { LegalModal } from "@/components/LegalModal"
-import { BookOpen, LibraryBig, User, Cat, Database as DbIcon, Loader2, Settings as SettingsIcon } from "lucide-react"
+import { BookOpen, LibraryBig, User, Cat, Database as DbIcon, Loader2, Settings as SettingsIcon, Globe } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { useTheme } from "@/hooks/useTheme"
 import { Button } from "@/components/ui/button"
 import { Toaster } from "sonner"
+import { useRouteMetadata } from "@/hooks/useRouteMetadata"
 
 // Lazy load heavy components to code-split the application
 const AdvancedSearch = lazy(() => import("@/components/AdvancedSearch").then(module => ({ default: module.AdvancedSearch })))
@@ -18,6 +19,11 @@ const SqlEditor = lazy(() => import("@/components/SqlEditor").then(module => ({ 
 const AiAssistant = lazy(() => import("@/components/AiAssistant").then(module => ({ default: module.AiAssistant })))
 const PublicationsSearch = lazy(() => import("@/components/Publications/PublicationsSearch").then(module => ({ default: module.PublicationsSearch })))
 const Settings = lazy(() => import("@/components/Settings").then(module => ({ default: module.Settings })))
+const AuthorsSearch = lazy(() => import("@/components/Authors/AuthorsSearch").then(module => ({ default: module.AuthorsSearch })))
+const CharactersSearch = lazy(() => import("@/components/Characters/CharactersSearch").then(module => ({ default: module.CharactersSearch })))
+const CountryPublications = lazy(() => import("@/components/Publications/CountryPublications").then(module => ({ default: module.CountryPublications })))
+const PublicationDetail = lazy(() => import("@/components/Publications/PublicationDetail").then(module => ({ default: module.PublicationDetail })))
+const IssueDetail = lazy(() => import("@/components/Publications/IssueDetail").then(module => ({ default: module.IssueDetail })))
 
 // Reusable loading fallback
 const TabFallback = () => (
@@ -33,19 +39,90 @@ function App() {
   const [prevTab, setPrevTab] = useState("stories");
   const [sqlQuery, setSqlQuery] = useState("SELECT * FROM inducks_story LIMIT 10");
 
+  const [selectedStorycode, setSelectedStorycode] = useState<string | null>(null);
+  const [selectedIssuecode, setSelectedIssuecode] = useState<string | null>(null);
+  const [selectedPersoncode, setSelectedPersoncode] = useState<string | null>(null);
+  const [selectedCharactercode, setSelectedCharactercode] = useState<string | null>(null);
+  const [selectedCountrycode, setSelectedCountrycode] = useState<string | null>(null);
+  const [selectedPublicationcode, setSelectedPublicationcode] = useState<string | null>(null);
+
+  // Call route metadata hook to update page title and description
+  useRouteMetadata({
+    activeTab,
+    selectedStorycode,
+    selectedIssuecode,
+    selectedPersoncode,
+    selectedCharactercode,
+    selectedCountrycode,
+    selectedPublicationcode,
+  });
+
   useEffect(() => {
     const handleUrlRouting = () => {
-      const path = window.location.pathname;
       const hash = window.location.hash;
-      if (path === "/settings" || path.endsWith("/settings") || hash === "#/settings") {
-        setActiveTab("settings");
-      } else if (path === "/entries" || path.endsWith("/entries") || hash === "#/entries") {
+      
+      // Reset all codes
+      setSelectedStorycode(null);
+      setSelectedIssuecode(null);
+      setSelectedPersoncode(null);
+      setSelectedCharactercode(null);
+      setSelectedCountrycode(null);
+      setSelectedPublicationcode(null);
+
+      if (!hash) {
         setActiveTab("stories");
-      } else {
-        const expectedTab = hash.replace("#/", "");
-        if (expectedTab && ["stories", "publications", "authors", "characters", "sql"].includes(expectedTab)) {
-          setActiveTab(expectedTab);
+        return;
+      }
+
+      const decodedHash = decodeURIComponent(hash);
+      const parts = decodedHash.replace("#/", "").split("/");
+      const rootPart = parts[0];
+
+      if (rootPart === "settings") {
+        setActiveTab("settings");
+      } else if (rootPart === "entries" || rootPart === "stories") {
+        setActiveTab("stories");
+        if (parts[1] === "story" && parts[2]) {
+          const code = parts.slice(2).join("/");
+          setSelectedStorycode(code);
+        } else if (parts[1] === "issue" && parts[2]) {
+          const code = parts.slice(2).join("/");
+          setSelectedIssuecode(code);
         }
+      } else if (rootPart === "publications") {
+        setActiveTab("publications");
+        if (parts[1] === "publication" && parts[2]) {
+          const code = parts.slice(2).join("/");
+          setSelectedPublicationcode(code);
+        } else if (parts[1] === "story" && parts[2]) {
+          const code = parts.slice(2).join("/");
+          setSelectedStorycode(code);
+        } else if (parts[1] === "issue" && parts[2]) {
+          const code = parts.slice(2).join("/");
+          setSelectedIssuecode(code);
+        }
+      } else if (rootPart === "authors") {
+        setActiveTab("authors");
+        if (parts[1] === "person" && parts[2]) {
+          const code = parts.slice(2).join("/");
+          setSelectedPersoncode(code);
+        }
+      } else if (rootPart === "characters") {
+        setActiveTab("characters");
+        if (parts[1] === "character" && parts[2]) {
+          const code = parts.slice(2).join("/");
+          setSelectedCharactercode(code);
+        }
+      } else if (rootPart === "countries") {
+        setActiveTab("countries");
+        if (parts[1] === "country" && parts[2]) {
+          const code = parts.slice(2).join("/");
+          setSelectedCountrycode(code);
+        }
+      } else if (rootPart === "sql") {
+        setActiveTab("sql");
+      } else {
+        setActiveTab("stories");
       }
     };
 
@@ -58,16 +135,58 @@ function App() {
     };
   }, []);
 
-  useEffect(() => {
-    if (activeTab === "settings") {
-      if (window.location.hash !== "#/settings" && !window.location.pathname.endsWith("/settings")) {
-        window.history.pushState(null, "", "#/settings");
-      }
-    } else {
-      const urlTab = activeTab === "stories" ? "entries" : activeTab;
-      window.history.pushState(null, "", `#/${urlTab}`);
+  const pushHashState = (expectedHash: string) => {
+    // Force the path to be the absolute base path to avoid nested relative paths
+    const baseUrl = import.meta.env.BASE_URL || "/";
+    const cleanBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+    const expectedUrl = `${cleanBase}${expectedHash}`;
+    
+    // Compare actual URL (path + hash) to avoid duplicate pushState calls
+    const currentUrl = window.location.pathname + window.location.hash;
+    if (currentUrl !== expectedUrl) {
+      window.history.pushState(null, "", expectedUrl);
     }
-  }, [activeTab]);
+  };
+
+  useEffect(() => {
+    const rootPrefix = activeTab === "stories" ? "entries" : activeTab;
+    
+    if (activeTab === "settings") {
+      pushHashState("#/settings");
+    } else if (selectedStorycode) {
+      pushHashState(`#/${rootPrefix}/story/${encodeURIComponent(selectedStorycode)}`);
+    } else if (selectedIssuecode) {
+      pushHashState(`#/${rootPrefix}/issue/${encodeURIComponent(selectedIssuecode)}`);
+    } else if (selectedPersoncode) {
+      pushHashState(`#/authors/person/${encodeURIComponent(selectedPersoncode)}`);
+    } else if (selectedCharactercode) {
+      pushHashState(`#/characters/character/${encodeURIComponent(selectedCharactercode)}`);
+    } else if (selectedCountrycode) {
+      pushHashState(`#/countries/country/${encodeURIComponent(selectedCountrycode)}`);
+    } else if (selectedPublicationcode) {
+      pushHashState(`#/publications/publication/${encodeURIComponent(selectedPublicationcode)}`);
+    } else {
+      pushHashState(`#/${rootPrefix}`);
+    }
+  }, [
+    activeTab, 
+    selectedStorycode, 
+    selectedIssuecode, 
+    selectedPersoncode, 
+    selectedCharactercode, 
+    selectedCountrycode, 
+    selectedPublicationcode
+  ]);
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setSelectedStorycode(null);
+    setSelectedIssuecode(null);
+    setSelectedPersoncode(null);
+    setSelectedCharactercode(null);
+    setSelectedCountrycode(null);
+    setSelectedPublicationcode(null);
+  };
 
   return (
     <TooltipProvider>
@@ -116,10 +235,10 @@ function App() {
         </header>
 
         {/* Navigation Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col min-h-0">
           {activeTab !== "settings" && (
             <div className="px-4 lg:px-12 shrink-0 flex w-full bg-surface border-b border-border-subtle py-2">
-              <TabsList className="bg-surface-2/90 gap-1 h-12 p-1.5 rounded-2xl border border-border-subtle shadow-inner w-full flex justify-between items-center">
+              <TabsList className="bg-surface-2/90 gap-1 h-12 p-1.5 rounded-2xl border border-border-subtle shadow-inner w-full flex justify-between items-center overflow-x-auto overflow-y-hidden">
                 <TabsTrigger
                   value="stories"
                   className="data-[state=active]:bg-surface data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-xl px-2 sm:px-6 py-2 flex gap-1.5 sm:gap-2 items-center justify-center text-xs sm:text-sm font-medium transition-all flex-1"
@@ -158,7 +277,12 @@ function App() {
           <div className="flex-1 min-h-0 overflow-hidden relative">
             <TabsContent value="stories" className="h-full m-0 p-0 border-none outline-none overflow-hidden">
               <Suspense fallback={<TabFallback />}>
-                <AdvancedSearch />
+                <AdvancedSearch
+                  selectedStorycode={selectedStorycode}
+                  setSelectedStorycode={setSelectedStorycode}
+                  selectedIssuecode={selectedIssuecode}
+                  setSelectedIssuecode={setSelectedIssuecode}
+                />
               </Suspense>
             </TabsContent>
 
@@ -172,18 +296,54 @@ function App() {
 
             <TabsContent value="publications" className="h-full m-0 p-0 border-none outline-none overflow-hidden">
               <Suspense fallback={<TabFallback />}>
-                <PublicationsSearch />
+                {selectedIssuecode ? (
+                  <IssueDetail
+                    issuecode={selectedIssuecode}
+                    onBack={() => setSelectedIssuecode(null)}
+                    onSelectStory={(code) => setSelectedStorycode(code)}
+                  />
+                ) : selectedPublicationcode ? (
+                  <PublicationDetail
+                    publicationcode={selectedPublicationcode}
+                    onBack={() => setSelectedPublicationcode(null)}
+                    onSelectIssue={(code) => setSelectedIssuecode(code)}
+                  />
+                ) : selectedCountrycode ? (
+                  <CountryPublications
+                    countrycode={selectedCountrycode}
+                    onBack={() => setSelectedCountrycode(null)}
+                    onSelectPublication={(code) => {
+                      setSelectedPublicationcode(code);
+                    }}
+                  />
+                ) : (
+                  <PublicationsSearch
+                    selectedStorycode={selectedStorycode}
+                    setSelectedStorycode={setSelectedStorycode}
+                    selectedIssuecode={selectedIssuecode}
+                    setSelectedIssuecode={setSelectedIssuecode}
+                    setSelectedCountrycode={setSelectedCountrycode}
+                  />
+                )}
               </Suspense>
             </TabsContent>
 
-            <TabsContent value="authors" className="h-full m-0 p-0 flex-1 data-[state=active]:flex flex-col items-center justify-center bg-surface-2/80 text-text-hint gap-4 min-h-[400px]">
-              <User className="w-12 h-12 opacity-20 text-blue-600 animate-pulse" />
-              <p className="font-bold italic text-lg text-center px-4 text-text-body">{t('tabs.coming_soon.authors')}</p>
+            <TabsContent value="authors" className="h-full m-0 p-0 border-none outline-none overflow-hidden">
+              <Suspense fallback={<TabFallback />}>
+                <AuthorsSearch
+                  selectedAuthorcode={selectedPersoncode}
+                  setSelectedAuthorcode={setSelectedPersoncode}
+                />
+              </Suspense>
             </TabsContent>
 
-            <TabsContent value="characters" className="h-full m-0 p-0 flex-1 data-[state=active]:flex flex-col items-center justify-center bg-surface-2/80 text-text-hint gap-4 min-h-[400px]">
-              <Cat className="w-12 h-12 opacity-20 text-blue-600 animate-pulse" />
-              <p className="font-bold italic text-lg text-center px-4 text-text-body">{t('tabs.coming_soon.characters')}</p>
+            <TabsContent value="characters" className="h-full m-0 p-0 border-none outline-none overflow-hidden">
+              <Suspense fallback={<TabFallback />}>
+                <CharactersSearch
+                  selectedCharactercode={selectedCharactercode}
+                  setSelectedCharactercode={setSelectedCharactercode}
+                />
+              </Suspense>
             </TabsContent>
 
             <TabsContent value="settings" className="h-full m-0 p-0 border-none outline-none overflow-auto bg-surface-2/40">

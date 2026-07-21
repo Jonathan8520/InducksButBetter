@@ -116,10 +116,13 @@ export function StoryDetail({ storycode, onBack, onSelectIssue, onSelectCharacte
 
   const otherDescriptions = story.descriptions?.filter((d: any) => d.languagecode !== defaultDesc?.languagecode) || []
 
-  // Group creators by job type
-  const writers = story.creators?.filter((c: any) => ["w", "p", "pw"].includes(c.role)) || []
-  const artists = story.creators?.filter((c: any) => ["a", "i", "pa"].includes(c.role)) || []
-  const others = story.creators?.filter((c: any) => !["w", "p", "pw", "a", "i", "pa"].includes(c.role)) || []
+  // Group creators by job type and deduplicate by personcode
+  const writers = (story.creators?.filter((c: any) => ["w", "p", "pw"].includes(c.role)) || [])
+    .filter((v: any, i: number, a: any[]) => a.findIndex((t: any) => t.personcode === v.personcode) === i)
+  const artists = (story.creators?.filter((c: any) => ["a", "i", "pa"].includes(c.role)) || [])
+    .filter((v: any, i: number, a: any[]) => a.findIndex((t: any) => t.personcode === v.personcode) === i)
+  const others = (story.creators?.filter((c: any) => !["w", "p", "pw", "a", "i", "pa"].includes(c.role)) || [])
+    .filter((v: any, i: number, a: any[]) => a.findIndex((t: any) => t.personcode === v.personcode) === i)
 
   return (
     <div className="w-full max-w-4xl mx-auto p-4 lg:p-8 space-y-6">

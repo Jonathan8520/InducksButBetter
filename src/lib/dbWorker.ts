@@ -44,6 +44,7 @@ self.onmessage = async (e: MessageEvent) => {
           const stream = file.stream().pipeThrough(new TextDecoderStream());
           const reader = stream.getReader();
           let partialLine = "";
+          let isFirstLine = true;
           
           while (true) {
             const { value, done } = await reader.read();
@@ -56,6 +57,12 @@ self.onmessage = async (e: MessageEvent) => {
               const line = lines[j];
               if (!line || line === "\r") continue;
               const cleanLine = line.endsWith('\r') ? line.slice(0, -1) : line;
+              
+              if (isFirstLine) {
+                isFirstLine = false;
+                continue;
+              }
+              
               const values = cleanLine.split('^');
               const boundValues = new Array(colCount);
               for (let i = 0; i < colCount; i++) {
@@ -67,12 +74,16 @@ self.onmessage = async (e: MessageEvent) => {
           
           if (partialLine && partialLine !== "\r") {
             const cleanLine = partialLine.endsWith('\r') ? partialLine.slice(0, -1) : partialLine;
-            const values = cleanLine.split('^');
-            const boundValues = new Array(colCount);
-            for (let i = 0; i < colCount; i++) {
-              boundValues[i] = values[i] !== undefined ? values[i] : null;
+            
+            // Only insert if it's not the header line (in case the file is only 1 line)
+            if (!isFirstLine) {
+              const values = cleanLine.split('^');
+              const boundValues = new Array(colCount);
+              for (let i = 0; i < colCount; i++) {
+                boundValues[i] = values[i] !== undefined ? values[i] : null;
+              }
+              stmt.run(boundValues);
             }
-            stmt.run(boundValues);
           }
           
           stmt.free();

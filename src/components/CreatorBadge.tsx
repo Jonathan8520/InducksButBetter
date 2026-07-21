@@ -19,6 +19,7 @@ export function CreatorBadge({ code, name, size = "md" }: CreatorBadgeProps) {
           href={`https://inducks.org/creator.php?c=${code}`}
           target="_blank"
           rel="noreferrer"
+          onClick={(e) => e.stopPropagation()}
           className="inline-flex items-center gap-1 bg-surface border border-border-subtle px-1.5 py-0.5 rounded-md shadow-sm hover:border-blue-300 dark:hover:border-blue-700 hover:bg-surface-2 transition-all cursor-pointer"
         >
           <div className={`${avatarSize} rounded-full overflow-hidden border border-border-subtle bg-zinc-100 dark:bg-zinc-800 shrink-0 relative flex items-center justify-center`}>

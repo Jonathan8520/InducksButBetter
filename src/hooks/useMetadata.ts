@@ -44,9 +44,15 @@ export function useMetadata() {
         const metaObj: MetaData = {
           languages: COMMON_LANGUAGES.map((l) => ({ languagecode: l.code, languagename: l.label })),
           kinds: kindsRes.rows.map((r: any) => String(r.kind)),
-          countries: countriesRes.rows.map((r: any) => ({ countrycode: String(r.countrycode), countryname: String(r.countryname) })),
-          universes: universesRes.rows.map((r: any) => ({ universecode: String(r.universecode), universename: String(r.universename) })),
-          subseries: subseriesRes.rows.map((r: any) => ({ value: String(r.subseriescode), label: String(r.label), group: "Series" })),
+          countries: countriesRes.rows
+            .map((r: any) => ({ countrycode: String(r.countrycode), countryname: String(r.countryname) }))
+            .sort((a: any, b: any) => a.countryname.localeCompare(b.countryname, currentLang)),
+          universes: universesRes.rows
+            .map((r: any) => ({ universecode: String(r.universecode), universename: String(r.universename) }))
+            .sort((a: any, b: any) => a.universename.localeCompare(b.universename, currentLang)),
+          subseries: subseriesRes.rows
+            .map((r: any) => ({ value: String(r.subseriescode), label: String(r.label), group: "Series" }))
+            .sort((a: any, b: any) => a.label.localeCompare(b.label, currentLang)),
         };
         sessionStorage.setItem(cacheKey, JSON.stringify(metaObj));
         setMeta(metaObj);
