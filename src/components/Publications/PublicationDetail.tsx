@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Loader2, ChevronLeft, LibraryBig, FileText, Globe, BookOpen } from "lucide-react";
 import { executeQuery } from "@/lib/db";
@@ -29,30 +29,64 @@ export function PublicationDetail({ publicationcode, onBack, onSelectIssue }: Pu
   const [issues, setIssues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const groupedIssues = useMemo(() => {
+    return Object.entries(
+      issues.reduce((acc: Record<string, any[]>, issue) => {
+        let year = "Inconnue";
+        if (issue.oldestdate && issue.oldestdate !== "0000-00-00" && issue.oldestdate !== "9999-99-99" && issue.oldestdate.length >= 4) {
+          year = issue.oldestdate.substring(0, 4);
+        }
+        if (!acc[year]) acc[year] = [];
+        acc[year].push(issue);
+        return acc;
+      }, {})
+    );
+  }, [issues]);
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
         // Fetch publication details and publisher
-        const pubResult = await executeQuery({
-          sql: `
-            SELECT p.publicationcode, p.title, p.countrycode, p.languagecode, p.publicationcomment,
-                   (SELECT pub.publishername 
-                    FROM inducks_publishingjob pj 
-                    JOIN inducks_publisher pub ON pj.publisherid = pub.publisherid 
-                    JOIN inducks_issue i ON pj.issuecode = i.issuecode
-                    WHERE i.publicationcode = p.publicationcode 
-                    LIMIT 1) as publishername
-            FROM inducks_publication p
-            WHERE p.publicationcode = ?
-          `,
-          args: [publicationcode]
-        });
+        let pubData = null;
+        try {
+          const pubResult = await executeQuery({
+            sql: `
+              SELECT p.publicationcode, p.title, p.countrycode, p.languagecode, p.publicationcomment,
+                     (SELECT pub.publishername 
+                      FROM inducks_publishingjob pj 
+                      JOIN inducks_publisher pub ON pj.publisherid = pub.publisherid 
+                      JOIN inducks_issue i ON pj.issuecode = i.issuecode
+                      WHERE i.publicationcode = p.publicationcode 
+                      LIMIT 1) as publishername
+              FROM inducks_publication p
+              WHERE p.publicationcode = ?
+            `,
+            args: [publicationcode]
+          });
+          if (pubResult.rows.length > 0) {
+            pubData = pubResult.rows[0] as PublicationDetailData;
+          }
+        } catch (e) {
+          console.warn("Could not fetch publication details (missing table?):", e);
+        }
 
-        if (pubResult.rows.length > 0) {
-          setPublication(pubResult.rows[0] as PublicationDetailData);
+        // If no publication data found, create a fallback
+        if (!pubData) {
+          const fallbackCountry = publicationcode.split('/')[0] || 'xx';
+          pubData = {
+            publicationcode: publicationcode,
+            title: publicationcode, // fallback title
+            countrycode: fallbackCountry,
+            languagecode: fallbackCountry,
+          };
+        }
+        
+        setPublication(pubData);
 
-          // Fetch all issues of this publication with details matching IssueResultCard requirements
+        // Fetch all issues of this publication
+        try {
+          // Try with full join
           const issuesResult = await executeQuery({
             sql: `
               SELECT i.issuecode, i.issuenumber, i.title as issue_title, i.pages, i.price, i.oldestdate, i.size, i.attached,
@@ -71,6 +105,25 @@ export function PublicationDetail({ publicationcode, onBack, onSelectIssue }: Pu
             args: [publicationcode]
           });
           setIssues(issuesResult.rows);
+        } catch (e) {
+          console.warn("Could not fetch issues with JOIN (missing table?). Trying fallback:", e);
+          // Fallback without joining inducks_publication
+          const fallbackResult = await executeQuery({
+            sql: `
+              SELECT i.issuecode, i.issuenumber, i.title as issue_title, i.pages, i.price, i.oldestdate, i.size, i.attached,
+                     ? as series_title, ? as countrycode, ? as publicationcode,
+                     (SELECT eu.sitecode || '|' || eu.url 
+                      FROM inducks_entry e 
+                      JOIN inducks_entryurl eu ON e.entrycode = eu.entrycode 
+                      WHERE e.issuecode = i.issuecode 
+                      LIMIT 1) as issue_thumb
+              FROM inducks_issue i
+              WHERE i.publicationcode = ? OR i.issuecode LIKE ? || ' %'
+              ORDER BY i.oldestdate ASC, i.issuenumber ASC
+            `,
+            args: [pubData.title, pubData.countrycode, pubData.publicationcode, publicationcode, publicationcode]
+          });
+          setIssues(fallbackResult.rows);
         }
       } catch (err) {
         console.error("Error fetching publication detail:", err);
@@ -186,13 +239,43 @@ export function PublicationDetail({ publicationcode, onBack, onSelectIssue }: Pu
                   {t("publication.empty") || "Aucun numéro trouvé."}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-4 pb-4">
-                  {issues.map((issue) => (
-                    <IssueResultCard
-                      key={issue.issuecode}
-                      row={issue}
-                      onSelect={(code) => onSelectIssue(code)}
-                    />
+                <div className="space-y-8 pb-4 pr-2">
+                  {groupedIssues.map(([year, yearIssues]) => (
+                    <div key={year} className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <h3 className="font-bold text-foreground text-base tracking-tight">{year}</h3>
+                        <div className="h-px bg-border-subtle flex-1" />
+                        <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                          {(yearIssues as any[]).length} {(yearIssues as any[]).length > 1 ? "numéros" : "numéro"}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2">
+                        {(yearIssues as any[]).map((issue) => {
+                          let preciseDate = "";
+                          if (issue.oldestdate && issue.oldestdate.length >= 10 && issue.oldestdate !== "0000-00-00" && issue.oldestdate !== "9999-99-99") {
+                            const parts = issue.oldestdate.split("-");
+                            if (parts[1] !== "00") {
+                              preciseDate = `${parts[2] !== "00" ? parts[2] + "/" : ""}${parts[1]}`;
+                            }
+                          }
+                          return (
+                            <button
+                              key={issue.issuecode}
+                              onClick={() => onSelectIssue(issue.issuecode)}
+                              className="p-2 border border-border-subtle rounded-xl bg-surface hover:bg-surface-2 hover:border-primary/50 transition-colors flex flex-col items-center justify-center text-center gap-1 group"
+                              title={issue.issue_title ? `${issue.issuenumber} - ${issue.issue_title}` : issue.issuenumber}
+                            >
+                              <span className="font-bold text-sm text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                                {issue.issuenumber}
+                              </span>
+                              {preciseDate && (
+                                <span className="text-[10px] text-muted-foreground">{preciseDate}</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}

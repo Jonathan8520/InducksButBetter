@@ -62,7 +62,7 @@
     "previous": "Précédent",
     "next": "Suivant",
     "error_fetch": "Erreur : impossible de récupérer les données.",
-    "publications_title": "Recherche de Publications",
+    "publications_title": "Paramètres de recherche",
     "issue_number": "Numéro de parution",
     "issue_number_placeholder": "Ex : 123, 1A...",
     "indexer": "Indexeur",
@@ -108,7 +108,8 @@
   "common": {
     "loading": "Chargement...",
     "no_data": "Aucune donnée trouvée",
-    "error": "Une erreur est survenue"
+    "error": "Une erreur est survenue",
+    "back": "Retour"
   },
   "story": {
     "no_title": "Sans titre",
@@ -318,7 +319,7 @@
     "role_writer": "Scénariste",
     "role_artist": "Dessinateur",
     "role_any": "Tous les rôles",
-    "title": "Recherche d'auteurs",
+    "title": "Paramètres de recherche",
     "full_name": "Nom complet",
     "full_name_placeholder": "Rechercher un auteur...",
     "nationality": "Nationalité",
@@ -356,7 +357,7 @@
     "creators": "Créateurs principaux",
     "co_characters": "Compagnons fréquents",
     "stories_featuring": "Histoires avec {{name}}",
-    "title": "Recherche de personnages",
+    "title": "Paramètres de recherche",
     "name": "Nom du personnage",
     "name_placeholder": "Rechercher un personnage...",
     "universe": "Univers",

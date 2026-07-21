@@ -255,30 +255,60 @@ export async function getStoryDetail(storycode: string, lang: string = "fr") {
 }
 
 export async function getIssueDetail(issuecode: string) {
-  // 1. Core issue details
-  const coreResult = await executeQuery({
-    sql: `
-      SELECT 
-        i.issuecode,
-        i.issuenumber,
-        i.oldestdate,
-        i.pages,
-        i.price,
-        i.size,
-        i.attached,
-        p.title as publication_title,
-        p.countrycode,
-        c.countryname
-      FROM inducks_issue i
-      JOIN inducks_publication p ON i.publicationcode = p.publicationcode
-      LEFT JOIN inducks_country c ON p.countrycode = c.countrycode
-      WHERE i.issuecode = ?
-    `,
-    args: [issuecode]
-  });
+  let issue = null;
+  try {
+    const coreResult = await executeQuery({
+      sql: `
+        SELECT 
+          i.issuecode,
+          i.issuenumber,
+          i.oldestdate,
+          i.pages,
+          i.price,
+          i.size,
+          i.attached,
+          p.title as publication_title,
+          p.countrycode,
+          c.countryname
+        FROM inducks_issue i
+        JOIN inducks_publication p ON i.publicationcode = p.publicationcode
+        LEFT JOIN inducks_country c ON p.countrycode = c.countrycode
+        WHERE i.issuecode = ?
+      `,
+      args: [issuecode]
+    });
+    if (coreResult.rows.length > 0) issue = coreResult.rows[0];
+  } catch (e) {
+    console.warn("Could not fetch issue with publication join, trying fallback", e);
+  }
 
-  if (coreResult.rows.length === 0) return null;
-  const issue = coreResult.rows[0];
+  if (!issue) {
+    const fallbackResult = await executeQuery({
+      sql: `
+        SELECT 
+          i.issuecode,
+          i.issuenumber,
+          i.oldestdate,
+          i.pages,
+          i.price,
+          i.size,
+          i.attached,
+          i.publicationcode as publication_title,
+          i.publicationcode as countrycode,
+          i.publicationcode as countryname
+        FROM inducks_issue i
+        WHERE i.issuecode = ?
+      `,
+      args: [issuecode]
+    });
+    if (fallbackResult.rows.length === 0) return null;
+    issue = fallbackResult.rows[0] as any;
+    const parts = (issue.countrycode as string || "").split('/');
+    if (parts.length > 0) {
+      issue.countrycode = parts[0];
+      issue.countryname = parts[0].toUpperCase();
+    }
+  }
 
   // 2. Cover / thumbnail
   const thumbResult = await executeQuery({
@@ -300,7 +330,7 @@ export async function getIssueDetail(issuecode: string) {
       SELECT 
         e.entrycode,
         e.position,
-        e.entirepages,
+        sv.entirepages,
         e.title as entry_title,
         s.storycode,
         s.title as original_title,

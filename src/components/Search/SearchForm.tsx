@@ -223,7 +223,7 @@ export function SearchForm({
               <SearchableMultiSelect
                 options={meta.countries.map((c: any) => ({
                   value: c.countrycode,
-                  label: c.countryname,
+                  label: t(`nationalities.${c.countrycode.toLowerCase()}`) !== `nationalities.${c.countrycode.toLowerCase()}` ? t(`nationalities.${c.countrycode.toLowerCase()}`) : c.countryname,
                   group: t(`continents.${COUNTRY_CONTINENTS[c.countrycode.toLowerCase()] || "other"}`),
                   icon: (
                     <img

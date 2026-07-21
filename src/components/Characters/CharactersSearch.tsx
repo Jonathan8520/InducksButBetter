@@ -10,6 +10,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { executeQuery } from "@/lib/db";
 import CharacterDetail from "./CharacterDetail";
+import { SearchableMultiSelect } from "@/components/SearchableMultiSelect";
+import { useMetadata } from "@/hooks/useMetadata";
 import { SearchResults } from "@/components/Search/SearchResults";
 
 interface Character {
@@ -29,6 +31,7 @@ interface CharactersSearchFilters {
   oneTime: boolean;
   official: boolean;
   minAppearances: string;
+  universes: string[];
   sort: string;
   page: number;
   rowsperpage: string;
@@ -41,6 +44,7 @@ const initialFilters: CharactersSearchFilters = {
   oneTime: false,
   official: false,
   minAppearances: "",
+  universes: [],
   sort: "appearances_desc",
   page: 1,
   rowsperpage: "24",
@@ -53,6 +57,7 @@ interface CharactersSearchProps {
 
 export function CharactersSearch({ selectedCharactercode, setSelectedCharactercode }: CharactersSearchProps) {
   const { t, i18n } = useTranslation();
+  const { meta } = useMetadata();
   const [filters, setFilters] = useState<CharactersSearchFilters>(initialFilters);
   const [results, setResults] = useState<Character[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -93,6 +98,11 @@ export function CharactersSearch({ selectedCharactercode, setSelectedCharacterco
     if (searchFilters.minAppearances.trim()) {
       where.push(`(SELECT COUNT(*) FROM inducks_appearance WHERE charactercode = c.charactercode) >= ?`);
       params.push(parseInt(searchFilters.minAppearances.trim(), 10));
+    }
+
+    if (searchFilters.universes && searchFilters.universes.length > 0) {
+      where.push(`EXISTS (SELECT 1 FROM inducks_ucrelation ucr WHERE ucr.charactercode = c.charactercode AND ucr.universecode IN (${searchFilters.universes.map(() => "?").join(",")}))`);
+      params.push(...searchFilters.universes);
     }
 
     const whereClause = "WHERE " + where.join(" AND ");
@@ -205,7 +215,7 @@ export function CharactersSearch({ selectedCharactercode, setSelectedCharacterco
     <div className="h-full flex flex-col overflow-auto lg:overflow-hidden bg-background">
       <div className="flex-1 flex flex-col lg:flex-row min-h-0 p-4 lg:p-8 gap-8 px-4 lg:px-12">
         {/* Left Side: Filters form */}
-        <div className="w-full lg:w-[400px] shrink-0 flex flex-col border border-border-subtle/60 shadow-2xl shadow-blue-900/5 rounded-3xl overflow-hidden bg-surface">
+        <div className="flex-1 flex flex-col border border-border-subtle/60 shadow-2xl shadow-blue-900/5 rounded-3xl overflow-hidden bg-surface min-h-[600px] lg:min-h-0">
           <div className="px-6 py-4 border-b border-border-subtle bg-surface flex items-center justify-between shrink-0">
             <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
               <SlidersHorizontal className="w-4 h-4 text-primary" />
@@ -214,7 +224,7 @@ export function CharactersSearch({ selectedCharactercode, setSelectedCharacterco
           </div>
 
           <ScrollArea className="flex-1">
-            <form onSubmit={(e) => handleSearch(e)} className="p-6 space-y-5">
+            <form onSubmit={(e) => handleSearch(e)} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-4 md:gap-x-8 gap-y-4 md:gap-y-7">
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">{t("characters.name") || "Nom"}</Label>
                 <Input
@@ -246,15 +256,29 @@ export function CharactersSearch({ selectedCharactercode, setSelectedCharacterco
                 />
               </div>
 
-              <div className="pt-2 space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">{t("search.universe") || "Univers"}</Label>
+                <SearchableMultiSelect
+                  options={meta.universes.map((u: any) => ({
+                    value: u.universecode,
+                    label: u.universename,
+                  }))}
+                  selected={filters.universes}
+                  onChange={(vals) => setFilters({ ...filters, universes: vals })}
+                  placeholder={t("search.all_universes") || "Tous les univers"}
+                  searchPlaceholder={t("search.search_universe") || "Rechercher..."}
+                  emptyMessage={t("common.no_data") || "Aucun résultat"}
+                />
+              </div>
+
+              <div className="space-y-3 pt-4">
                 <div className="flex items-center gap-2">
                   <Checkbox
                     id="heroOnly"
                     checked={filters.heroOnly}
                     onCheckedChange={(checked) => setFilters({ ...filters, heroOnly: checked === true })}
                   />
-                  <Label htmlFor="heroOnly" className="text-xs font-medium cursor-pointer flex items-center gap-1">
-                    <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                  <Label htmlFor="heroOnly" className="text-xs font-medium cursor-pointer">
                     {t("characters.hero_only") || "Héros uniquement"}
                   </Label>
                 </div>
@@ -265,8 +289,7 @@ export function CharactersSearch({ selectedCharactercode, setSelectedCharacterco
                     checked={filters.official}
                     onCheckedChange={(checked) => setFilters({ ...filters, official: checked === true })}
                   />
-                  <Label htmlFor="official" className="text-xs font-medium cursor-pointer flex items-center gap-1">
-                    <Badge variant="secondary" className="px-1 text-[9px] h-3.5 shrink-0 bg-primary/20 text-primary border-none">O</Badge>
+                  <Label htmlFor="official" className="text-xs font-medium cursor-pointer">
                     {t("characters.official") || "Personnage officiel"}
                   </Label>
                 </div>
@@ -277,8 +300,7 @@ export function CharactersSearch({ selectedCharactercode, setSelectedCharacterco
                     checked={filters.oneTime}
                     onCheckedChange={(checked) => setFilters({ ...filters, oneTime: checked === true })}
                   />
-                  <Label htmlFor="oneTime" className="text-xs font-medium cursor-pointer flex items-center gap-1">
-                    <Badge variant="secondary" className="px-1 text-[9px] h-3.5 shrink-0 bg-muted-foreground/20 text-muted-foreground border-none">1</Badge>
+                  <Label htmlFor="oneTime" className="text-xs font-medium cursor-pointer">
                     {t("characters.onetime") || "Apparition unique"}
                   </Label>
                 </div>

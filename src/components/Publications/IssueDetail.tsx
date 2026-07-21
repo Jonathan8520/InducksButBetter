@@ -34,6 +34,22 @@ export function IssueDetail({ issuecode, onBack, onSelectStory }: IssueDetailPro
     fetchDetails()
   }, [issuecode])
 
+  // Build high-res cover image URL
+  const coverUrl = React.useMemo(() => {
+    if (!issue?.issue_thumb) return null
+    const parts = issue.issue_thumb.split("|")
+    const url = parts.length > 1 ? parts[1] : parts[0]
+    let baseUrl = url
+    if (!url.startsWith("http")) {
+      if (parts[0] === "webusers" && !url.startsWith("webusers/")) {
+        baseUrl = `https://outducks.org/webusers/webusers/${url}`
+      } else {
+        baseUrl = `https://outducks.org/${url.startsWith("/") ? url.substring(1) : url}`
+      }
+    }
+    return `/api/proxy-image?url=${encodeURIComponent(`https://inducks.org/hr.php?normalsize=1&image=${baseUrl}`)}`
+  }, [issue?.issue_thumb])
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-[400px] text-primary/40 gap-3">
@@ -76,21 +92,6 @@ export function IssueDetail({ issuecode, onBack, onSelectStory }: IssueDetailPro
     }
   }
 
-  // Build high-res cover image URL
-  const coverUrl = React.useMemo(() => {
-    if (!issue.issue_thumb) return null
-    const parts = issue.issue_thumb.split("|")
-    const url = parts.length > 1 ? parts[1] : parts[0]
-    let baseUrl = url
-    if (!url.startsWith("http")) {
-      if (parts[0] === "webusers" && !url.startsWith("webusers/")) {
-        baseUrl = `https://outducks.org/webusers/webusers/${url}`
-      } else {
-        baseUrl = `https://outducks.org/${url.startsWith("/") ? url.substring(1) : url}`
-      }
-    }
-    return `/api/proxy-image?url=${encodeURIComponent(`https://inducks.org/hr.php?normalsize=1&image=${baseUrl}`)}`
-  }, [issue.issue_thumb])
 
   return (
     <div className="w-full max-w-5xl mx-auto p-4 lg:p-8 space-y-6">

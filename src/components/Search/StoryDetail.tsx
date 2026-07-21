@@ -136,11 +136,11 @@ export function StoryDetail({ storycode, onBack, onSelectIssue, onSelectCharacte
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left/Middle Content: Main Story Info */}
         <div className="md:col-span-2 space-y-6">
-          <div className="space-y-2">
+          <div className="space-y-3">
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               {story.story_title || "Sans titre"}
             </h1>
-            <p className="text-muted-foreground text-sm flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 text-muted-foreground text-sm">
               <span className="font-semibold">{story.series_title}</span>
               {story.firstpublicationdate && (
                 <>
@@ -151,7 +151,18 @@ export function StoryDetail({ storycode, onBack, onSelectIssue, onSelectCharacte
                   </span>
                 </>
               )}
-            </p>
+              <div className="flex items-center gap-1.5 ml-2">
+                <Badge variant="secondary" className="font-medium text-[10px]">
+                  {story.kind ? t(`kinds.${story.kind}`, story.kind) : t("kinds.s")}
+                </Badge>
+                {(story.entirepages || story.brokenpagenumerator) && (
+                  <Badge variant="outline" className="font-medium text-[10px] gap-1 bg-surface">
+                    <FileText className="w-3 h-3" />
+                    {story.entirepages ? `${story.entirepages} pages` : `${story.brokenpagenumerator}/${story.brokenpagedenominator} page`}
+                  </Badge>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Copyable Story Code */}

@@ -46,10 +46,15 @@ export function CountryList({ onSelectCountry }: CountryListProps) {
     fetchCountries();
   }, []);
 
-  const filteredCountries = countries.filter(c => 
-    c.countryname.toLowerCase().includes(filterText.toLowerCase()) ||
-    c.countrycode.toLowerCase().includes(filterText.toLowerCase())
-  );
+  const filteredCountries = React.useMemo(() => {
+    return countries.filter(c => {
+      const translatedName = t(`nationalities.${c.countrycode.toLowerCase()}`) !== `nationalities.${c.countrycode.toLowerCase()}` 
+        ? t(`nationalities.${c.countrycode.toLowerCase()}`) 
+        : c.countryname;
+      return translatedName.toLowerCase().includes(filterText.toLowerCase()) ||
+             c.countrycode.toLowerCase().includes(filterText.toLowerCase());
+    });
+  }, [countries, filterText, t]);
 
   if (loading) {
     return (
@@ -100,7 +105,7 @@ export function CountryList({ onSelectCountry }: CountryListProps) {
                 )}
                 <div className="min-w-0 space-y-0.5">
                   <h3 className="font-semibold text-foreground text-xs truncate group-hover:text-primary transition-colors">
-                    {c.countryname}
+                    {t(`nationalities.${c.countrycode.toLowerCase()}`) !== `nationalities.${c.countrycode.toLowerCase()}` ? t(`nationalities.${c.countrycode.toLowerCase()}`) : c.countryname}
                   </h3>
                   <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                     <LibraryBig className="w-3 h-3 text-primary shrink-0" />

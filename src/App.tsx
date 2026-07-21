@@ -87,7 +87,9 @@ function App() {
           setSelectedStorycode(code);
         } else if (parts[1] === "issue" && parts[2]) {
           const code = parts.slice(2).join("/");
-          setSelectedIssuecode(code);
+          const partsArr = code.split("/");
+          const restoredCode = partsArr.length >= 3 ? `${partsArr[0]}/${partsArr[1]} ${partsArr.slice(2).join("/")}` : code;
+          setSelectedIssuecode(restoredCode);
         }
       } else if (rootPart === "publications") {
         setActiveTab("publications");
@@ -99,26 +101,19 @@ function App() {
           setSelectedStorycode(code);
         } else if (parts[1] === "issue" && parts[2]) {
           const code = parts.slice(2).join("/");
-          setSelectedIssuecode(code);
+          const partsArr = code.split("/");
+          const restoredCode = partsArr.length >= 3 ? `${partsArr[0]}/${partsArr[1]} ${partsArr.slice(2).join("/")}` : code;
+          setSelectedIssuecode(restoredCode);
         }
       } else if (rootPart === "authors") {
         setActiveTab("authors");
-        if (parts[1] === "person" && parts[2]) {
-          const code = parts.slice(2).join("/");
-          setSelectedPersoncode(code);
-        }
+        if (parts[1]) setSelectedPersoncode(parts.slice(1).join("/"));
       } else if (rootPart === "characters") {
         setActiveTab("characters");
-        if (parts[1] === "character" && parts[2]) {
-          const code = parts.slice(2).join("/");
-          setSelectedCharactercode(code);
-        }
+        if (parts[1]) setSelectedCharactercode(parts.slice(1).join("/"));
       } else if (rootPart === "countries") {
         setActiveTab("countries");
-        if (parts[1] === "country" && parts[2]) {
-          const code = parts.slice(2).join("/");
-          setSelectedCountrycode(code);
-        }
+        if (parts[1]) setSelectedCountrycode(parts.slice(1).join("/"));
       } else if (rootPart === "sql") {
         setActiveTab("sql");
       } else {
@@ -154,17 +149,19 @@ function App() {
     if (activeTab === "settings") {
       pushHashState("#/settings");
     } else if (selectedStorycode) {
-      pushHashState(`#/${rootPrefix}/story/${encodeURIComponent(selectedStorycode)}`);
+      pushHashState(`#/${rootPrefix}/story/${encodeURI(selectedStorycode)}`);
     } else if (selectedIssuecode) {
-      pushHashState(`#/${rootPrefix}/issue/${encodeURIComponent(selectedIssuecode)}`);
+      // Replace the space with a slash for cleaner URLs
+      const displayCode = selectedIssuecode.replace(" ", "/");
+      pushHashState(`#/${rootPrefix}/issue/${encodeURI(displayCode)}`);
     } else if (selectedPersoncode) {
-      pushHashState(`#/authors/person/${encodeURIComponent(selectedPersoncode)}`);
+      pushHashState(`#/authors/${encodeURI(selectedPersoncode)}`);
     } else if (selectedCharactercode) {
-      pushHashState(`#/characters/character/${encodeURIComponent(selectedCharactercode)}`);
+      pushHashState(`#/characters/${encodeURI(selectedCharactercode)}`);
     } else if (selectedCountrycode) {
-      pushHashState(`#/countries/country/${encodeURIComponent(selectedCountrycode)}`);
+      pushHashState(`#/countries/${encodeURI(selectedCountrycode)}`);
     } else if (selectedPublicationcode) {
-      pushHashState(`#/publications/publication/${encodeURIComponent(selectedPublicationcode)}`);
+      pushHashState(`#/publications/publication/${encodeURI(selectedPublicationcode)}`);
     } else {
       pushHashState(`#/${rootPrefix}`);
     }

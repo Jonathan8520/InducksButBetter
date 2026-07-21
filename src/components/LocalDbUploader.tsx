@@ -38,16 +38,40 @@ export function LocalDbUploader() {
 
     setIsLoading(true)
     setProgressMsg(t('localDb.progress_start'))
+    
+    const toastId = "db-upload-toast"
+    toast.loading(
+      <div className="flex flex-col gap-2 w-full min-w-[200px] mt-1">
+        <span className="text-sm font-medium">{t('localDb.progress_start')}</span>
+        <div className="w-full h-1.5 bg-secondary rounded-full overflow-hidden">
+          <div className="h-full bg-primary transition-all duration-300" style={{ width: '0%' }}></div>
+        </div>
+      </div>, 
+      { id: toastId }
+    )
+
     try {
       await loadFromIsvFiles(Array.from(files), (progress) => {
-        setProgressMsg(t('localDb.progress_importing', { table: progress.table, current: progress.current, total: progress.total }))
+        const msg = t('localDb.progress_importing', { table: progress.table, current: progress.current, total: progress.total })
+        setProgressMsg(msg)
+        const percent = Math.round((progress.current / progress.total) * 100)
+        
+        toast.loading(
+          <div className="flex flex-col gap-2 w-full min-w-[200px] mt-1">
+            <span className="text-sm font-medium">{msg}</span>
+            <div className="w-full h-1.5 bg-secondary rounded-full overflow-hidden">
+              <div className="h-full bg-primary transition-all duration-300" style={{ width: `${percent}%` }}></div>
+            </div>
+          </div>,
+          { id: toastId }
+        )
       })
       setIsActive(true)
       setIsOpen(false)
-      toast.success(t('localDb.success') || "Local ISV database loaded successfully!")
+      toast.success(t('localDb.success') || "Local ISV database loaded successfully!", { id: toastId })
     } catch (error) {
       console.error(error)
-      toast.error(t('localDb.error') || "Failed to load ISV database.")
+      toast.error(t('localDb.error') || "Failed to load ISV database.", { id: toastId })
     } finally {
       setIsLoading(false)
       setProgressMsg(null)

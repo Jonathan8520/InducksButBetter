@@ -11,6 +11,7 @@ interface PublicationInfo {
   publicationcode: string;
   title: string;
   languagecode: string;
+  publicationcomment?: string;
   issueCount: number;
 }
 
@@ -45,7 +46,7 @@ export function CountryPublications({ countrycode, onBack, onSelectPublication }
         // Fetch publications
         const result = await executeQuery({
           sql: `
-            SELECT p.publicationcode, p.title, p.languagecode,
+            SELECT p.publicationcode, p.title, p.languagecode, p.publicationcomment,
                    (SELECT COUNT(*) FROM inducks_issue WHERE publicationcode = p.publicationcode) as issueCount
             FROM inducks_publication p
             WHERE p.countrycode = ?
@@ -65,10 +66,12 @@ export function CountryPublications({ countrycode, onBack, onSelectPublication }
     fetchData();
   }, [countrycode]);
 
-  const filteredPublications = publications.filter(p => 
-    p.title.toLowerCase().includes(filterText.toLowerCase()) ||
-    p.publicationcode.toLowerCase().includes(filterText.toLowerCase())
-  );
+  const filteredPublications = React.useMemo(() => {
+    return publications.filter(p => 
+      p.title.toLowerCase().includes(filterText.toLowerCase()) ||
+      p.publicationcode.toLowerCase().includes(filterText.toLowerCase())
+    );
+  }, [publications, filterText]);
 
   const flagUrl = getFlagUrl(countrycode);
 
@@ -124,11 +127,16 @@ export function CountryPublications({ countrycode, onBack, onSelectPublication }
               onClick={() => onSelectPublication(p.publicationcode)}
               className="p-4 cursor-pointer hover:bg-surface-2 hover:border-primary/20 hover:shadow-md transition-all duration-300 flex justify-between items-center gap-4 border border-border-subtle bg-surface/50 rounded-2xl group"
             >
-              <div className="min-w-0 space-y-0.5">
-                <h3 className="font-semibold text-foreground text-xs truncate group-hover:text-primary transition-colors">
+              <div className="min-w-0 space-y-0.5 flex-1">
+                <h3 className="font-semibold text-foreground text-sm group-hover:text-primary transition-colors leading-tight">
                   {p.title || "Sans titre"}
                 </h3>
                 <p className="text-[10px] text-muted-foreground font-mono">{p.publicationcode}</p>
+                {p.publicationcomment && (
+                  <p className="text-[10.5px] text-text-secondary italic line-clamp-2 mt-1.5 pt-0.5">
+                    "{p.publicationcomment}"
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground bg-surface-2 px-3 py-1 rounded-xl border border-border-subtle shrink-0">

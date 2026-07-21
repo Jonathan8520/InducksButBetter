@@ -7,10 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
-import { AUTHOR_NATIONALITIES } from "@/lib/constants";
+import { SearchableMultiSelect } from "@/components/SearchableMultiSelect";
+import { useMetadata } from "@/hooks/useMetadata";
+import { COUNTRY_CONTINENTS } from "@/lib/types";
 import { executeQuery } from "@/lib/db";
 import AuthorDetail from "./AuthorDetail";
 import { getFlagUrl } from "@/lib/utils";
+import { Autocomplete } from "@/components/Autocomplete";
+import { autocompletePerson } from "@/lib/turso";
 import { SearchResults } from "@/components/Search/SearchResults";
 
 interface Author {
@@ -24,7 +28,7 @@ interface Author {
 
 interface AuthorsSearchFilters {
   fullName: string;
-  nationality: string;
+  nationality: string[];
   bornAfter: string;
   bornBefore: string;
   deceasedAfter: string;
@@ -40,7 +44,7 @@ interface AuthorsSearchFilters {
 
 const initialFilters: AuthorsSearchFilters = {
   fullName: "",
-  nationality: "any",
+  nationality: [],
   bornAfter: "",
   bornBefore: "",
   deceasedAfter: "",
@@ -61,8 +65,9 @@ interface AuthorsSearchProps {
 
 export function AuthorsSearch({ selectedAuthorcode, setSelectedAuthorcode }: AuthorsSearchProps) {
   const { t } = useTranslation();
+  const { meta } = useMetadata();
   const [filters, setFilters] = useState<AuthorsSearchFilters>(initialFilters);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+
   const [results, setResults] = useState<Author[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -81,9 +86,9 @@ export function AuthorsSearch({ selectedAuthorcode, setSelectedAuthorcode }: Aut
       params.push(likeVal, likeVal, likeVal, likeVal);
     }
 
-    if (searchFilters.nationality && searchFilters.nationality !== "any") {
-      where.push("p.nationalitycountrycode = ?");
-      params.push(searchFilters.nationality);
+    if (searchFilters.nationality && searchFilters.nationality.length > 0) {
+      where.push(`p.nationalitycountrycode IN (${searchFilters.nationality.map(() => "?").join(",")})`);
+      params.push(...searchFilters.nationality);
     }
 
     if (searchFilters.bornAfter.trim()) {
@@ -231,7 +236,7 @@ export function AuthorsSearch({ selectedAuthorcode, setSelectedAuthorcode }: Aut
     <div className="h-full flex flex-col overflow-auto lg:overflow-hidden bg-background">
       <div className="flex-1 flex flex-col lg:flex-row min-h-0 p-4 lg:p-8 gap-8 px-4 lg:px-12">
         {/* Left Side: Search Form Card */}
-        <div className="w-full lg:w-[400px] shrink-0 flex flex-col border border-border-subtle/60 shadow-2xl shadow-blue-900/5 rounded-3xl overflow-hidden bg-surface">
+        <div className="flex-1 flex flex-col border border-border-subtle/60 shadow-2xl shadow-blue-900/5 rounded-3xl overflow-hidden bg-surface min-h-[600px] lg:min-h-0">
           <div className="px-6 py-4 border-b border-border-subtle bg-surface flex items-center justify-between shrink-0">
             <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
               <SlidersHorizontal className="w-4 h-4 text-primary" />
@@ -240,34 +245,42 @@ export function AuthorsSearch({ selectedAuthorcode, setSelectedAuthorcode }: Aut
           </div>
 
           <ScrollArea className="flex-1">
-            <form onSubmit={(e) => handleSearch(e)} className="p-6 space-y-5">
+            <form onSubmit={(e) => handleSearch(e)} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-4 md:gap-x-8 gap-y-4 md:gap-y-7">
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">{t("authors.full_name")}</Label>
-                <Input
-                  placeholder={t("authors.full_name_placeholder")}
+                <Autocomplete
                   value={filters.fullName}
-                  onChange={(e) => setFilters({ ...filters, fullName: e.target.value })}
-                  className="h-10 rounded-xl bg-surface"
+                  placeholder={t("authors.full_name_placeholder") || "Ex: Don Rosa..."}
+                  emptyMessage={t("common.no_data") || "Aucun résultat"}
+                  fetchOptions={autocompletePerson}
+                  onInputChange={(val) => setFilters({ ...filters, fullName: val })}
+                  onSelect={(id, name) => setFilters({ ...filters, fullName: name })}
+                  onClear={() => setFilters({ ...filters, fullName: "" })}
+                  type="authors"
                 />
               </div>
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">{t("authors.nationality")}</Label>
-                <Select
-                  value={filters.nationality}
-                  onValueChange={(val) => setFilters({ ...filters, nationality: val })}
-                >
-                  <SelectTrigger className="h-10 rounded-xl bg-surface">
-                    <SelectValue placeholder={t("nationalities.any") || "N'importe"} />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px] rounded-xl border-border-subtle bg-surface">
-                    {AUTHOR_NATIONALITIES.map((nat) => (
-                      <SelectItem key={nat.code} value={nat.code} className="rounded-lg">
-                        {nat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableMultiSelect
+                  options={meta.countries.map((c: any) => ({
+                    value: c.countrycode,
+                    label: t(`nationalities.${c.countrycode.toLowerCase()}`) !== `nationalities.${c.countrycode.toLowerCase()}` ? t(`nationalities.${c.countrycode.toLowerCase()}`) : c.countryname,
+                    group: t(`continents.${COUNTRY_CONTINENTS[c.countrycode.toLowerCase()] || "other"}`),
+                    icon: (
+                      <img
+                        src={getFlagUrl(c.countrycode)}
+                        className="w-4 h-3 rounded-xs"
+                        alt=""
+                      />
+                    ),
+                  }))}
+                  selected={filters.nationality}
+                  onChange={(vals) => setFilters({ ...filters, nationality: vals })}
+                  placeholder={t("nationalities.any") || "Toutes nationalités"}
+                  searchPlaceholder={t("search.search_country") || "Rechercher..."}
+                  emptyMessage={t("common.no_data") || "Aucun résultat"}
+                />
               </div>
 
               <div className="space-y-1.5">
@@ -289,93 +302,74 @@ export function AuthorsSearch({ selectedAuthorcode, setSelectedAuthorcode }: Aut
                 </Select>
               </div>
 
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="text-xs text-primary font-semibold flex items-center gap-1.5 h-8 p-0 hover:bg-transparent"
-              >
-                <Settings className="w-3.5 h-3.5" />
-                {showAdvanced ? "Masquer les options" : "Options avancées (dates, lieux...)"}
-              </Button>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">{t("authors.born_range") || "Année naiss. min"}</Label>
+                <Input
+                  placeholder="Ex: 1900"
+                  value={filters.bornAfter}
+                  onChange={(e) => setFilters({ ...filters, bornAfter: e.target.value })}
+                  className="h-10 rounded-xl bg-surface"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">{"Max"}</Label>
+                <Input
+                  placeholder="Ex: 1950"
+                  value={filters.bornBefore}
+                  onChange={(e) => setFilters({ ...filters, bornBefore: e.target.value })}
+                  className="h-10 rounded-xl bg-surface"
+                />
+              </div>
 
-              {showAdvanced && (
-                <div className="space-y-5 pt-2 border-t border-border-subtle/50">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-medium">{t("authors.born_range") || "Année naiss. min"}</Label>
-                      <Input
-                        placeholder="Ex: 1900"
-                        value={filters.bornAfter}
-                        onChange={(e) => setFilters({ ...filters, bornAfter: e.target.value })}
-                        className="h-9 rounded-xl bg-surface"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-medium">{"Max"}</Label>
-                      <Input
-                        placeholder="Ex: 1950"
-                        value={filters.bornBefore}
-                        onChange={(e) => setFilters({ ...filters, bornBefore: e.target.value })}
-                        className="h-9 rounded-xl bg-surface"
-                      />
-                    </div>
-                  </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">{t("authors.deceased_range") || "Année décès min"}</Label>
+                <Input
+                  placeholder="Ex: 1980"
+                  value={filters.deceasedAfter}
+                  onChange={(e) => setFilters({ ...filters, deceasedAfter: e.target.value })}
+                  className="h-10 rounded-xl bg-surface"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">{"Max"}</Label>
+                <Input
+                  placeholder="Ex: 2020"
+                  value={filters.deceasedBefore}
+                  onChange={(e) => setFilters({ ...filters, deceasedBefore: e.target.value })}
+                  className="h-10 rounded-xl bg-surface"
+                />
+              </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-medium">{t("authors.deceased_range") || "Année décès min"}</Label>
-                      <Input
-                        placeholder="Ex: 1980"
-                        value={filters.deceasedAfter}
-                        onChange={(e) => setFilters({ ...filters, deceasedAfter: e.target.value })}
-                        className="h-9 rounded-xl bg-surface"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-medium">{"Max"}</Label>
-                      <Input
-                        placeholder="Ex: 2020"
-                        value={filters.deceasedBefore}
-                        onChange={(e) => setFilters({ ...filters, deceasedBefore: e.target.value })}
-                        className="h-9 rounded-xl bg-surface"
-                      />
-                    </div>
-                  </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">{t("authors.born_place") || "Lieu de naissance"}</Label>
+                <Input
+                  placeholder="Ex: Oregon"
+                  value={filters.birthPlace}
+                  onChange={(e) => setFilters({ ...filters, birthPlace: e.target.value })}
+                  className="h-10 rounded-xl bg-surface"
+                />
+              </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium">{t("authors.born_place") || "Lieu de naissance"}</Label>
-                    <Input
-                      placeholder="Ex: Oregon"
-                      value={filters.birthPlace}
-                      onChange={(e) => setFilters({ ...filters, birthPlace: e.target.value })}
-                      className="h-9 rounded-xl bg-surface"
-                    />
-                  </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">{t("authors.deceased_place") || "Lieu de décès"}</Label>
+                <Input
+                  placeholder="Ex: California"
+                  value={filters.deceasedPlace}
+                  onChange={(e) => setFilters({ ...filters, deceasedPlace: e.target.value })}
+                  className="h-10 rounded-xl bg-surface"
+                />
+              </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium">{t("authors.deceased_place") || "Lieu de décès"}</Label>
-                    <Input
-                      placeholder="Ex: California"
-                      value={filters.deceasedPlace}
-                      onChange={(e) => setFilters({ ...filters, deceasedPlace: e.target.value })}
-                      className="h-9 rounded-xl bg-surface"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium">{t("authors.min_stories") || "Histoires minimum"}</Label>
-                    <Input
-                      type="number"
-                      placeholder="Ex: 10"
-                      value={filters.minStories}
-                      onChange={(e) => setFilters({ ...filters, minStories: e.target.value })}
-                      className="h-9 rounded-xl bg-surface"
-                    />
-                  </div>
-                </div>
-              )}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">{t("authors.min_stories") || "Histoires minimum"}</Label>
+                <Input
+                  type="number"
+                  placeholder="Ex: 10"
+                  value={filters.minStories}
+                  onChange={(e) => setFilters({ ...filters, minStories: e.target.value })}
+                  className="h-10 rounded-xl bg-surface"
+                />
+              </div>
             </form>
           </ScrollArea>
 

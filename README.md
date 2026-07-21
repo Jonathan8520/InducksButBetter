@@ -76,6 +76,10 @@ This project is fully automated for deployment on GitHub Pages using GitHub Acti
 2. Push to the `main` branch.
 3. The Action will automatically bake your read-only credentials into the static Vite bundle and publish the site.
 
+## Credits
+
+- **Luis Bärenfaller**: German, Italian, and Portuguese translations.
+
 ---
 
 <div align="center">
