@@ -378,21 +378,34 @@ MATERIALIZED: list[tuple[str, str, str, list[str]]] = [
         # Auteurs et parutions, également en une passe chacun.
         "DROP TABLE IF EXISTS _cred",
         """CREATE TABLE _cred (storycode TEXT PRIMARY KEY, lst TEXT) WITHOUT ROWID""",
+        # Format attendu par StoryResultCard : « role:personcode|nom », séparés par « ; ».
+        # Le séparateur par défaut de GROUP_CONCAT est la virgule, et SQLite refuse
+        # GROUP_CONCAT(DISTINCT x, sep) : on déduplique donc dans une sous-requête.
         """INSERT INTO _cred
-           SELECT b.storycode, GROUP_CONCAT(DISTINCT sj.plotwritartink || '|' || p.fullname)
-           FROM _bestver b
-           JOIN inducks_storyjob sj ON sj.storyversioncode = b.svc
-           JOIN inducks_person p ON p.personcode = sj.personcode
-           GROUP BY b.storycode""",
+           SELECT storycode, GROUP_CONCAT(entry, ';') FROM (
+             SELECT DISTINCT b.storycode AS storycode,
+                    sj.plotwritartink || ':' || sj.personcode || '|' || p.fullname AS entry
+             FROM _bestver b
+             JOIN inducks_storyjob sj ON sj.storyversioncode = b.svc
+             JOIN inducks_person p ON p.personcode = sj.personcode
+             WHERE sj.plotwritartink IS NOT NULL AND p.fullname IS NOT NULL
+           ) GROUP BY storycode""",
         "DROP TABLE IF EXISTS _pubs",
         # `n` est compté ici plutôt que repris de inducks_story.entry_count : cette
         # colonne dérivée est calculée APRÈS les tables regroupées, donc elle n'existe pas
         # encore à ce stade. La compter dans le même GROUP BY ne coûte rien.
         """CREATE TABLE _pubs (storycode TEXT PRIMARY KEY, lst TEXT, n INTEGER) WITHOUT ROWID""",
+        # « pays|TITRE de publication », séparés par « ; » — le composant affiche le titre,
+        # pas le code. Le décompte sert au tri « le plus publié ».
         """INSERT INTO _pubs
-           SELECT storycode, GROUP_CONCAT(DISTINCT countrycode || '|' || publicationcode),
-                  COUNT(*)
-           FROM story_publications GROUP BY storycode""",
+           SELECT storycode, GROUP_CONCAT(entry, ';'), SUM(n) FROM (
+             SELECT sp.storycode AS storycode,
+                    sp.countrycode || '|' || COALESCE(pub.title, sp.publicationcode) AS entry,
+                    COUNT(*) AS n
+             FROM story_publications sp
+             LEFT JOIN inducks_publication pub ON pub.publicationcode = sp.publicationcode
+             GROUP BY sp.storycode, entry
+           ) GROUP BY storycode""",
         """INSERT OR REPLACE INTO story_card
            SELECT s.storycode,
                   COALESCE(pb.lst, ''), COALESCE(cr.lst, ''),
