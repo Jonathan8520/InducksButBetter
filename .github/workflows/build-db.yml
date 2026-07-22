@@ -74,12 +74,9 @@ jobs:
       - name: Vérifier que les requêtes réelles sont indexées
         run: python scripts/check_queries.py data/inducks.sqlite
 
-      - name: Découper en tranches
-        run: |
-          python scripts/split_db.py data/inducks.sqlite public/db \
-            --chunk-size "$CHUNK_SIZE_MIB"
-
       # --- Construction du site -------------------------------------------------------
+      # Le site est bâti AVANT le découpage : Vite recopie tout `public/` dans `dist/`,
+      # donc y déposer 1,2 Go de tranches au préalable les ferait copier deux fois.
       - uses: pnpm/action-setup@v3
         with:
           version: 9
@@ -91,10 +88,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
 
-      - name: Recopier les tranches dans dist/
+      - name: Découper en tranches directement dans dist/
         run: |
-          mkdir -p dist/db
-          cp -r public/db/* dist/db/
+          python scripts/split_db.py data/inducks.sqlite dist/db \
+            --chunk-size "$CHUNK_SIZE_MIB"
           du -sh dist
 
       # --- Déploiement ----------------------------------------------------------------
@@ -117,5 +114,5 @@ jobs:
             echo "| Source | ${{ steps.src.outputs.source }} |"
             echo "| ISV | $(du -sh data/isv | cut -f1) |"
             echo "| SQLite | $(du -sh data/inducks.sqlite | cut -f1) |"
-            echo "| Tranches | $(ls public/db/db-*.bin | wc -l) |"
+            echo "| Tranches | $(ls dist/db/db-*.bin | wc -l) |"
           } >> "$GITHUB_STEP_SUMMARY"
