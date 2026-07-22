@@ -232,6 +232,13 @@ def main() -> int:
         scans = []
         for line in detail:
             stripped = line.strip()
+
+            # Relever les index empruntés AVANT tout filtrage : ce sont les lignes SEARCH
+            # qui les nomment, et elles ne correspondent pas à SCAN_RE. Les écarter plus
+            # bas ferait passer tous les index pour inutilisés.
+            for ix in re.findall(r"USING (?:COVERING )?INDEX (\w+)", stripped):
+                used_indexes.add(ix)
+
             # « SCAN x VIRTUAL TABLE INDEX 0:M2 » n'est PAS un parcours de table : c'est
             # l'usage normal d'un index FTS5, le suffixe M2 dénotant la contrainte MATCH.
             if "VIRTUAL TABLE INDEX" in stripped:
