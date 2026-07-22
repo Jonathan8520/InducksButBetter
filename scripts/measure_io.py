@@ -96,22 +96,31 @@ QUERIES: list[tuple[str, str, tuple]] = [
     """, ("W OS  178-02",)),
 
     ("Personnages d'une histoire", """
-        SELECT a.charactercode, c.charactername
-        FROM inducks_appearance a
-        JOIN inducks_character c ON a.charactercode = c.charactercode
-        WHERE a.storyversioncode IN (
-            SELECT storyversioncode FROM inducks_storyversion WHERE storycode = ?)
-        ORDER BY a.number
+        SELECT sc.charactercode, COALESCE(cn.charactername, sc.charactername)
+        FROM story_characters sc
+        LEFT JOIN inducks_charactername cn
+          ON cn.charactercode = sc.charactercode AND cn.languagecode = 'fr'
+        WHERE sc.storycode = ? ORDER BY sc.number
     """, ("W OS  178-02",)),
 
     ("Parutions d'une histoire", """
-        SELECT e.entrycode, i.issuecode, p.countrycode
-        FROM inducks_entry e
-        JOIN inducks_issue i ON e.issuecode = i.issuecode
-        JOIN inducks_publication p ON i.publicationcode = p.publicationcode
-        WHERE e.storyversioncode IN (
-            SELECT storyversioncode FROM inducks_storyversion WHERE storycode = ?)
+        SELECT sp.entrycode, sp.issuecode, sp.countrycode
+        FROM story_publications sp
+        WHERE sp.storycode = ? ORDER BY sp.countrycode, sp.oldestdate
     """, ("W OS  178-02",)),
+
+    ("Vignette d'une histoire", """
+        SELECT sitecode || '|' || url FROM story_thumb WHERE storycode = ?
+    """, ("W OS  178-02",)),
+
+    ("Recherche plein texte (FTS5)", """
+        SELECT storycode FROM fts_story WHERE fts_story MATCH ? LIMIT 24
+    """, ("treasure",)),
+
+    ("Autocomplétion personnage (trigram)", """
+        SELECT charactercode, charactername FROM fts_character
+        WHERE fts_character MATCH ? LIMIT 10
+    """, ('"donald"',)),
 
     ("Sommaire d'un numéro", """
         SELECT e.entrycode, e.position, e.title, s.storycode

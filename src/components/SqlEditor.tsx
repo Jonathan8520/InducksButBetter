@@ -16,6 +16,9 @@ import { executeQuery } from "@/lib/db"
 import { DEFAULT_DB_SCHEMA } from "@/lib/defaultSchema"
 import { toast } from "sonner"
 
+/** Plafond de lignes appliqué quand la requête de l'utilisateur n'a pas sa propre LIMIT. */
+const MAX_EDITOR_ROWS = 500
+
 interface SqlEditorProps {
   query: string
   setQuery: (query: string) => void
@@ -173,17 +176,37 @@ export function SqlEditor({ query, setQuery }: SqlEditorProps) {
     }
 
     try {
-      // Direct Turso connection for standalone mode
-      if (!query.trim().toLowerCase().startsWith("select")) {
+      const trimmed = query.trim().replace(/;\s*$/, "")
+      if (!/^(select|with)\b/i.test(trimmed)) {
         throw new Error("Only SELECT queries are allowed.")
       }
-      const result = await executeQuery({ sql: query, args: [] })
-      setResults(result.rows || [])
-      
-      const count = result.rows?.length || 0
+
+      // Un plafond de lignes est ajouté quand la requête n'en porte pas.
+      //
+      // Sur une base servie par requêtes HTTP Range, un `SELECT * FROM inducks_entry` ne
+      // ralentit pas un serveur : il télécharge la table entière chez le visiteur, page
+      // par page. Le garde-fou protège donc l'utilisateur lui-même — et sa facture de
+      // données mobile. Il reste contournable en écrivant explicitement sa propre clause
+      // LIMIT, ce qui est un choix conscient.
+      const hasLimit = /\blimit\s+\d+/i.test(trimmed)
+      const guarded = hasLimit ? trimmed : `SELECT * FROM (${trimmed}) LIMIT ${MAX_EDITOR_ROWS}`
+
+      const result = await executeQuery({ sql: guarded, args: [] })
+      const rows = result.rows || []
+      setResults(rows)
+
+      const count = rows.length
+      const capped = !hasLimit && count >= MAX_EDITOR_ROWS
       toast.success(
-        t("sql.results_count", { count, defaultValue: `${count} result(s) found` }), 
-        { description: t("sql.query_success", { defaultValue: "Query executed successfully." }) }
+        t("sql.results_count", { count, defaultValue: `${count} result(s) found` }),
+        {
+          description: capped
+            ? t("sql.results_capped", {
+                max: MAX_EDITOR_ROWS,
+                defaultValue: `Affichage limité à ${MAX_EDITOR_ROWS} lignes — ajoutez votre propre LIMIT pour aller au-delà.`,
+              })
+            : t("sql.query_success", { defaultValue: "Query executed successfully." }),
+        }
       )
     } catch (err: any) {
       setError(err?.message || "Unable to execute SQL query")

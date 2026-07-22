@@ -60,14 +60,24 @@ export function useSearchExecution({ filters, pagesSliderMoved }: UseSearchExecu
       const { query, countQuery, params, countParams } = buildAdvancedSearchQuery(filtersForQuery);
 
       setResults([]);
-      
-      const countResult = await executeQuery({ sql: countQuery, args: countParams });
-      
-      await executeQuery({ sql: query, args: params }, (newRow) => {
+
+      // Les résultats partent en premier et sans attendre le décompte. Auparavant, le
+      // COUNT(*) était awaité AVANT la requête paginée : deux parcours complets de la
+      // même clause WHERE, en série, avant le premier résultat affiché. C'est ce qui
+      // doublait le coût de chaque recherche.
+      const rowsPromise = executeQuery({ sql: query, args: params }, (newRow) => {
         setResults((prev) => [...prev, newRow]);
       });
 
-      setTotalCount(Number(countResult.rows[0]?.total || countResult.rows[0]?.COUNT || 0));
+      // Le décompte n'est utile qu'à la pagination : on le laisse arriver en parallèle et
+      // son échec éventuel ne doit pas priver l'utilisateur de ses résultats.
+      const countPromise = executeQuery({ sql: countQuery, args: countParams })
+        .then((r) => Number(r.rows[0]?.total || r.rows[0]?.COUNT || 0))
+        .catch(() => -1);
+
+      await rowsPromise;
+      const total = await countPromise;
+      if (total >= 0) setTotalCount(total);
     } catch (err) {
       console.error(err);
       toast.error(t("search.error_fetch", { defaultValue: "Erreur: impossible de récupérer les données." }));

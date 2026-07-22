@@ -1,4 +1,5 @@
 import { createClient } from "@libsql/client/web";
+import { ftsSubstring, ftsAvailable, disableFts } from "./fts"
 import { executeQuery } from "./db";
 
 const url = import.meta.env.VITE_TURSO_DATABASE_URL || "libsql://dummy.turso.io";
@@ -30,43 +31,98 @@ export const tursoClient = createClient({
 //   }
 // };
 
-// Polyfill for autocomplete queries
+/**
+ * Exécute la variante plein texte, et retombe sur la variante LIKE si les tables FTS5 sont
+ * absentes — c'est le cas d'une base construite localement depuis les fichiers ISV, où
+ * seule la CI produit l'index plein texte.
+ */
+async function withFtsFallback<T>(
+  fts: (() => Promise<T>) | null,
+  like: () => Promise<T>,
+): Promise<T> {
+  if (fts && ftsAvailable()) {
+    try {
+      return await fts();
+    } catch (err) {
+      // Une table FTS manquante est définitif pour la session : inutile de repayer
+      // l'échec à chaque frappe.
+      if (String(err).includes("no such table")) disableFts();
+      else throw err;
+    }
+  }
+  return like();
+}
+
 export async function autocompleteCharacter(q: string, lang: string = 'fr') {
   if (!q || q.length < 2) return [];
-  const result = await executeQuery({
-    sql: `
-      SELECT c.charactercode, COALESCE(cn.charactername, c.charactername) as charactername,
-              (SELECT cu.sitecode || '|' || cu.url 
-              FROM inducks_characterurl cu 
-              WHERE cu.charactercode = c.charactercode 
-              ORDER BY CASE WHEN cu.sitecode = 'webusers' THEN 0 ELSE 1 END 
-              LIMIT 1) as imageUrl
-      FROM inducks_character c
-      LEFT JOIN inducks_charactername cn ON c.charactercode = cn.charactercode AND cn.languagecode = ?
-      WHERE (COALESCE(cn.charactername, c.charactername) LIKE ? OR c.charactercode LIKE ?)
-      GROUP BY c.charactercode
-      ORDER BY MAX(COALESCE(cn.preferred, 0)) DESC, charactername ASC
-      LIMIT 10
-    `,
-    args: [lang, `%${q}%`, `%${q}%`]
-  });
-  return result.rows;
+  const match = ftsSubstring(q);
+
+  // `imageUrl` reste exposée pour ne pas changer la forme attendue par les composants,
+  // mais la sous-requête sur inducks_characterurl a disparu : cette table est vide dans le
+  // dump Inducks (28 octets, l'en-tête seul), l'expression valait donc toujours NULL.
+  return withFtsFallback(
+    match ? async () => (await executeQuery({
+      sql: `
+        SELECT c.charactercode,
+               COALESCE(MAX(cn.charactername), c.charactername) as charactername,
+               NULL as imageUrl
+        FROM fts_character f
+        JOIN inducks_character c ON c.charactercode = f.charactercode
+        LEFT JOIN inducks_charactername cn
+          ON cn.charactercode = c.charactercode AND cn.languagecode = ?
+        WHERE fts_character MATCH ?
+        GROUP BY c.charactercode
+        ORDER BY MAX(COALESCE(cn.preferred, 0)) DESC, c.appearancecount DESC
+        LIMIT 10
+      `,
+      args: [lang, match]
+    })).rows : null,
+    async () => (await executeQuery({
+      sql: `
+        SELECT c.charactercode,
+               COALESCE(MAX(cn.charactername), c.charactername) as charactername,
+               NULL as imageUrl
+        FROM inducks_character c
+        LEFT JOIN inducks_charactername cn
+          ON cn.charactercode = c.charactercode AND cn.languagecode = ?
+        WHERE c.charactername LIKE ? OR c.charactercode LIKE ?
+        GROUP BY c.charactercode
+        ORDER BY MAX(COALESCE(cn.preferred, 0)) DESC, c.charactername ASC
+        LIMIT 10
+      `,
+      args: [lang, `%${q}%`, `%${q}%`]
+    })).rows,
+  );
 }
 
 export async function autocompletePerson(q: string) {
   if (!q || q.length < 2) return [];
-  const result = await executeQuery({
-    sql: `
-      SELECT personcode, fullname, nationalitycountrycode, fullname as displayname 
-      FROM inducks_person 
-      WHERE fullname LIKE ? OR personcode LIKE ? 
-      GROUP BY personcode
-      ORDER BY MAX(numberofindexedissues) DESC 
-      LIMIT 10
-    `,
-    args: [`%${q}%`, `%${q}%`]
-  });
-  return result.rows;
+  const match = ftsSubstring(q);
+
+  return withFtsFallback(
+    match ? async () => (await executeQuery({
+      sql: `
+        SELECT p.personcode, p.fullname, p.nationalitycountrycode,
+               p.fullname as displayname
+        FROM fts_person f
+        JOIN inducks_person p ON p.personcode = f.personcode
+        WHERE fts_person MATCH ?
+        ORDER BY p.numberofindexedissues DESC
+        LIMIT 10
+      `,
+      args: [match]
+    })).rows : null,
+    async () => (await executeQuery({
+      sql: `
+        SELECT personcode, fullname, nationalitycountrycode, fullname as displayname
+        FROM inducks_person
+        WHERE fullname LIKE ? OR personcode LIKE ?
+        ORDER BY numberofindexedissues DESC
+        LIMIT 10
+      `,
+      args: [`%${q}%`, `%${q}%`]
+    })).rows,
+  );
 }
 
 export async function autocompleteStorycode(q: string, lang: string = 'fr') {
