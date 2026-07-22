@@ -1,4 +1,5 @@
 import { ftsPrefix, ftsAvailable } from "./fts";
+import { normalizedLike } from "./normalize";
 
 export interface SearchFilters {
   title?: string;
@@ -672,9 +673,14 @@ export function buildPublicationsSearchQuery(filters: PublicationsSearchFilters)
   }
 
   if (filters.title) {
-    const like = `%${filters.title.trim()}%`;
-    where.push("(pn.publicationname LIKE ? OR i.title LIKE ? OR p.publicationcode LIKE ?)");
-    p.push(like, like, like);
+    // Comparaison sur les colonnes normalisées : le LIKE de SQLite ne replie la casse que
+    // pour l'ASCII, si bien que « géant » ne trouvait pas « Géant » et que chercher
+    // « Super picsou géant » ne renvoyait rien. Les colonnes *_norm sont calculées au
+    // build par la même transformation que normalizeText (accents retirés, minuscules),
+    // ce qui rend aussi la recherche insensible aux accents dans les deux sens.
+    const like = normalizedLike(filters.title);
+    where.push("(pn.publicationname_norm LIKE ? OR i.title_norm LIKE ? OR p.title_norm LIKE ? OR p.publicationcode LIKE ?)");
+    p.push(like, like, like, like);
   }
 
   if (filters.issuenumber) {

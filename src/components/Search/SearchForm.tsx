@@ -70,7 +70,7 @@ export function SearchForm({
   const { t, i18n } = useTranslation();
 
   return (
-    <div className="flex-1 flex flex-col border-border-subtle/60 dark:border-border-subtle/60 shadow-2xl shadow-black/5 rounded-3xl overflow-hidden bg-surface min-h-[600px] lg:min-h-0">
+    <div className="flex-1 flex flex-col border-border-subtle/60 dark:border-border-subtle/60 shadow-2xl shadow-blue-900/5 rounded-3xl overflow-hidden bg-surface min-h-[600px] lg:min-h-0">
       <div className="px-8 py-5 border-b border-border-subtle bg-surface flex items-center justify-between shrink-0">
         <h2 className="text-sm font-semibold text-foreground flex items-center gap-3">
           {t("search.title")}
@@ -79,7 +79,7 @@ export function SearchForm({
 
       <ScrollArea className="flex-1">
         <div className="p-8">
-          <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-2 items-start auto-rows-min gap-x-4 md:gap-x-8 gap-y-4 md:gap-y-5">
+          <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-2 gap-x-4 md:gap-x-8 gap-y-4 md:gap-y-7">
             {/* Row: Code & Keywords */}
             <div className="space-y-2">
               <Label className="text-sm font-medium text-foreground">{t("search.inducks_code")}</Label>

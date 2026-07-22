@@ -229,6 +229,20 @@ MATERIALIZED: list[tuple[str, str, str, list[str]]] = [
         WHERE sv.storycode IS NOT NULL AND e.entrycode IS NOT NULL
      """, []),
 
+    # Les valeurs distinctes du formulaire, figées au build.
+    #
+    # `SELECT DISTINCT kind FROM inducks_storyversion` coûtait 23 107 pages, 90,3 Mo et
+    # 1 249 requêtes HTTP — pour DIX valeurs. Cette seule requête, exécutée au montage du
+    # formulaire de recherche, représentait l'essentiel du temps de chargement perçu :
+    # bien plus que la recherche elle-même. Un DISTINCT sans index parcourt toute la table.
+    ("meta_kind", """
+        CREATE TABLE meta_kind (kind TEXT NOT NULL PRIMARY KEY) WITHOUT ROWID
+     """, [
+        """INSERT OR REPLACE INTO meta_kind
+           SELECT DISTINCT kind FROM inducks_storyversion
+           WHERE kind IS NOT NULL AND kind <> ''""",
+     ], []),
+
     # Second point chaud mesuré : les personnages d'une histoire coûtaient 87 pages et
     # 79 requêtes, parce que les 170 lignes d'appearance renvoient vers autant de lignes
     # dispersées d'inducks_character. Le nom par défaut est embarqué ici ; la traduction
@@ -447,6 +461,29 @@ MATERIALIZED: list[tuple[str, str, str, list[str]]] = [
 
 
 # ======================================================================================
+# 3bis. COLONNES NORMALISÉES (accents et casse)
+# ======================================================================================
+# Le LIKE de SQLite ne replie la casse que pour l'ASCII : « picsou » trouve « Picsou »,
+# mais « géant » NE TROUVE PAS « Géant ». Une recherche de « Super picsou géant » ne
+# renvoie donc rien, alors que le titre existe. Et même corrigée, elle resterait sensible
+# aux accents : « geant » ne trouverait pas « Géant ».
+#
+# On stocke donc une forme normalisée — minuscules, accents retirés — calculée en Python
+# au build (SQLite n'a pas de fonction de dépliage Unicode). L'application normalise la
+# saisie de la même façon avant de comparer.
+#
+# Format : (table, colonne source, colonne normalisée)
+
+NORMALIZED_COLUMNS: list[tuple[str, str, str]] = [
+    ("inducks_publication", "title", "title_norm"),
+    ("inducks_publicationname", "publicationname", "publicationname_norm"),
+    ("inducks_issue", "title", "title_norm"),
+    ("inducks_person", "fullname", "fullname_norm"),
+    ("inducks_character", "charactername", "charactername_norm"),
+]
+
+
+# ======================================================================================
 # 4. INDEX
 # ======================================================================================
 # Chaque entrée nomme la requête qu'elle sert. Les clés primaires déclarées en §2 ne sont
@@ -482,6 +519,8 @@ INDEXES: list[tuple[str, list[str]]] = [
 
     # Index couvrant sur une petite table (7 281 lignes) : sert la navigation par pays.
     ("inducks_publication", ["countrycode", "title", "publicationcode", "languagecode"]),
+    # Recherche de publication insensible aux accents et à la casse.
+    ("inducks_publication", ["title_norm"]),
 
     # statpersoncharacter est la seule table de stats interrogée dans les deux sens.
     ("inducks_statpersoncharacter", ["charactercode", "total"]),

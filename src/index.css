@@ -3,21 +3,6 @@
 @tailwind utilities;
 
 @layer base {
-  /* ==================================================================================
-     PALETTE — « papier journal »
-     ==================================================================================
-     Le thème précédent était celui de shadcn/ui sorti de la boîte : --primary à
-     221.2 83.2% 53.3% (le bleu du template), fond blanc pur, texte quasi noir. D'où deux
-     défauts ressentis — aucune identité, et un contraste brutal faute de valeur
-     intermédiaire chaude.
-
-     La direction retenue vient du sujet lui-même : les comics Disney de l'âge d'or sont
-     imprimés sur papier journal crème, en trichromie, avec une encre qui tire sur le brun.
-     Le fond n'est donc pas blanc, le texte n'est pas noir, et l'accent est le vermillon des
-     couvertures Barks plutôt qu'un bleu générique.
-
-     Les couleurs sont en HSL sans virgule, comme l'attend Tailwind via hsl(var(--x)).
-     ================================================================================== */
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
@@ -47,7 +32,7 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
 
-    --radius: 0.625rem;
+    --radius: 0.5rem;
 
     /* ── Semantic surface tokens ────────────────────────── */
     --surface:         0 0% 100%;          /* white             */
@@ -68,8 +53,6 @@
     --shimmer-via:     #e2e8f0;
   }
 
-  /* Mode sombre : encre chaude sur brun très foncé — surtout pas le bleu-nuit
-     #020817 d'origine, qui donnait un aspect terminal étranger au sujet. */
   .dark {
     color-scheme: dark;
     --background: 222.2 84% 4.9%;

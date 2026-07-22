@@ -17,22 +17,6 @@ export default {
       },
     },
     extend: {
-      /**
-       * Aucune fonte n'était déclarée : le site s'affichait dans la police système par
-       * défaut, ce qui contribuait à l'impression de gabarit générique.
-       *
-       * Volontairement, aucune fonte n'est TÉLÉCHARGÉE : la base est conçue pour
-       * fonctionner hors-ligne et le déploiement est purement statique. On s'appuie donc
-       * sur des familles présentes partout, choisies pour leur caractère.
-       */
-      fontFamily: {
-        // Pas de serif pour les titres : l'essai avec Georgia donnait un aspect daté
-        // plutôt que « patrimonial ». On garde la grotesque système partout.
-        sans: ['"Segoe UI"', 'system-ui', '-apple-system', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
-        // Codes Inducks (« W OS  178-02 ») : ce sont des identifiants, l'alignement des
-        // colonnes compte autant que dans du code.
-        mono: ['"Cascadia Mono"', 'Consolas', '"SF Mono"', 'Menlo', '"DejaVu Sans Mono"', 'monospace'],
-      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

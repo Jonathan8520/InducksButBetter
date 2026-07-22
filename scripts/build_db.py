@@ -30,12 +30,13 @@ import sys
 import time
 import sqlite3
 import argparse
+import unicodedata
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from schema_spec import (  # noqa: E402
     DROP_TABLES, STAGING_TABLES, DROP_COLUMNS, PRIMARY_KEYS,
-    DERIVED_COLUMNS, MATERIALIZED, INDEXES, FTS_TABLES,
+    DERIVED_COLUMNS, MATERIALIZED, INDEXES, FTS_TABLES, NORMALIZED_COLUMNS,
 )
 
 try:
@@ -136,6 +137,22 @@ def infer_types(path: str, header: list[str]) -> tuple[list[str], list[int]]:
     for c in range(n):
         types.append("INTEGER" if seen[c] and (is_flag[c] or is_int[c]) else "TEXT")
     return types, empties
+
+
+def normalize(text):
+    """Minuscules et accents retirés — la forme utilisée pour comparer les titres.
+
+    SQLite ne sait pas déplier l'Unicode : son LIKE ne replie la casse que pour l'ASCII,
+    si bien que « géant » ne trouve pas « Géant ». On calcule donc la forme normalisée ici,
+    et l'application applique EXACTEMENT la même transformation à la saisie
+    (cf. src/lib/normalize.ts).
+    """
+    if text is None:
+        return None
+    return "".join(
+        c for c in unicodedata.normalize("NFD", str(text).casefold())
+        if not unicodedata.combining(c)
+    )
 
 
 def convert(value: str, typ: str):
@@ -398,7 +415,22 @@ def main() -> int:
             except sqlite3.OperationalError as exc:
                 print(f"  [!] {table}.{col} : {exc}")
 
-    print("[build] colonnes dérivées")
+    # --- Colonnes normalisées ---------------------------------------------------------
+    print("[build] colonnes normalisées (accents et casse)")
+    db.create_function("norm", 1, normalize)
+    for table, src_col, new_col in NORMALIZED_COLUMNS:
+        if table not in loaded:
+            continue
+        t = time.time()
+        try:
+            db.execute(f'ALTER TABLE "{table}" ADD COLUMN "{new_col}" TEXT')
+            db.execute(f'UPDATE "{table}" SET "{new_col}" = norm("{src_col}")')
+            db.commit()
+            print(f"  ok {table}.{new_col:<26} en {time.time()-t:.1f}s")
+        except sqlite3.OperationalError as exc:
+            print(f"  [!] {table}.{new_col} : {exc}")
+
+    print("\n[build] colonnes dérivées")
     apply_derived(early, "calculée")
 
     # --- Tables dénormalisées et regroupées -------------------------------------------

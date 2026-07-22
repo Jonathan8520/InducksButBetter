@@ -29,7 +29,14 @@ export function useMetadata() {
 
       try {
         const [kindsRes, countriesRes, universesRes, subseriesRes] = await Promise.all([
-          executeQuery("SELECT DISTINCT kind FROM inducks_storyversion WHERE kind IS NOT NULL"),
+          // meta_kind est figée au build : dix lignes.
+          // La forme précédente, `SELECT DISTINCT kind FROM inducks_storyversion`, parcourait
+          // les 734 876 versions pour trouver ces dix valeurs — mesuré à 23 107 pages,
+          // 90,3 Mo et 1 249 requêtes HTTP, à chaque montage du formulaire de recherche.
+          executeQuery("SELECT kind FROM meta_kind ORDER BY kind").catch(() =>
+            // Repli pour une base importée localement, où la table n'existe pas.
+            executeQuery("SELECT DISTINCT kind FROM inducks_storyversion WHERE kind IS NOT NULL")
+          ),
           executeQuery({
             sql: "SELECT c.countrycode, COALESCE(cn.countryname, c.countryname) as countryname FROM inducks_country c LEFT JOIN inducks_countryname cn ON c.countrycode = cn.countrycode AND cn.languagecode = ? ORDER BY countryname",
             args: [currentLang],
