@@ -489,26 +489,36 @@ contrainte navigateur.
 > **Livrable clé : la taille réelle de la base.** C'est le chiffre dont dépendent le
 > découpage et le choix final d'hébergeur.
 
-### Étape 2 — Moteur de lecture
+### Étape 2 — Moteur de lecture · ✅ *écrit (commit `0a909c3`)*
 
-- [ ] `@sqlite.org/sqlite-wasm` dans un Web Worker
-- [ ] VFS HTTP : « lire la page N » → requête Range sur la bonne tranche (table de
-      correspondance offset → tranche)
-- [ ] Cache des pages via l'API Cache, indexé par **ETag** (2ᵉ visite quasi instantanée + hors-ligne)
-- [ ] Brancher sous `executeQuery()` dans `src/lib/db.ts`
+- [x] `@sqlite.org/sqlite-wasm` dans un Web Worker (`src/lib/sqlite/dbWorker.ts`)
+- [x] VFS HTTP traduisant les lectures de pages en requêtes Range (`httpVfs.ts`,
+      `rangeReader.ts`), avec cache de blocs LRU borné à 64 Mio
+- [x] Branché sous `executeQuery()` (`src/lib/db.ts`) : local / statique distant / Turso
+- [ ] **Reste à valider dans un vrai navigateur** — le VFS ne peut pas être exercé ici
+- [ ] Cache des pages persistant via l'API Cache indexé par ETag (hors-ligne)
 - [ ] Faire converger l'import ISV local sur le même moteur (supprime `sql.js`, résout P8)
-- [ ] Supprimer `loadLocalDb()` mort (P5)
 
-### Étape 3 — Réécriture des requêtes · *le gros du travail*
+> Contrainte structurante : `xRead` est **synchrone** côté SQLite alors que `fetch` est
+> asynchrone. D'où le recours à XMLHttpRequest synchrone, autorisé uniquement dans un Web
+> Worker — c'est ce qui impose que la base tourne dans un worker. Cette voie évite les
+> en-têtes COOP/COEP qu'exigerait la variante SharedArrayBuffer + `Atomics.wait`.
 
-- [ ] `src/lib/searchService.ts` (741 lignes) : `LIKE '%…%'` → `MATCH` FTS5
-- [ ] Supprimer les `COUNT(*)` de pagination (`useSearchExecution.ts:64`) → pagination par
-      curseur, ou « plus de N résultats »
-- [ ] Corriger la sous-requête morte sur `inducks_characterurl` (P4)
-- [ ] Vérifier que chaque `ORDER BY` s'appuie sur un index couvrant
-- [ ] **Préserver `getStorycodeCandidates()`** (`searchService.ts:57-163`) : ~20 heuristiques
-      qui répliquent `coa/util14-storycode.php` d'Inducks. Fonction pure → candidat idéal
-      pour des tests unitaires (cf. étape 5)
+### Étape 3 — Réécriture des requêtes
+
+- [x] Autocomplétions personnages et auteurs sur FTS5, avec repli LIKE (`src/lib/fts.ts`)
+- [x] `COUNT(*)` de pagination sorti du chemin critique : il partait **avant** la requête
+      paginée, en série — deux parcours complets avant le premier résultat affiché
+- [x] Sous-requête morte sur `inducks_characterurl` supprimée (P4)
+- [x] `REPLACE(s.storycode,' ','')` remplacé par la colonne `storycode_packed`, sans quoi
+      l'index posé pour elle resterait inutilisable
+- [x] Vignettes lues dans `story_thumb` / `entry_thumb` / `issue_thumb`
+- [x] Parutions et personnages d'une histoire lus dans les tables regroupées
+- [x] Éditeur SQL : `LIMIT` injecté quand la requête n'en porte pas
+- [ ] Recherche par titre et description sur FTS5 (reste en LIKE)
+- [ ] Réorienter les `EXISTS` corrélés de la recherche par personnage / auteur
+- [ ] **Préserver `getStorycodeCandidates()`** : ~20 heuristiques répliquant
+      `coa/util14-storycode.php`. Fonction pure → candidat idéal pour des tests unitaires
 
 ### Étape 4 — Pipeline automatisé
 

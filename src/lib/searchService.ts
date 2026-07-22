@@ -236,8 +236,12 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
       where.push("s.storycode >= ? AND s.storycode < ?");
       p.push(prefix, prefixEnd);
 
-      const stripped = prefix.replace(/\s+/g, '');
-      where.push("REPLACE(s.storycode, ' ', '') LIKE ?");
+      // storycode_packed est calculée au build (lower(replace(storycode,' ',''))).
+      // La forme précédente enveloppait la colonne dans REPLACE(), ce qui neutralisait
+      // tout index et imposait un parcours des 355 404 histoires à chaque recherche,
+      // alors même que le joker est en fin de motif.
+      const stripped = prefix.replace(/\s+/g, '').toLowerCase();
+      where.push("s.storycode_packed LIKE ?");
       p.push(stripped + '%');
     } else {
       const candidates = getStorycodeCandidates(code);
@@ -256,7 +260,9 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
             p.push(prefix, prefixEnd);
           }
           
-          likeClauses.push("REPLACE(s.storycode, ' ', '') LIKE ?");
+          // getStorycodeCandidates produit déjà la forme compactée en minuscules,
+          // exactement celle stockée dans storycode_packed.
+          likeClauses.push("s.storycode_packed LIKE ?");
           p.push(cand.packed + '%');
         }
         

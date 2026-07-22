@@ -24,29 +24,62 @@ Welcome to **InducksButBetter**! This project is a complete reimagining of the c
 - **Fully internationalized:** Seamless switching between French and English.
 - **100% Serverless:** Direct connection to a remote [Turso](https://turso.tech/) (SQLite) edge database. No heavy backend required!
 
+## Architecture: a static database, queried over HTTP Range
+
+The app no longer talks to a remote database server. It ships a **prebuilt SQLite file**,
+published as static chunks, and the browser fetches only the pages a query actually needs
+via HTTP Range requests.
+
+Why: a hosted database billed per row read cannot serve a public site for free. Every
+`LIKE '%word%'` search was a full table scan, and the free-form SQL tab let any visitor
+scan the whole database. Static bytes on a CDN have no such meter.
+
+**What a visitor actually downloads** (measured with an instrumented VFS,
+`scripts/measure_io.py`): a session of eight varied queries transfers about **3 MB — roughly
+0.3 % of the database**. A story detail page costs ~50 KB, an autocomplete ~30 KB.
+
+The single most effective technique is counter-intuitive: **physical clustering beats adding
+indexes**. Fetching the publications of a story through live joins cost 561 pages and 415
+HTTP requests; the same data in a purpose-built `WITHOUT ROWID` table clustered by
+`storycode` costs 9 pages and 9 requests. On this backend you trade server-side storage —
+free and unmetered on a CDN — for client requests, which are the scarce resource.
+
 ## Quick start
 
 ### Prerequisites
-- [Node.js](https://nodejs.org/) 18+
-- [pnpm](https://pnpm.io/) 9+
-- A [Turso](https://turso.tech/) database containing the Inducks schema
+- [Node.js](https://nodejs.org/) 18+ and [pnpm](https://pnpm.io/) 9+
+- [Python](https://www.python.org/) 3.12+ (only to build the database)
 
-### 1. Environment Setup
-Create a `.env` file at the root of the project with your read-only Turso credentials:
-```env
-VITE_TURSO_DATABASE_URL=libsql://your-database-name.turso.io
-VITE_TURSO_AUTH_TOKEN=your-read-only-token
+### 1. Get the Inducks data
+
+```bash
+# Official source, regenerated daily
+python scripts/fetch_isv.py data/isv --base https://inducks.org/inducks/isv
+
+# Fallback while inducks.org is down: a public backup of the same files
+python scripts/fetch_isv.py data/isv --mega     # needs: pip install pycryptodome
 ```
 
-### 2. Install & Run
-```bash
-# Install dependencies
-pnpm install
+### 2. Build and split the database
 
-# Start the development server
+```bash
+python scripts/build_db.py data/isv data/inducks.sqlite
+python scripts/check_queries.py data/inducks.sqlite   # no query may fall back to a scan
+python scripts/split_db.py data/inducks.sqlite public/db
+```
+
+### 3. Install & run
+
+```bash
+pnpm install
 pnpm dev
 ```
-The application will be available at `http://localhost:5173`.
+
+The app is served at `http://localhost:5173` and reads the chunks from `public/db/`.
+
+Set `VITE_STATIC_DB_URL` to serve the chunks from elsewhere, or to `off` to fall back to the
+legacy Turso path (which still requires `VITE_TURSO_DATABASE_URL` and
+`VITE_TURSO_AUTH_TOKEN`).
 
 > **Note:** A minimal backend proxy runs on `http://localhost:3000` solely to proxy images from external providers and bypass CORS restrictions. All SQL queries are executed securely directly from the client!
 
@@ -68,13 +101,29 @@ If you don't want to use Turso, or if you exceed the free-tier limits, you can i
 - **Aggressive caching**: To preserve free-tier quotas, static metadata (countries, universes, languages) is cached via `sessionStorage`.
 - **JSON injection**: The personal collection filter uses SQLite's `json_each()` function to pass thousands of issue codes to the database in a single, lightweight payload.
 
-## Deployment (GitHub Pages)
+## Deployment (Cloudflare Pages)
 
-This project is fully automated for deployment on GitHub Pages using GitHub Actions!
+`.github/workflows/build-db.yml` runs nightly: it fetches the ISV files, rebuilds the
+database, verifies that every real query still uses an index, splits the result into chunks
+and deploys.
 
-1. Add your `VITE_TURSO_DATABASE_URL` and `VITE_TURSO_AUTH_TOKEN` as **Repository Secrets** on GitHub.
-2. Push to the `main` branch.
-3. The Action will automatically bake your read-only credentials into the static Vite bundle and publish the site.
+Add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as repository secrets. No database
+credentials exist any more — there is nothing left to leak.
+
+**Why Cloudflare Pages rather than R2 or GitHub Pages.** The choice is not about which is
+technically nicest, it is about which one *cannot send you a bill*:
+
+| | Free tier | On overage |
+|---|---|---|
+| **Cloudflare Pages** | unlimited bandwidth, 20 000 files, **25 MiB max per file** | never billed |
+| GitHub Pages | 1 GB site, ~100 GB/month soft | never billed (email, or service stops) |
+| Cloudflare R2 | 10 GB, 10 M reads/month, egress genuinely free | ⚠️ **billed automatically** |
+
+R2 is the more elegant fit — one big file, no chunking — but its overage is billed, which is
+exactly how the previous setup failed. Pages is capped at 25 MiB per file, hence the 20 MiB
+chunks. The database is over 1 GB, which rules out GitHub Pages as the primary host.
+
+A `*.pages.dev` subdomain is provided free; no domain purchase is required.
 
 ## Credits
 
