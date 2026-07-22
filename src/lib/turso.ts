@@ -1,5 +1,6 @@
 import { createClient } from "@libsql/client/web";
-import { ftsSubstring, ftsAvailable, disableFts } from "./fts"
+import { ftsSubstring, ftsAvailable, disableFts, TRIGRAM_MIN } from "./fts"
+import { normalizeText } from "./normalize"
 import { executeQuery } from "./db";
 
 const url = import.meta.env.VITE_TURSO_DATABASE_URL || "libsql://dummy.turso.io";
@@ -182,25 +183,50 @@ export async function autocompletePublisher(q: string) {
 }
 
 export async function autocompletePublicationTitle(q: string) {
-  const like = `%${q}%`;
-  const result = await executeQuery({
-    sql: `
-      -- inducks_publicationname ne couvre que 148 des 7 281 publications : une jointure
-      -- interne rendait 98 % du catalogue introuvable, et neutralisait la recherche par
-      -- code pour tout le reste. LEFT JOIN + repli sur p.title.
-      SELECT DISTINCT p.publicationcode as value,
-             COALESCE(pn.publicationname, p.title, p.publicationcode)
-               || ' (' || p.publicationcode || ')' as label,
-             COALESCE(pn.publicationname, p.title, p.publicationcode) as sortkey
-      FROM inducks_publication p
-      LEFT JOIN inducks_publicationname pn ON p.publicationcode = pn.publicationcode
-      WHERE pn.publicationname LIKE ? OR p.title LIKE ? OR p.publicationcode LIKE ?
-      ORDER BY sortkey
-      LIMIT 10
-    `,
-    args: [like, like, like]
-  });
-  return result.rows.map((r: any) => ({
+  const term = normalizeText(q);
+  if (!term) return [];
+
+  // Voie rapide : FTS5 trigram sur la colonne normalisée. La variante LIKE '%...%'
+  // imposait un parcours d'index, mesuré à 292 requêtes HTTP par frappe — l'essentiel de
+  // la lenteur ressentie sur ce formulaire. Le trigram exige au moins 3 caractères.
+  const rows = await withFtsFallback(
+    term.length >= TRIGRAM_MIN
+      ? async () => (await executeQuery({
+          sql: `
+            SELECT p.publicationcode as value,
+                   COALESCE(pn.publicationname, p.title, p.publicationcode)
+                     || ' (' || p.publicationcode || ')' as label,
+                   COALESCE(pn.publicationname, p.title, p.publicationcode) as sortkey
+            FROM fts_publication f
+            JOIN inducks_publication p ON p.publicationcode = f.publicationcode
+            LEFT JOIN inducks_publicationname pn ON pn.publicationcode = p.publicationcode
+            WHERE fts_publication MATCH ?
+            ORDER BY sortkey
+            LIMIT 10
+          `,
+          args: [ftsSubstring(term)]
+        })).rows
+      : null,
+    // Repli : base locale sans tables FTS, ou terme trop court pour le trigram.
+    // inducks_publicationname ne couvre que 148 des 7 281 publications, d'où le LEFT JOIN
+    // et la recherche sur p.title, absente de la version d'origine.
+    async () => (await executeQuery({
+      sql: `
+        SELECT DISTINCT p.publicationcode as value,
+               COALESCE(pn.publicationname, p.title, p.publicationcode)
+                 || ' (' || p.publicationcode || ')' as label,
+               COALESCE(pn.publicationname, p.title, p.publicationcode) as sortkey
+        FROM inducks_publication p
+        LEFT JOIN inducks_publicationname pn ON p.publicationcode = pn.publicationcode
+        WHERE p.title_norm LIKE ? OR p.publicationcode LIKE ?
+        ORDER BY sortkey
+        LIMIT 10
+      `,
+      args: [`%${term}%`, `%${term}%`]
+    })).rows,
+  );
+
+  return rows.map((r: any) => ({
     publicationcode: r.value,
     publicationname: r.label
   }));

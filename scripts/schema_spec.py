@@ -603,6 +603,11 @@ FTS_TABLES: list[tuple[str, str, str, list[str], str]] = [
      "trigram"),
     ("fts_publisher", "inducks_publisher", "publisherid",
      ["publisherid", "publishername"], "trigram"),
+    # Indexe la colonne NORMALISÉE : le tokenizer trigram est insensible à la casse mais
+    # pas aux accents, alors que la suggestion doit répondre à « geant » comme à « Géant ».
+    # Sans elle, l'autocomplétion retombait sur `title_norm LIKE '%...%'`, c'est-à-dire un
+    # parcours d'index — mesuré à 292 requêtes HTTP par frappe, l'essentiel de la lenteur
+    # ressentie sur le formulaire des publications.
     ("fts_publication", "inducks_publication", "publicationcode",
-     ["publicationcode", "title"], "trigram"),
+     ["publicationcode", "title_norm"], "trigram"),
 ]

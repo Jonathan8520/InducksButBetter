@@ -642,6 +642,8 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
 export interface PublicationsSearchFilters {
   country?: string;
   title?: string;
+  /** Code exact issu d'une suggestion. Prime sur `title`, et permet une égalité indexée. */
+  publicationcode?: string;
   issuenumber?: string;
   dateAfter?: string;
   dateBefore?: string;
@@ -672,7 +674,12 @@ export function buildPublicationsSearchQuery(filters: PublicationsSearchFilters)
     p.push(filters.country);
   }
 
-  if (filters.title) {
+  // Une suggestion choisie donne le code exact : égalité sur la clé primaire de
+  // inducks_publication, au lieu de balayer la table avec quatre LIKE '%...%'.
+  if (filters.publicationcode) {
+    where.push("p.publicationcode = ?");
+    p.push(filters.publicationcode.trim());
+  } else if (filters.title) {
     // Comparaison sur les colonnes normalisées : le LIKE de SQLite ne replie la casse que
     // pour l'ASCII, si bien que « géant » ne trouvait pas « Géant » et que chercher
     // « Super picsou géant » ne renvoyait rien. Les colonnes *_norm sont calculées au

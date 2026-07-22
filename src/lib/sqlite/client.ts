@@ -29,6 +29,7 @@ let worker: Worker | null = null;
 let counter = 0;
 let openPromise: Promise<void> | null = null;
 const pending = new Map<number, Pending>();
+const pendingSql = new Map<number, string>();
 
 /** Cumul du trafic depuis le chargement de la page — alimente le panneau de diagnostic. */
 export const sessionIo: IoStats = { requests: 0, bytesFetched: 0, cacheHits: 0 };
@@ -50,6 +51,11 @@ function getWorker(): Worker {
       entry.reject(new Error(error));
       return;
     }
+    if (io && import.meta.env.DEV) {
+      const sql = pendingSql.get(id);
+      pendingSql.delete(id);
+      if (sql) console.info(`[sql] ${String(io.requests).padStart(4)} req  ${sql}`);
+    }
     if (io) {
       sessionIo.requests += io.requests;
       sessionIo.bytesFetched += io.bytesFetched;
@@ -64,6 +70,11 @@ function getWorker(): Worker {
 function post(action: string, payload: unknown, onRow?: Pending["onRow"]): Promise<ExecResult> {
   const w = getWorker();
   const id = ++counter;
+  if (import.meta.env.DEV && action === "execute") {
+    // Journal de diagnostic (développement uniquement) : sans lui, impossible de savoir
+    // QUELLE requête consomme les allers-retours. Les totaux de session ne le disent pas.
+    pendingSql.set(id, String((payload as any)?.sql ?? "").replace(/\s+/g, " ").slice(0, 110));
+  }
   return new Promise<ExecResult>((resolve, reject) => {
     pending.set(id, { resolve, reject, onRow });
     w.postMessage({ id, action, payload });

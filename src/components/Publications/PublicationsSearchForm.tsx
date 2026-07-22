@@ -78,14 +78,18 @@ export function PublicationsSearchForm({
             {/* Title */}
             <div className="space-y-2">
               <Label className="text-sm font-medium text-foreground">{t("search.title_pub_label") || "Titre (série ou numéro)"}</Label>
+              {/* Choisir une suggestion donne un CODE exact : on le mémorise à part pour que
+                  la requête fasse une égalité indexée au lieu d'un LIKE sur quatre colonnes.
+                  Toute frappe libre l'efface — l'utilisateur est reparti d'une saisie
+                  textuelle, qui doit alors rechercher dans les titres. */}
               <Autocomplete
                 value={filters.title}
                 placeholder={t("search.title_pub_placeholder")}
                 emptyMessage={t("common.no_data")}
                 fetchOptions={autocompletePublicationTitle}
-                onSelect={(val) => setFilters({ ...filters, title: val })}
-                onInputChange={(val) => setFilters({ ...filters, title: val })}
-                onClear={() => setFilters({ ...filters, title: "" })}
+                onSelect={(val) => setFilters({ ...filters, title: val, publicationcode: val })}
+                onInputChange={(val) => setFilters({ ...filters, title: val, publicationcode: "" })}
+                onClear={() => setFilters({ ...filters, title: "", publicationcode: "" })}
                 type="publications"
                 hideIcon={true}
                 hideSearchIcon={true}
