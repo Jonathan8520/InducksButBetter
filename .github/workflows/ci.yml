@@ -1,0 +1,102 @@
+name: CI
+
+# Le dépôt ne vérifiait rien avant de déployer : ni types, ni tests, ni compilation.
+# Ce workflow tourne sur chaque poussée et chaque PR, indépendamment du déploiement.
+
+on:
+  push:
+    branches: ["main", "feat/**", "fix/**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+
+      - name: Vérifier les types
+        run: pnpm exec tsc --noEmit
+
+      - name: Tests unitaires
+        run: pnpm test
+
+      - name: Compiler le bundle
+        run: pnpm run build
+        env:
+          # Pas de base statique à disposition en CI : on vérifie seulement que le bundle
+          # se construit. Le chemin de données est exercé par build-db.yml.
+          VITE_STATIC_DB_URL: "off"
+
+  # Le schéma de la base est du code lui aussi : une clé primaire ou un index changé sans
+  # y penser peut faire disparaître des lignes ou transformer une requête en parcours
+  # complet. On vérifie donc que les scripts de construction restent au moins exécutables.
+  scripts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Vérifier la syntaxe des scripts de construction
+        run: |
+          python -m py_compile scripts/*.py
+          echo "Scripts compilés."
+
+      - name: Vérifier la cohérence de la spec de schéma
+        run: |
+          python - <<'PY'
+          import sys
+          sys.path.insert(0, "scripts")
+          from schema_spec import (
+              DROP_TABLES, STAGING_TABLES, PRIMARY_KEYS, INDEXES, FTS_TABLES, MATERIALIZED,
+          )
+          from build_db import check_redundant_indexes
+
+          errors = []
+
+          # Une table ne peut pas être à la fois écartée et utilisée comme échafaudage.
+          overlap = DROP_TABLES & STAGING_TABLES
+          if overlap:
+              errors.append(f"tables à la fois écartées et d'échafaudage : {overlap}")
+
+          # Indexer une table écartée n'a pas de sens.
+          mat = {m[0] for m in MATERIALIZED}
+          for table, cols in INDEXES:
+              if table in DROP_TABLES:
+                  errors.append(f"index sur une table écartée : {table}({cols})")
+
+          for name, source, key, cols, _tok in FTS_TABLES:
+              if source in DROP_TABLES:
+                  errors.append(f"FTS {name} sur une table écartée : {source}")
+              if cols.count(key) > 1:
+                  errors.append(f"FTS {name} : colonne clé {key} déclarée plusieurs fois")
+
+          for w in check_redundant_indexes():
+              errors.append(f"index redondant : {w}")
+
+          if errors:
+              for e in errors:
+                  print(f"::error::{e}")
+              raise SystemExit(1)
+          print(f"Spec cohérente : {len(PRIMARY_KEYS)} clés, {len(INDEXES)} index, "
+                f"{len(FTS_TABLES)} tables FTS, {len(mat)} tables regroupées.")
+          PY

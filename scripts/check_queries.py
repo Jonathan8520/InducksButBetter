@@ -29,6 +29,9 @@ SMALL_TABLES = {
     "inducks_country", "inducks_language", "inducks_site", "inducks_universe",
     "inducks_currency", "inducks_team", "inducks_teammember", "inducks_studio",
     "inducks_publicationname", "inducks_storyheader", "inducks_characterdetail",
+    # 7 279 lignes, 430 Ko de texte : parcourue via son index couvrant, donc en accès
+    # séquentiel — le motif le plus favorable sur un backend en requêtes Range.
+    "inducks_publication",
     "inducks_characterurl", "inducks_currencyname", "inducks_referencereasonname",
 }
 
@@ -136,37 +139,37 @@ QUERIES: list[tuple[str, str, tuple]] = [
         SELECT sitecode, url FROM story_thumb WHERE storycode = ?
     """, ("W OS  178-02",)),
 
-    ("search.byStorycode (packed)", """
-        SELECT storycode FROM inducks_story WHERE storycode_packed LIKE ? LIMIT 15
-    """, ("wos178%",)),
+    ("search.byStorycode (packed, intervalle)", """
+        SELECT storycode FROM inducks_story
+        WHERE storycode_packed >= ? AND storycode_packed < ? LIMIT 15
+    """, ("wos178", "wos179")),
 
     ("search.byTitle (FTS)", """
         SELECT storycode FROM fts_story WHERE fts_story MATCH ? LIMIT 24
     """, ("treasure",)),
 
     # ---- Recherches --------------------------------------------------------------------
-    ("search.byCharacter", """
+    ("search.byCharacter (réorienté)", """
         SELECT s.storycode FROM inducks_story s
-        WHERE EXISTS (SELECT 1 FROM inducks_storyversion sv
-                      JOIN inducks_appearance a ON a.storyversioncode = sv.storyversioncode
-                      WHERE sv.storycode = s.storycode AND a.charactercode = ?)
+        WHERE s.storycode IN (SELECT sv.storycode FROM inducks_appearance a
+                              JOIN inducks_storyversion sv ON sv.storyversioncode = a.storyversioncode
+                              WHERE a.charactercode = ?)
         LIMIT 24
     """, ("DD",)),
 
-    ("search.byAuthor", """
+    ("search.byAuthor (réorienté)", """
         SELECT s.storycode FROM inducks_story s
-        WHERE EXISTS (SELECT 1 FROM inducks_storyversion sv
-                      JOIN inducks_storyjob sj ON sj.storyversioncode = sv.storyversioncode
-                      WHERE sv.storycode = s.storycode AND sj.personcode = ?)
+        WHERE s.storycode IN (SELECT sv.storycode FROM inducks_storyjob sj
+                              JOIN inducks_storyversion sv ON sv.storyversioncode = sj.storyversioncode
+                              WHERE sj.personcode = ?)
         LIMIT 24
     """, ("Carl Barks",)),
 
-    ("search.byTitle_LIKE", """
+    ("search.byTitle (FTS, réorienté)", """
         SELECT s.storycode FROM inducks_story s
-        WHERE EXISTS (SELECT 1 FROM inducks_storyheader sh
-                      WHERE sh.storyheadercode = s.storyheadercode AND sh.title LIKE ?)
+        WHERE s.storycode IN (SELECT storycode FROM fts_story WHERE fts_story MATCH ?)
         LIMIT 24
-    """, ("%treasure%",)),
+    """, ("treasure",)),
 
     ("publications.byCountry", """
         SELECT i.issuecode FROM inducks_issue i
@@ -180,10 +183,9 @@ QUERIES: list[tuple[str, str, tuple]] = [
         WHERE i.oldestdate >= ? ORDER BY i.oldestdate DESC, i.issuecode ASC LIMIT 24
     """, ("1990-01",)),
 
-    ("publications.byPublisher", """
+    ("publications.byPublisher (réorienté)", """
         SELECT i.issuecode FROM inducks_issue i
-        WHERE EXISTS (SELECT 1 FROM inducks_publishingjob pj
-                      WHERE pj.issuecode = i.issuecode AND pj.publisherid = ?)
+        WHERE i.issuecode IN (SELECT issuecode FROM inducks_publishingjob WHERE publisherid = ?)
         LIMIT 24
     """, ("egmont",)),
 ]
@@ -211,12 +213,36 @@ def main() -> int:
             print(f"  ?? {name:<32} erreur SQL : {exc}")
             continue
 
+        # Les alias masquent le nom réel de la table : sans cette correspondance, un
+        # parcours de `pn` (inducks_publicationname, 148 lignes) serait signalé comme
+        # problématique alors qu'il tient sur une page.
+        # {alias: table réelle}. Sans cette correspondance, un parcours de `pn`
+        # (inducks_publicationname, 148 lignes) serait signalé alors qu'il tient sur
+        # une page.
+        aliases = {
+            alias: table
+            for table, alias in re.findall(
+                r"\b(inducks_\w+|fts_\w+|story_\w+|entry_\w+|issue_\w+)\s+(?:AS\s+)?(\w+)\b",
+                sql, re.I,
+            )
+            if alias.lower() not in ("on", "where", "order", "group", "limit", "join", "left")
+        }
+
         detail = [row[3] for row in plan]
         scans = []
         for line in detail:
-            m = SCAN_RE.match(line.strip())
-            if m and m.group(1) not in SMALL_TABLES:
-                scans.append(m.group(1))
+            stripped = line.strip()
+            # « SCAN x VIRTUAL TABLE INDEX 0:M2 » n'est PAS un parcours de table : c'est
+            # l'usage normal d'un index FTS5, le suffixe M2 dénotant la contrainte MATCH.
+            if "VIRTUAL TABLE INDEX" in stripped:
+                continue
+            m = SCAN_RE.match(stripped)
+            if not m:
+                continue
+            target = m.group(1)
+            real = aliases.get(target, target)
+            if real not in SMALL_TABLES:
+                scans.append(real)
             for ix in re.findall(r"USING (?:COVERING )?INDEX (\w+)", line):
                 used_indexes.add(ix)
 

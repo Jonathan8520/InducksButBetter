@@ -97,7 +97,9 @@ PRIMARY_KEYS: dict[str, list[str]] = {
     # --- Tables dont l'ordre naturel ISV colle déjà à toutes les requêtes ---------------
     "inducks_storydescription": ["storyversioncode", "languagecode"],
     "inducks_storysubseries": ["storycode", "subseriescode"],
-    "inducks_subseriesname": ["subseriescode", "languagecode"],
+    # subseriesname entre dans la clé, comme pour charactername : une sous-série porte
+    # plusieurs noms dans la même langue (83 lignes sur 3 607, soit 2,3 % perdus sinon).
+    "inducks_subseriesname": ["subseriescode", "languagecode", "subseriesname"],
     # charactername entre dans la clé : un personnage peut porter PLUSIEURS noms dans la
     # même langue (2 409 lignes sur 23 916 le font). Sans elle, une clé
     # (charactercode, languagecode) en écrasait 10 % silencieusement.
@@ -361,6 +363,10 @@ INDEXES: list[tuple[str, list[str]]] = [
 
     # Chemin storycode -> parutions, dans le sens inverse de la PK.
     ("story_publications", ["issuecode"]),
+
+    # inducks_publishingjob est groupée sur (issuecode, publisherid) ; le filtre « par
+    # éditeur » a besoin du sens inverse, sinon il impose un parcours des 258 551 numéros.
+    ("inducks_publishingjob", ["publisherid", "issuecode"]),
 ]
 
 

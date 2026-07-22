@@ -195,6 +195,20 @@ function countPlaceholders(sql: string): number {
   return count;
 }
 
+/**
+ * Encadre un préfixe par deux bornes, pour remplacer `col LIKE 'prefix%'` par
+ * `col >= lo AND col < hi` — toujours servi par un index, sans dépendre de la collation.
+ *
+ * La borne haute incrémente le dernier caractère du préfixe. Les storycodes compactés
+ * n'utilisent que `[a-z0-9-]`, donc il n'y a pas de cas limite en fin d'alphabet à traiter
+ * ici — mais la borne reste correcte au-delà, puisque la comparaison est binaire.
+ */
+export function packedPrefixRange(prefix: string): [string, string] {
+  if (!prefix) return ["", "￿"];
+  const last = prefix.charCodeAt(prefix.length - 1);
+  return [prefix, prefix.slice(0, -1) + String.fromCharCode(last + 1)];
+}
+
 function assertParamCount(r: SearchQueryResponse, label: string): void {
   const expected = countPlaceholders(r.query);
   if (expected !== r.params.length) {
@@ -238,11 +252,14 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
 
       // storycode_packed est calculée au build (lower(replace(storycode,' ',''))).
       // La forme précédente enveloppait la colonne dans REPLACE(), ce qui neutralisait
-      // tout index et imposait un parcours des 355 404 histoires à chaque recherche,
-      // alors même que le joker est en fin de motif.
+      // tout index et imposait un parcours des 355 404 histoires à chaque recherche.
+      // On compare par intervalle plutôt qu'avec LIKE 'x%' : l'optimisation de LIKE en
+      // parcours d'intervalle est conditionnée par la collation de l'index et le réglage
+      // case_sensitive_like, alors qu'un intervalle explicite est toujours indexable.
       const stripped = prefix.replace(/\s+/g, '').toLowerCase();
-      where.push("s.storycode_packed LIKE ?");
-      p.push(stripped + '%');
+      const [lo, hi] = packedPrefixRange(stripped);
+      where.push("(s.storycode_packed >= ? AND s.storycode_packed < ?)");
+      p.push(lo, hi);
     } else {
       const candidates = getStorycodeCandidates(code);
       if (candidates.length > 0) {
@@ -262,8 +279,9 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
           
           // getStorycodeCandidates produit déjà la forme compactée en minuscules,
           // exactement celle stockée dans storycode_packed.
-          likeClauses.push("s.storycode_packed LIKE ?");
-          p.push(cand.packed + '%');
+          const [lo, hi] = packedPrefixRange(cand.packed);
+          likeClauses.push("(s.storycode_packed >= ? AND s.storycode_packed < ?)");
+          p.push(lo, hi);
         }
         
         if (rangeClauses.length > 0) {
@@ -303,7 +321,11 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
     const codes = (Array.isArray(filters.charactercode) ? filters.charactercode : String(filters.charactercode).split(",")).map(c => c.trim()).filter(Boolean);
     if (codes.length > 0) {
       codes.forEach(code => {
-        where.push(`EXISTS (SELECT 1 FROM inducks_storyversion sv_c JOIN inducks_appearance app_c ON sv_c.storyversioncode = app_c.storyversioncode WHERE sv_c.storycode = s.storycode AND app_c.charactercode = ?)`);
+        // Réorienté : on part de la table SÉLECTIVE (les apparitions du personnage) au
+        // lieu de balayer les 355 404 histoires en évaluant une sous-requête corrélée
+        // pour chacune. Plan mesuré avant : `SCAN s` + sous-requête corrélée. Après :
+        // `SEARCH a USING INDEX (charactercode=?)` puis accès par clé primaire.
+        where.push(`s.storycode IN (SELECT sv_c.storycode FROM inducks_appearance app_c JOIN inducks_storyversion sv_c ON sv_c.storyversioncode = app_c.storyversioncode WHERE app_c.charactercode = ?)`);
         p.push(code);
       });
     }
@@ -313,7 +335,7 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
     const codes = (Array.isArray(filters.herocode) ? filters.herocode : String(filters.herocode).split(",")).map(c => c.trim()).filter(Boolean);
     if (codes.length > 0) {
       codes.forEach(code => {
-        where.push(`EXISTS (SELECT 1 FROM inducks_storyversion sv_h JOIN inducks_appearance app_h ON sv_h.storyversioncode = app_h.storyversioncode WHERE sv_h.storycode = s.storycode AND app_h.charactercode = ? AND app_h.number = 0)`);
+        where.push(`s.storycode IN (SELECT sv_h.storycode FROM inducks_appearance app_h JOIN inducks_storyversion sv_h ON sv_h.storyversioncode = app_h.storyversioncode WHERE app_h.charactercode = ? AND app_h.number = 0)`);
         p.push(code);
       });
     }
@@ -330,7 +352,7 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
   if (filters.universes && Array.isArray(filters.universes)) {
     const universes = filters.universes.filter(u => u && String(u).trim());
     if (universes.length > 0) {
-      where.push(`EXISTS (SELECT 1 FROM inducks_storyversion sv_u JOIN inducks_appearance app_u ON sv_u.storyversioncode = app_u.storyversioncode JOIN inducks_ucrelation ucr ON app_u.charactercode = ucr.charactercode WHERE sv_u.storycode = s.storycode AND app_u.number = 0 AND ucr.universecode IN (${universes.map(() => "?").join(",")}))`);
+      where.push(`s.storycode IN (SELECT sv_u.storycode FROM inducks_ucrelation ucr JOIN inducks_appearance app_u ON app_u.charactercode = ucr.charactercode JOIN inducks_storyversion sv_u ON sv_u.storyversioncode = app_u.storyversioncode WHERE app_u.number = 0 AND ucr.universecode IN (${universes.map(() => "?").join(",")}))`);
       p.push(...universes);
     }
   }
@@ -681,10 +703,9 @@ export function buildPublicationsSearchQuery(filters: PublicationsSearchFilters)
   }
 
   if (filters.publisherid) {
-    where.push(`EXISTS (
-      SELECT 1 FROM inducks_publishingjob pj 
-      WHERE pj.issuecode = i.issuecode AND pj.publisherid = ?
-    )`);
+    // Réorienté : on part des numéros de cet éditeur plutôt que de balayer les 258 551
+    // numéros en évaluant un EXISTS pour chacun.
+    where.push(`i.issuecode IN (SELECT pj.issuecode FROM inducks_publishingjob pj WHERE pj.publisherid = ?)`);
     p.push(filters.publisherid.trim());
   }
 

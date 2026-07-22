@@ -327,6 +327,31 @@ CREATE TABLE story_publications (
 > gratuit et illimité sur CDN — contre des requêtes client, qui sont la ressource rare.
 > À généraliser à tous les chemins chauds en étape 1bis.
 
+### Résultat après réorientation des requêtes et regroupement
+
+**23 requêtes sur 23 entièrement indexées** (`scripts/check_queries.py`). Trafic à froid,
+cache vide, mesuré sur la base finale :
+
+| Requête | Avant | Après |
+|---|---:|---:|
+| **Parutions d'une histoire** | 2,2 Mo · 410 req | **44 Ko · 5 req** |
+| Personnages d'une histoire | 340 Ko · 77 req | **52 Ko · 12 req** |
+| Détail d'une histoire | 52 Ko · 13 req | 60 Ko · 14 req |
+| Autocomplétion storycode | 36 Ko · 9 req | **8 Ko · 2 req** |
+| Autocomplétion personnage (trigram) | — | 60 Ko · 12 req |
+| Recherche plein texte (FTS5) | — | 116 Ko · 18 req |
+| Numéros d'un pays | 620 Ko · 9 req | 628 Ko · **6 req** |
+
+Sur la requête la plus coûteuse : **50x moins de données, 82x moins d'allers-retours.**
+
+« Numéros d'un pays » reste le plus gros volume mais ne coûte que 6 requêtes : c'est un
+parcours *séquentiel* d'index couvrant, le motif le plus favorable en Range — beaucoup de
+pages contiguës, très peu de requêtes.
+
+**Les trois réorientations appliquées** remplacent un `EXISTS` corrélé par un `IN` qui part
+de la table sélective. Plan avant : `SCAN s` sur 355 404 histoires plus une sous-requête par
+ligne. Après : `SEARCH a USING INDEX (charactercode=?)` puis accès par clé primaire.
+
 ### Cartographie fine du code (6 analyses parallèles + synthèse)
 
 Spec resserrée : **15 index au lieu de 42**, 41 tables supprimables (~98 Mo d'ISV), et des

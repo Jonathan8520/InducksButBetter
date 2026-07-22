@@ -163,13 +163,19 @@ export function installHttpVfs(sqlite3: Sqlite3, reader: RangeReader): void {
     },
   };
 
+  // Les champs de la structure doivent être renseignés AVANT l'enregistrement : SQLite lit
+  // $zName au moment de sqlite3_vfs_register, et un VFS enregistré sans nom serait
+  // introuvable depuis `new DB({vfs: ...})`.
+  vfsStruct.$iVersion = 2;                 // 2 = xCurrentTimeInt64 fourni
+  vfsStruct.$szOsFile = capi.sqlite3_file.structInfo.sizeof;
+  vfsStruct.$mxPathname = 1024;
+  vfsStruct.$zName = wasm.allocCString(VFS_NAME);
+
   sqlite3.vfs.installVfs({
     io: { struct: ioStruct, methods: ioMethods },
     vfs: { struct: vfsStruct, methods: vfsMethods, asDefault: false },
   });
 
-  vfsStruct.$mxPathname = 1024;
-  vfsStruct.$zName = wasm.allocCString(VFS_NAME);
   installed = true;
 }
 
