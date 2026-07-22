@@ -409,7 +409,12 @@ def main() -> int:
         try:
             db.execute(f'DROP TABLE IF EXISTS "{name}"')
             db.execute(ddl)
-            db.execute(insert)
+            # `insert` accepte une liste : certaines tables se construisent en plusieurs
+            # étapes (tables temporaires agrégées une fois, puis assemblées). C'est
+            # nécessaire pour éviter les sous-requêtes corrélées, qui sont précisément le
+            # motif que ces tables existent pour supprimer.
+            for stmt in (insert if isinstance(insert, (list, tuple)) else [insert]):
+                db.execute(stmt)
             db.commit()
             n = db.execute(f'SELECT COUNT(*) FROM "{name}"').fetchone()[0]
             loaded.add(name)

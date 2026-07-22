@@ -3,103 +3,109 @@
 @tailwind utilities;
 
 @layer base {
+  /* ==================================================================================
+     PALETTE — « papier journal »
+     ==================================================================================
+     Le thème précédent était celui de shadcn/ui sorti de la boîte : --primary à
+     221.2 83.2% 53.3% (le bleu du template), fond blanc pur, texte quasi noir. D'où deux
+     défauts ressentis — aucune identité, et un contraste brutal faute de valeur
+     intermédiaire chaude.
+
+     La direction retenue vient du sujet lui-même : les comics Disney de l'âge d'or sont
+     imprimés sur papier journal crème, en trichromie, avec une encre qui tire sur le brun.
+     Le fond n'est donc pas blanc, le texte n'est pas noir, et l'accent est le vermillon des
+     couvertures Barks plutôt qu'un bleu générique.
+
+     Les couleurs sont en HSL sans virgule, comme l'attend Tailwind via hsl(var(--x)).
+     ================================================================================== */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    color-scheme: light;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* Papier : crème très légèrement désaturé, jamais #fff. */
+    --background: 40 33% 96%;
+    --foreground: 24 22% 16%;          /* encre brun-noir, pas du noir pur */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --card: 40 40% 98%;
+    --card-foreground: 24 22% 16%;
+    --popover: 40 40% 98%;
+    --popover-foreground: 24 22% 16%;
 
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
+    /* Vermillon des couvertures. Réservé aux actions : un accent, pas un aplat. */
+    --primary: 8 68% 48%;
+    --primary-foreground: 40 40% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 38 26% 91%;
+    --secondary-foreground: 24 22% 16%;
+    --muted: 38 24% 92%;
+    --muted-foreground: 26 12% 42%;
+    --accent: 38 30% 89%;
+    --accent-foreground: 24 22% 16%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 40 40% 98%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --border: 34 20% 84%;
+    --input: 34 20% 84%;
+    --ring: 8 68% 48%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Moins arrondi : l'imprimé n'a pas de coins ronds. */
+    --radius: 0.3rem;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-
-    --radius: 0.5rem;
-
-    /* ── Semantic surface tokens ────────────────────────── */
-    --surface:         0 0% 100%;          /* white             */
-    --surface-2:       240 5% 96%;         /* zinc-50           */
-    --surface-3:       240 6% 90%;         /* zinc-100          */
-    --surface-invert:  240 5% 8%;          /* zinc-950 (headers)*/
-
-    /* ── Semantic border tokens ─────────────────────────── */
-    --border-subtle:   220 13% 95%;        /* zinc-100          */
-
-    /* ── Semantic text tokens ───────────────────────────── */
-    --text-body:       222 47% 5%;         /* zinc-900          */
-    --text-secondary:  220 9% 39%;         /* zinc-600/700      */
-    --text-hint:       217 11% 65%;        /* zinc-400/500      */
-
-    /* ── Shimmer animation colors ───────────────────────── */
-    --shimmer-from:    #f1f5f9;
-    --shimmer-via:     #e2e8f0;
+    /* ── Surfaces sémantiques ─────────────────────────────────────────────────── */
+    --surface:         40 40% 98%;
+    --surface-2:       38 30% 94%;
+    --surface-3:       36 24% 89%;
+    --surface-invert:  24 24% 13%;
+    --border-subtle:   36 22% 90%;
+    --text-body:       24 22% 16%;
+    --text-secondary:  26 12% 38%;
+    --text-hint:       28 10% 55%;
+    --shimmer-from:    #efe9dc;
+    --shimmer-via:     #e3dbc9;
   }
 
+  /* Mode sombre : encre chaude sur brun très foncé — surtout pas le bleu-nuit
+     #020817 d'origine, qui donnait un aspect terminal étranger au sujet. */
   .dark {
     color-scheme: dark;
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --background: 24 16% 9%;
+    --foreground: 40 26% 90%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --card: 24 15% 12%;
+    --card-foreground: 40 26% 90%;
+    --popover: 24 15% 12%;
+    --popover-foreground: 40 26% 90%;
 
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
+    /* Vermillon éclairci : à luminosité égale il vibrerait sur fond sombre. */
+    --primary: 10 72% 58%;
+    --primary-foreground: 24 16% 9%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 24 12% 18%;
+    --secondary-foreground: 40 26% 90%;
+    --muted: 24 12% 17%;
+    --muted-foreground: 34 12% 62%;
+    --accent: 24 12% 20%;
+    --accent-foreground: 40 26% 90%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --destructive: 0 55% 42%;
+    --destructive-foreground: 40 26% 90%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --border: 24 12% 22%;
+    --input: 24 12% 22%;
+    --ring: 10 72% 58%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
-
-    /* ── Semantic surface tokens (dark) ─────────────────── */
-    --surface:         222 28% 10%;        /* zinc-900          */
-    --surface-2:       217 33% 14%;        /* zinc-800          */
-    --surface-3:       215 25% 18%;        /* zinc-700          */
-    --surface-invert:  222 47% 5%;         /* zinc-950          */
-
-    /* ── Semantic border tokens (dark) ──────────────────── */
-    --border-subtle:   217 33% 16%;        /* zinc-800          */
-
-    /* ── Semantic text tokens (dark) ────────────────────── */
-    --text-body:       210 40% 98%;        /* zinc-50           */
-    --text-secondary:  213 27% 84%;        /* zinc-300          */
-    --text-hint:       215 20% 65%;        /* zinc-400          */
-
-    /* ── Shimmer animation colors (dark) ────────────────── */
-    --shimmer-from:    #1e293b;
-    --shimmer-via:     #334155;
+    /* ── Surfaces sémantiques (sombre) ────────────────────────────────────────── */
+    --surface:         24 15% 12%;
+    --surface-2:       24 13% 16%;
+    --surface-3:       24 12% 21%;
+    --surface-invert:  40 30% 92%;
+    --border-subtle:   24 12% 20%;
+    --text-body:       40 26% 90%;
+    --text-secondary:  34 12% 68%;
+    --text-hint:       30 9% 50%;
+    --shimmer-from:    #241f1a;
+    --shimmer-via:     #2f2822;
   }
 }
 

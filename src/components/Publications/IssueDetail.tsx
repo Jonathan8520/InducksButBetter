@@ -106,7 +106,7 @@ export function IssueDetail({ issuecode, onBack, onSelectStory }: IssueDetailPro
         {/* Left Column: Cover & Core Specs */}
         <div className="space-y-6">
           <Card className="rounded-2xl border-border-subtle bg-surface shadow-sm overflow-hidden p-2">
-            <div className="aspect-[3/4] w-full flex items-center justify-center bg-zinc-50 dark:bg-zinc-800 rounded-lg overflow-hidden">
+            <div className="aspect-[3/4] w-full flex items-center justify-center bg-surface-2 rounded-lg overflow-hidden">
               {coverUrl ? (
                 <img
                   src={coverUrl}

@@ -243,7 +243,7 @@ export function StoryDetail({ storycode, onBack, onSelectIssue, onSelectCharacte
               <Card className="rounded-2xl border-border-subtle bg-surface shadow-sm">
                 <CardContent className="p-4 space-y-3">
                   <h4 className="text-xs font-bold text-text-secondary uppercase tracking-wider flex items-center gap-2">
-                    <User className="w-3.5 h-3.5 text-blue-500" />
+                    <User className="w-3.5 h-3.5 text-primary" />
                     Scénaristes
                   </h4>
                   {writers.length > 0 ? (
@@ -289,7 +289,7 @@ export function StoryDetail({ storycode, onBack, onSelectIssue, onSelectCharacte
           {/* Story Thumbnail (if available) */}
           {story.story_thumb && (
             <Card className="rounded-2xl border-border-subtle bg-surface shadow-sm overflow-hidden">
-              <div className="aspect-[4/3] w-full flex items-center justify-center p-2 bg-zinc-50 dark:bg-zinc-800">
+              <div className="aspect-[4/3] w-full flex items-center justify-center p-2 bg-surface-2">
                 <img
                   src={`/api/proxy-image?url=${encodeURIComponent(
                     story.story_thumb.split("|")[1] || story.story_thumb
@@ -322,7 +322,7 @@ export function StoryDetail({ storycode, onBack, onSelectIssue, onSelectCharacte
                               <img
                                 src={avatarUrl}
                                 alt=""
-                                className="w-5 h-5 rounded-full object-cover bg-zinc-200 dark:bg-zinc-800 shrink-0"
+                                className="w-5 h-5 rounded-full object-cover bg-surface-3 shrink-0"
                                 onError={(e) => {
                                   e.currentTarget.style.display = "none"
                                 }}

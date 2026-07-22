@@ -307,7 +307,7 @@ export function Settings() {
                   href="https://mega.nz/folder/lSZ3BSIa#5ygCpsBRQrd8JCxvfmMaFg"
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-blue-500 hover:text-blue-600 font-semibold"
+                  className="inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary font-semibold"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                   {t("settings.download_isv") || "Télécharger les fichiers ISV (depuis Mega)"}

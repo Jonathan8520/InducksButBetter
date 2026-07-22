@@ -183,12 +183,12 @@ export function StoryResultCard({ row, onSelect, onSelectCharacter }: StoryResul
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       tabIndex={0}
-      className="group overflow-hidden border-zinc-200 dark:border-zinc-700 shadow-sm hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-800 hover:bg-zinc-50/10 dark:hover:bg-zinc-800/10 transition-all duration-300 rounded-lg bg-white dark:bg-zinc-900 cursor-pointer active:scale-[0.995] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      className="group overflow-hidden border-border-subtle shadow-sm hover:shadow-lg hover:border-primary/40 dark:hover:border-primary/40 hover:bg-surface-2/10 dark:hover:bg-surface-3/10 transition-all duration-300 rounded-lg bg-surface cursor-pointer active:scale-[0.995] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <CardContent className="p-0 flex flex-row">
         {/* Left: Thumbnail */}
         <div
-          className="w-[200px] shrink-0 border-r border-zinc-100 dark:border-zinc-700 relative flex items-center justify-center p-1 group/thumb overflow-hidden bg-zinc-50 dark:bg-zinc-800"
+          className="w-[200px] shrink-0 border-r border-border-subtle dark:border-border relative flex items-center justify-center p-1 group/thumb overflow-hidden bg-surface-2"
         >
           {/* Shimmer skeleton while image loads */}
           {thumbData && !imageError && !imageLoaded && (
@@ -208,7 +208,7 @@ export function StoryResultCard({ row, onSelect, onSelectCharacter }: StoryResul
             onLoad={() => setImageLoaded(true)}
           />
           {(!thumbData || imageError) && (
-            <div className="flex flex-col items-center gap-2 text-zinc-300">
+            <div className="flex flex-col items-center gap-2 text-text-hint">
               <BookOpen className="w-8 h-8 opacity-20" />
               <span className="text-[10px] font-bold uppercase tracking-tighter opacity-30">No Image</span>
             </div>
@@ -218,13 +218,13 @@ export function StoryResultCard({ row, onSelect, onSelectCharacter }: StoryResul
             <Button
               variant="secondary"
               size="icon"
-              className="absolute top-2 right-2 h-7 w-7 rounded-full opacity-0 group-hover/thumb:opacity-100 transition-opacity bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm hover:bg-white dark:hover:bg-zinc-700 shadow-sm"
+              className="absolute top-2 right-2 h-7 w-7 rounded-full opacity-0 group-hover/thumb:opacity-100 transition-opacity bg-white/80 dark:bg-surface-3/80 backdrop-blur-sm hover:bg-white dark:hover:bg-surface-3 shadow-sm"
               onClick={(e) => {
                 e.stopPropagation();
                 window.open(thumbData.full, "_blank");
               }}
             >
-              <Maximize2 className="w-3.5 h-3.5 text-zinc-600" />
+              <Maximize2 className="w-3.5 h-3.5 text-text-secondary" />
             </Button>
           )}
         </div>
@@ -235,39 +235,39 @@ export function StoryResultCard({ row, onSelect, onSelectCharacter }: StoryResul
             <div className="flex justify-between items-start">
               <div className="min-w-0 flex-1">
                 {row.hero_name && (
-                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1.5 block">
+                  <span className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1.5 block">
                     {cleanText(row.hero_name)}
                   </span>
                 )}
-                <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 leading-tight mb-1 truncate group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors">
+                <h3 className="font-display text-lg text-foreground leading-tight mb-1 truncate group-hover:text-primary transition-colors">
                   {cleanText(row.story_title) || t('story.no_title')}
                 </h3>
-                <div className="text-[11px] font-mono text-zinc-400 dark:text-zinc-500 font-semibold tracking-wider">
+                <div className="text-[11px] font-mono text-text-hint font-semibold tracking-wider">
                   {row.storycode}
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-y-2 gap-x-4">
-              <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                <span className="font-bold text-zinc-700 dark:text-zinc-300">{t('story.pagination')} :</span> {
+              <div className="text-[11px] text-text-secondary">
+                <span className="font-bold text-text-body">{t('story.pagination')} :</span> {
                   row.entirepages > 0
                     ? row.entirepages
                     : (row.brokenpagenumerator && row.brokenpagedenominator)
                       ? `${row.brokenpagenumerator}/${row.brokenpagedenominator}`
                       : "?"
-                } {t('story.pages')} · <span className="text-blue-600/80 font-medium">{t(`kinds.${row.kind}`) || row.kind}</span>
+                } {t('story.pages')} · <span className="text-primary/80 font-medium">{t(`kinds.${row.kind}`) || row.kind}</span>
               </div>
-              <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                <span className="font-bold text-zinc-700 dark:text-zinc-300">{t('story.release_date')} :</span> {formatDate(row.firstpublicationdate)}
+              <div className="text-[11px] text-text-secondary">
+                <span className="font-bold text-text-body">{t('story.release_date')} :</span> {formatDate(row.firstpublicationdate)}
                 {row.rowsperpage > 0 && (
-                  <span className="ml-2 px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded text-[9px] font-bold uppercase tracking-tight">
+                  <span className="ml-2 px-1.5 py-0.5 bg-surface-2 text-text-secondary rounded text-[9px] font-bold uppercase tracking-tight">
                     {row.rowsperpage} {row.rowsperpage > 1 ? t('story.strips') || 'bandes' : t('story.strip') || 'bande'} / page
                   </span>
                 )}
               </div>
-              <div className="text-[11px] text-zinc-500 dark:text-zinc-400 col-span-2">
-                <span className="font-bold text-zinc-700 dark:text-zinc-300">{t('story.publications')} :</span>
+              <div className="text-[11px] text-text-secondary col-span-2">
+                <span className="font-bold text-text-body">{t('story.publications')} :</span>
                 {publications.length > 0 ? (
                   <div className="inline-flex flex-wrap gap-2 ml-1">
                     {publications.slice(0, 3).map((p: any, i: number) => (
@@ -276,20 +276,20 @@ export function StoryResultCard({ row, onSelect, onSelectCharacter }: StoryResul
                     {publications.length > 3 && (
                       <Tooltip delayDuration={200}>
                         <TooltipTrigger asChild>
-                          <span className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-help self-center ml-1">
+                          <span className="text-[10px] text-primary hover:underline font-bold cursor-help self-center ml-1">
                             +{publications.length - 3}
                           </span>
                         </TooltipTrigger>
-                        <TooltipContent className="max-w-[320px] max-h-[240px] overflow-y-auto p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-xl" asChild>
+                        <TooltipContent className="max-w-[320px] max-h-[240px] overflow-y-auto p-3 bg-surface border border-border-subtle rounded-lg shadow-xl" asChild>
                           <div className="flex flex-col gap-2">
-                            <p className="font-bold text-xs text-zinc-700 dark:text-zinc-300 border-b pb-1 mb-1">
+                            <p className="font-bold text-xs text-text-body border-b pb-1 mb-1">
                               {t('story.other_publications') || 'Autres publications'}
                             </p>
                             <div className="flex flex-col gap-1.5">
                               {publications.slice(3).map((p: any, i: number) => (
                                 <div key={i} className="flex items-center gap-2 text-xs">
                                   <FlagBadge country={p.country} name={p.name} />
-                                  <span className="text-zinc-600 dark:text-zinc-400 truncate">{p.name}</span>
+                                  <span className="text-text-secondary truncate">{p.name}</span>
                                 </div>
                               ))}
                             </div>
@@ -299,28 +299,28 @@ export function StoryResultCard({ row, onSelect, onSelectCharacter }: StoryResul
                     )}
                   </div>
                 ) : (
-                  <span className="ml-1 text-zinc-400 italic">{t('story.none')}</span>
+                  <span className="ml-1 text-text-hint italic">{t('story.none')}</span>
                 )}
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-zinc-50 dark:border-zinc-800 pt-3">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-border-subtle dark:border-border pt-3">
               <div className="text-[11px] flex items-center gap-1.5 flex-wrap">
-                <span className="font-bold text-zinc-500 dark:text-zinc-400 tracking-tighter mr-0.5">{t('story.script')} :</span>
+                <span className="font-bold text-text-secondary tracking-tighter mr-0.5">{t('story.script')} :</span>
                 {writers.length > 0 ? writers.map((w: any, i: number) => (
                   <CreatorBadge key={i} code={w.code} name={w.name} />
-                )) : <span className="text-zinc-400">?</span>}
+                )) : <span className="text-text-hint">?</span>}
               </div>
               <div className="text-[11px] flex items-center gap-1.5 flex-wrap">
-                <span className="font-bold text-zinc-500 dark:text-zinc-400 tracking-tighter mr-0.5">{t('story.art')} :</span>
+                <span className="font-bold text-text-secondary tracking-tighter mr-0.5">{t('story.art')} :</span>
                 {artists.length > 0 ? artists.map((a: any, i: number) => (
                   <CreatorBadge key={i} code={a.code} name={a.name} size="sm" />
-                )) : <span className="text-zinc-400">?</span>}
+                )) : <span className="text-text-hint">?</span>}
               </div>
             </div>
 
             {/* Characters section */}
-            <div className="flex flex-row flex-wrap gap-2 border-t border-zinc-50 dark:border-zinc-800">
+            <div className="flex flex-row flex-wrap gap-2 border-t border-border-subtle dark:border-border">
               {characters.slice(0, 15).map((c: any, i: number) => {
                 const charImageUrl = c.url
                   ? `/api/proxy-image?url=${encodeURIComponent(`https://inducks.org/hr.php?normalsize=1&image=https://outducks.org/webusers/${c.url.startsWith('/') ? c.url.substring(1) : c.url}`)}`
@@ -332,14 +332,14 @@ export function StoryResultCard({ row, onSelect, onSelectCharacter }: StoryResul
                       <TooltipTrigger asChild>
                         <div className="flex items-center gap-1.5 cursor-pointer">
                           <div 
-                            className="w-4 h-4 rounded-full overflow-hidden border-zinc-200 dark:border-zinc-700 border bg-zinc-100 dark:bg-zinc-800 shrink-0 shadow-sm relative flex items-center justify-center"
+                            className="w-4 h-4 rounded-full overflow-hidden border-border-subtle border bg-surface-2 shrink-0 shadow-sm relative flex items-center justify-center"
                             onClick={(e) => {
                               e.stopPropagation();
                               if (onSelectCharacter) onSelectCharacter(c.code, c.name);
                               else window.open(`https://inducks.org/character.php?c=${c.code}`, "_blank");
                             }}
                           >
-                            <span className="text-[6px] font-bold text-zinc-400 dark:text-zinc-500 absolute inset-0 flex items-center justify-center uppercase leading-none tracking-tighter">
+                            <span className="text-[6px] font-bold text-text-hint absolute inset-0 flex items-center justify-center uppercase leading-none tracking-tighter">
                               {c.code}
                             </span>
                             <img 
@@ -350,7 +350,7 @@ export function StoryResultCard({ row, onSelect, onSelectCharacter }: StoryResul
                             />
                           </div>
                           <span 
-                            className="text-[10px] text-blue-600 hover:text-blue-700 hover:underline font-medium whitespace-nowrap"
+                            className="text-[10px] text-primary hover:text-primary hover:underline font-medium whitespace-nowrap"
                             onClick={(e) => {
                               e.stopPropagation();
                               if (onSelectCharacter) onSelectCharacter(c.code, c.name);
@@ -365,16 +365,16 @@ export function StoryResultCard({ row, onSelect, onSelectCharacter }: StoryResul
                         <div className="flex flex-col gap-0.5">
                           <p className="font-bold">
                             {c.name}
-                            <span className="ml-1 text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">({c.code})</span>
+                            <span className="ml-1 text-[10px] text-text-hint font-mono">({c.code})</span>
                           </p>
-                          {c.charComment && <p className="text-zinc-600 dark:text-zinc-400 italic leading-snug">{c.charComment}</p>}
+                          {c.charComment && <p className="text-text-secondary italic leading-snug">{c.charComment}</p>}
                         </div>
                         <TooltipArrow className="fill-popover" />
                       </TooltipContent>
                     </Tooltip>
 
                     {c.appComment && (
-                      <span className="text-[9px] text-zinc-400 italic whitespace-nowrap">
+                      <span className="text-[9px] text-text-hint italic whitespace-nowrap">
                         ({c.appComment})
                       </span>
                     )}
@@ -382,7 +382,7 @@ export function StoryResultCard({ row, onSelect, onSelectCharacter }: StoryResul
                 );
               })}
               {characters.length > 15 && (
-                <span className="text-[10px] text-zinc-400 font-medium pl-1 self-start">
+                <span className="text-[10px] text-text-hint font-medium pl-1 self-start">
                   +{characters.length - 15}
                 </span>
               )}
@@ -391,7 +391,7 @@ export function StoryResultCard({ row, onSelect, onSelectCharacter }: StoryResul
 
           {/* Description Box */}
           {text && (
-            <div className="bg-zinc-50 dark:bg-zinc-800/50 border-t border-zinc-100 dark:border-zinc-700 p-4 pt-3 flex flex-col gap-1">
+            <div className="bg-surface-2/50 border-t border-border-subtle dark:border-border p-4 pt-3 flex flex-col gap-1">
               <div
                 ref={textRef}
                 style={{
@@ -402,13 +402,13 @@ export function StoryResultCard({ row, onSelect, onSelectCharacter }: StoryResul
                   maxHeight: isExpanded ? '500px' : '3em',
                   transition: 'max-height 0.35s cubic-bezier(0.22,1,0.36,1)',
                 }}
-                className="text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-400 italic"
+                className="text-[11px] leading-relaxed text-text-secondary italic"
               >
                 {text}
               </div>
               {(isTruncated || isExpanded) && (
                 <span
-                  className="text-blue-500 font-bold text-[10px] cursor-pointer hover:underline self-end transition-colors"
+                  className="text-primary font-bold text-[10px] cursor-pointer hover:underline self-end transition-colors"
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsExpanded(!isExpanded);

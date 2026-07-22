@@ -20,10 +20,10 @@ export function CreatorBadge({ code, name, size = "md" }: CreatorBadgeProps) {
           target="_blank"
           rel="noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center gap-1 bg-surface border border-border-subtle px-1.5 py-0.5 rounded-md shadow-sm hover:border-blue-300 dark:hover:border-blue-700 hover:bg-surface-2 transition-all cursor-pointer"
+          className="inline-flex items-center gap-1 bg-surface border border-border-subtle px-1.5 py-0.5 rounded-md shadow-sm hover:border-primary/40 dark:hover:border-primary/40 hover:bg-surface-2 transition-all cursor-pointer"
         >
-          <div className={`${avatarSize} rounded-full overflow-hidden border border-border-subtle bg-zinc-100 dark:bg-zinc-800 shrink-0 relative flex items-center justify-center`}>
-            <span className="text-[8px] font-bold text-zinc-400 dark:text-zinc-500 absolute inset-0 flex items-center justify-center uppercase">
+          <div className={`${avatarSize} rounded-full overflow-hidden border border-border-subtle bg-surface-2 shrink-0 relative flex items-center justify-center`}>
+            <span className="text-[8px] font-bold text-text-hint absolute inset-0 flex items-center justify-center uppercase">
               {name.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2)}
             </span>
             <img

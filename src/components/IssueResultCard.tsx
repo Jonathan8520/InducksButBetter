@@ -99,12 +99,12 @@ export function IssueResultCard({ row, onSelect }: IssueResultCardProps) {
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       tabIndex={0}
-      className="group overflow-hidden border-zinc-200 dark:border-zinc-700 shadow-sm hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-800 hover:bg-zinc-50/10 dark:hover:bg-zinc-800/10 transition-all duration-300 rounded-lg bg-white dark:bg-zinc-900 cursor-pointer active:scale-[0.995] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      className="group overflow-hidden border-border-subtle shadow-sm hover:shadow-lg hover:border-primary/40 dark:hover:border-primary/40 hover:bg-surface-2/10 dark:hover:bg-surface-3/10 transition-all duration-300 rounded-lg bg-surface cursor-pointer active:scale-[0.995] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <CardContent className="p-0 flex flex-row">
         {/* Left: Cover Thumbnail */}
         <div
-          className="w-[140px] sm:w-[180px] shrink-0 border-r border-zinc-100 dark:border-zinc-700 relative flex items-center justify-center p-1 group/thumb overflow-hidden bg-zinc-50 dark:bg-zinc-800"
+          className="w-[140px] sm:w-[180px] shrink-0 border-r border-border-subtle dark:border-border relative flex items-center justify-center p-1 group/thumb overflow-hidden bg-surface-2"
         >
           {thumbData && !imageError && !imageLoaded && (
             <div className="absolute inset-1 rounded animate-shimmer" />
@@ -123,7 +123,7 @@ export function IssueResultCard({ row, onSelect }: IssueResultCardProps) {
             onLoad={() => setImageLoaded(true)}
           />
           {(!thumbData || imageError) && (
-            <div className="flex flex-col items-center gap-2 text-zinc-300">
+            <div className="flex flex-col items-center gap-2 text-text-hint">
               <BookOpen className="w-8 h-8 opacity-20" />
               <span className="text-[10px] font-bold uppercase tracking-tighter opacity-30">No Cover</span>
             </div>
@@ -133,13 +133,13 @@ export function IssueResultCard({ row, onSelect }: IssueResultCardProps) {
             <Button
               variant="secondary"
               size="icon"
-              className="absolute top-2 right-2 h-7 w-7 rounded-full opacity-0 group-hover/thumb:opacity-100 transition-opacity bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm hover:bg-white dark:hover:bg-zinc-700 shadow-sm"
+              className="absolute top-2 right-2 h-7 w-7 rounded-full opacity-0 group-hover/thumb:opacity-100 transition-opacity bg-white/80 dark:bg-surface-3/80 backdrop-blur-sm hover:bg-white dark:hover:bg-surface-3 shadow-sm"
               onClick={(e) => {
                 e.stopPropagation();
                 window.open(thumbData.full, "_blank");
               }}
             >
-              <Maximize2 className="w-3.5 h-3.5 text-zinc-600" />
+              <Maximize2 className="w-3.5 h-3.5 text-text-secondary" />
             </Button>
           )}
         </div>
@@ -149,11 +149,11 @@ export function IssueResultCard({ row, onSelect }: IssueResultCardProps) {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1">
               <FlagBadge country={row.countrycode} name={row.countrycode.toUpperCase()} />
-              <span className="text-[11px] font-mono text-zinc-400 dark:text-zinc-500 font-semibold tracking-wider">
+              <span className="text-[11px] font-mono text-text-hint font-semibold tracking-wider">
                 {row.issuecode}
               </span>
             </div>
-            <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 leading-tight mb-1 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors">
+            <h3 className="text-base sm:text-lg font-bold text-foreground leading-tight mb-1 group-hover:text-primary transition-colors">
               {cleanText(row.series_title)} #{row.issuenumber}
             </h3>
             {row.issue_title && (
@@ -163,33 +163,33 @@ export function IssueResultCard({ row, onSelect }: IssueResultCardProps) {
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1.5 gap-x-4 border-t border-zinc-50 dark:border-zinc-800 pt-3 text-[11px] text-zinc-500 dark:text-zinc-400">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1.5 gap-x-4 border-t border-border-subtle dark:border-border pt-3 text-[11px] text-text-secondary">
             {row.publishername && (
               <div className="col-span-1 sm:col-span-2">
-                <span className="font-bold text-zinc-700 dark:text-zinc-300">{t('search.publisher')} :</span> {row.publishername}
+                <span className="font-bold text-text-body">{t('search.publisher')} :</span> {row.publishername}
               </div>
             )}
             <div>
-              <span className="font-bold text-zinc-700 dark:text-zinc-300">{t('story.release_date')} :</span> {formatDate(row.oldestdate)}
+              <span className="font-bold text-text-body">{t('story.release_date')} :</span> {formatDate(row.oldestdate)}
             </div>
             {row.pages !== null && row.pages > 0 && (
               <div>
-                <span className="font-bold text-zinc-700 dark:text-zinc-300">{t('story.pagination')} :</span> {row.pages} {t('story.pages')}
+                <span className="font-bold text-text-body">{t('story.pagination')} :</span> {row.pages} {t('story.pages')}
               </div>
             )}
             {row.price && (
               <div>
-                <span className="font-bold text-zinc-700 dark:text-zinc-300">{t('search.price') || 'Prix'} :</span> {row.price}
+                <span className="font-bold text-text-body">{t('search.price') || 'Prix'} :</span> {row.price}
               </div>
             )}
             {row.size && (
               <div>
-                <span className="font-bold text-zinc-700 dark:text-zinc-300">{t('search.dimensions') || 'Format'} :</span> {row.size}
+                <span className="font-bold text-text-body">{t('search.dimensions') || 'Format'} :</span> {row.size}
               </div>
             )}
             {row.attached && (
               <div className="col-span-1 sm:col-span-2">
-                <span className="font-bold text-zinc-700 dark:text-zinc-300">{t('search.attached') || 'Supplément'} :</span> {row.attached}
+                <span className="font-bold text-text-body">{t('search.attached') || 'Supplément'} :</span> {row.attached}
               </div>
             )}
           </div>

@@ -118,7 +118,7 @@ export function MultiAutocomplete({
                     <img 
                       src={avatarUrl} 
                       alt="" 
-                      className="w-3.5 h-3.5 rounded-full object-cover bg-zinc-200 dark:bg-zinc-800 shrink-0"
+                      className="w-3.5 h-3.5 rounded-full object-cover bg-surface-3 shrink-0"
                       onError={(e) => {
                         e.currentTarget.style.display = "none";
                       }}

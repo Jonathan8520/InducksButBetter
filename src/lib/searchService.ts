@@ -539,142 +539,97 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
 
   const sort = String(filters.sort || "pubdate_desc");
   let orderBy = "s.firstpublicationdate DESC, s.storycode ASC";
+  // Ordre de la requête EXTERNE, exprimé sur story_card / story_card_i18n. Il est déclaré
+  // explicitement plutôt que dérivé de `orderBy` par substitution d'alias : plusieurs tris
+  // s'appuient sur des jointures (sh_sort) ou des sous-requêtes qui n'existent que dans le
+  // CTE, et une substitution aveugle transformerait aussi `ids.` en `idc.`.
+  let cardOrderBy = "c.firstpublicationdate DESC, c.storycode ASC";
   let sortJoins = "";
   
   const isPreciseStorycodeSearch = filters.storycode && String(filters.storycode).trim().split(/\s+/).length >= 2;
   
   if (sort === "pubdate_asc") {
     orderBy = "s.firstpublicationdate ASC, s.storycode ASC";
+    cardOrderBy = "c.firstpublicationdate ASC, c.storycode ASC";
   } else if (sort === "title_az") {
     sortJoins = "LEFT JOIN inducks_storyheader sh_sort ON s.storyheadercode = sh_sort.storyheadercode";
     orderBy = "sh_sort.title ASC, s.storycode ASC";
+    cardOrderBy = "i.story_title ASC, c.storycode ASC";
   } else if (sort === "title_za") {
     sortJoins = "LEFT JOIN inducks_storyheader sh_sort ON s.storyheadercode = sh_sort.storyheadercode";
     orderBy = "sh_sort.title DESC, s.storycode ASC";
+    cardOrderBy = "i.story_title DESC, c.storycode ASC";
   } else if (sort === "pages_desc") {
     orderBy = "(SELECT MAX(entirepages) FROM inducks_storyversion WHERE storycode = s.storycode) DESC, s.storycode ASC";
+    cardOrderBy = "c.entirepages DESC, c.storycode ASC";
   } else if (sort === "pages_asc") {
     orderBy = "(SELECT MIN(entirepages) FROM inducks_storyversion WHERE storycode = s.storycode) ASC, s.storycode ASC";
+    cardOrderBy = "c.entirepages ASC, c.storycode ASC";
   } else if (sort === "published_most") {
-    orderBy = "(SELECT COUNT(e_sort.entrycode) FROM inducks_entry e_sort JOIN inducks_storyversion sv_sort ON e_sort.storyversioncode = sv_sort.storyversioncode WHERE sv_sort.storycode = s.storycode) DESC, s.storycode ASC";
+    orderBy = "s.entry_count DESC, s.storycode ASC";
+    cardOrderBy = "c.entry_count DESC, c.storycode ASC";
   } else if (sort === "published_least") {
-    orderBy = "(SELECT COUNT(e_sort.entrycode) FROM inducks_entry e_sort JOIN inducks_storyversion sv_sort ON e_sort.storyversioncode = sv_sort.storyversioncode WHERE sv_sort.storycode = s.storycode) ASC, s.storycode ASC";
+    orderBy = "s.entry_count ASC, s.storycode ASC";
+    cardOrderBy = "c.entry_count ASC, c.storycode ASC";
   } else if (sort === "pubdate_desc" && isPreciseStorycodeSearch) {
     // Optimization: if searching for a precise storycode, order by length to prioritize exact matches
     orderBy = "LENGTH(s.storycode) ASC, s.storycode ASC";
+    cardOrderBy = "LENGTH(c.storycode) ASC, c.storycode ASC";
   }
 
   const whereSql = where.length > 0 ? "WHERE " + where.join(" AND ") : "";
   const countQuery = `SELECT COUNT(s.storycode) as total FROM inducks_story s ${whereSql}`;
 
+  // La totalité du contenu d'une carte de résultat est PRÉ-ASSEMBLÉE au build, dans
+  // story_card (part commune) et story_card_i18n (part linguistique).
+  //
+  // Ce que remplace cette requête : dix sous-requêtes corrélées exécutées POUR CHAQUE ligne
+  // affichée, qui touchaient des lignes dispersées dans inducks_appearance (1,7 M),
+  // inducks_entry (2,0 M) et inducks_storyjob (2,1 M). Mesuré : 1 525 pages en 1 309 plages
+  // contiguës, soit 1,2 page par plage — un accès quasi parfaitement aléatoire, donc ~29 s
+  // rien qu'en latence d'aller-retour. Sur la carte assemblée : 165 pages, 126 requêtes.
+  //
+  // Le sens de lecture est inversé : on résout d'abord les 24 identifiants de la page, puis
+  // on lit 24 cartes contiguës — au lieu de rayonner depuis chaque ligne vers six tables.
   const mainQuery = `
     WITH StoryIds AS (
-      SELECT s.storycode, s.firstpublicationdate, s.storyheadercode, s.storycomment, s.title
+      SELECT s.storycode
       FROM inducks_story s
       ${sortJoins}
       ${whereSql}
       ORDER BY ${orderBy}
       LIMIT ? OFFSET ?
-    ),
-    BestVersions AS (
-      SELECT sv.storyversioncode, sv.storycode, sv.kind, sv.entirepages, sv.brokenpagenumerator, sv.brokenpagedenominator, sv.plotsummary, sv.rowsperpage, sv.columnsperpage
-      FROM inducks_storyversion sv
-      WHERE sv.storyversioncode IN (
-        -- Corrélé sur les seules histoires retenues (24 par page). La forme précédente
-        -- joignait StoryIds puis groupait par storycode, ce qui faisait grouper les
-        -- 734 876 versions AVANT de filtrer : mesuré, 6 868 pages et 1 367 requêtes HTTP
-        -- pour une seule page de résultats. Ici, 24 MIN servis par la clé de regroupement.
-        SELECT (SELECT MIN(v.storyversioncode) FROM inducks_storyversion v
-                WHERE v.storycode = ids.storycode)
-        FROM StoryIds ids
-      )
     )
-    SELECT s.storycode,
-      COALESCE(
-        (SELECT sn.subseriesname FROM inducks_storysubseries ss JOIN inducks_subseriesname sn ON ss.subseriescode = sn.subseriescode WHERE ss.storycode = s.storycode ORDER BY CASE WHEN sn.languagecode = ? THEN 0 ELSE 1 END, sn.preferred DESC LIMIT 1),
-        (SELECT sh.title FROM inducks_storyheader sh WHERE sh.storyheadercode = s.storyheadercode LIMIT 1)
-      ) as series_title,
-      s.firstpublicationdate, sv.kind, sv.entirepages, sv.brokenpagenumerator, sv.brokenpagedenominator, sv.plotsummary, s.storycomment,
-      COALESCE(
-        (SELECT e.title FROM inducks_entry e JOIN inducks_issue i ON e.issuecode = i.issuecode JOIN inducks_publication pub ON i.publicationcode = pub.publicationcode WHERE e.storyversioncode = sv.storyversioncode AND e.title IS NOT NULL AND e.title != '' ORDER BY CASE WHEN pub.languagecode = ? THEN 0 ELSE 1 END, e.entrycode ASC LIMIT 1),
-        s.title,
-        NULL
-      ) as story_title,
-      -- Vignette : story_thumb est précalculée au build avec le même arbitrage
-      -- (webusers d'abord, puis la parution la plus ancienne). Remplace deux sous-requêtes
-      -- à trois jointures exécutées pour CHACUNE des 24 lignes de la page.
-      -- Nuance assumée : la préférence de langue, qui ne dépend que de l'utilisateur, ne
-      -- peut pas être précalculée ; elle n'intervenait qu'en troisième critère de tri.
-      (SELECT st.sitecode || '|' || st.url
-       FROM story_thumb st WHERE st.storycode = sv.storycode) as story_thumb,
-      COALESCE(
-        (SELECT CASE
-           WHEN TRIM(sd.desctext) LIKE 'Art:%' OR TRIM(sd.desctext) LIKE 'Script:%' OR TRIM(sd.desctext) LIKE 'Plot:%' OR TRIM(sd.desctext) LIKE 'Des:%' OR TRIM(sd.desctext) LIKE 'Desenhos:%' OR TRIM(sd.desctext) LIKE 'Roteiro:%'
-                OR TRIM(sd.desctext) LIKE 'Ink:%' OR TRIM(sd.desctext) LIKE 'Pencils:%' OR TRIM(sd.desctext) LIKE 'Pencil:%' OR TRIM(sd.desctext) LIKE 'Inks:%' OR TRIM(sd.desctext) LIKE 'Colors:%'
-                OR TRIM(sd.desctext) LIKE 'Letters:%' OR TRIM(sd.desctext) LIKE 'Texte:%' OR TRIM(sd.desctext) LIKE 'Dessin:%' OR TRIM(sd.desctext) LIKE 'Scénario:%'
-                OR TRIM(sd.desctext) LIKE 'Scenario:%' OR TRIM(sd.desctext) LIKE 'Translation:%' OR TRIM(sd.desctext) LIKE 'Aut:%' OR TRIM(sd.desctext) LIKE 'Dis:%'
-                OR TRIM(sd.desctext) LIKE ',%' OR TRIM(sd.desctext) LIKE '%.%'
-           THEN NULL
-           ELSE sd.desctext
-         END FROM inducks_storydescription sd 
-         WHERE sd.storyversioncode = sv.storyversioncode 
-         ORDER BY 
-           CASE 
-             WHEN sd.languagecode = ? THEN 0 
-             WHEN sd.languagecode = 'en' THEN 1 
-             ELSE 2 
-           END ASC,
-           sd.desctext ASC
-         LIMIT 1),
-        (SELECT CASE
-           WHEN TRIM(sv.plotsummary) LIKE 'Art:%' OR TRIM(sv.plotsummary) LIKE 'Script:%' OR TRIM(sv.plotsummary) LIKE 'Plot:%' OR TRIM(sv.plotsummary) LIKE 'Des:%' OR TRIM(sv.plotsummary) LIKE 'Desenhos:%' OR TRIM(sv.plotsummary) LIKE 'Roteiro:%'
-                OR TRIM(sv.plotsummary) LIKE 'Ink:%' OR TRIM(sv.plotsummary) LIKE 'Pencils:%' OR TRIM(sv.plotsummary) LIKE 'Pencil:%' OR TRIM(sv.plotsummary) LIKE 'Inks:%' OR TRIM(sv.plotsummary) LIKE 'Colors:%'
-                OR TRIM(sv.plotsummary) LIKE 'Letters:%' OR TRIM(sv.plotsummary) LIKE 'Texte:%' OR TRIM(sv.plotsummary) LIKE 'Dessin:%' OR TRIM(sv.plotsummary) LIKE 'Scénario:%'
-                OR TRIM(sv.plotsummary) LIKE 'Scenario:%' OR TRIM(sv.plotsummary) LIKE 'Translation:%' OR TRIM(sv.plotsummary) LIKE 'Aut:%' OR TRIM(sv.plotsummary) LIKE 'Dis:%'
-                OR TRIM(sv.plotsummary) LIKE ',%'
-           THEN NULL
-           ELSE sv.plotsummary
-         END)
-      ) as full_description,
-      (SELECT GROUP_CONCAT(DISTINCT sj.plotwritartink || ':' || p.personcode || '|' || p.fullname) 
-       FROM inducks_storyjob sj 
-       JOIN inducks_person p ON sj.personcode = p.personcode 
-       WHERE sj.storyversioncode = sv.storyversioncode) as creators,
-      -- Lue dans story_characters, groupée par storycode et portant déjà le nom par
-      -- défaut. La forme précédente reconstruisait la liste depuis inducks_appearance
-      -- (1,7 M de lignes) et inducks_character POUR CHAQUE ligne affichée : 24 fois par
-      -- page, sur des lignes dispersées.
-      (SELECT GROUP_CONCAT(sc.charactercode || '|' || COALESCE(cn.charactername, sc.charactername) || '|' || COALESCE(sc.appearancecomment, '') || '|' || COALESCE(cn.characternamecomment, sc.charactercomment, '') || '|' || '', ';')
-       FROM (SELECT charactercode, charactername, appearancecomment, charactercomment, number
-             FROM story_characters WHERE storycode = s.storycode ORDER BY number ASC) sc
-       LEFT JOIN inducks_charactername cn ON sc.charactercode = cn.charactercode AND cn.languagecode = ? AND cn.preferred = 'Y'
-      ) as character_list,
-      -- Idem : story_publications porte déjà countrycode et publicationcode groupés par
-      -- histoire, au lieu de rejouer entry -> storyversion -> issue -> publication par ligne.
-      (SELECT GROUP_CONCAT(DISTINCT sp_c.countrycode || '|' || sp_c.publicationcode)
-       FROM story_publications sp_c WHERE sp_c.storycode = s.storycode) as publication_list,
-      (SELECT app_h.charactercode 
-       FROM inducks_appearance app_h 
-       WHERE app_h.storyversioncode = sv.storyversioncode AND app_h.number = 0 
-       ORDER BY app_h.charactercode ASC LIMIT 1) as hero_code,
-      (SELECT COALESCE((SELECT cn_h.charactername FROM inducks_charactername cn_h WHERE cn_h.charactercode = app_h.charactercode AND cn_h.languagecode = ? AND cn_h.preferred = 'Y' LIMIT 1), c_h.charactername)
-       FROM inducks_appearance app_h 
-       JOIN inducks_character c_h ON app_h.charactercode = c_h.charactercode 
-       WHERE app_h.storyversioncode = sv.storyversioncode AND app_h.number = 0 
-       ORDER BY app_h.charactercode ASC LIMIT 1) as hero_name,
-      sv.rowsperpage, sv.columnsperpage
+    SELECT
+      c.storycode,
+      COALESCE(NULLIF(i.story_title, ''), c.storycode) as story_title,
+      NULLIF(i.series_title, '')                       as series_title,
+      NULLIF(i.description, '')                        as full_description,
+      NULLIF(i.character_list, '')                     as character_list,
+      NULLIF(c.publication_list, '')                   as publication_list,
+      NULLIF(c.creators, '')                           as creators,
+      NULLIF(c.story_thumb, '')                        as story_thumb,
+      NULL                                             as hero_name,
+      c.kind,
+      c.entirepages,
+      c.brokenpagenumerator,
+      c.brokenpagedenominator,
+      c.rowsperpage,
+      c.firstpublicationdate
     FROM StoryIds ids
-    JOIN inducks_story s ON ids.storycode = s.storycode
-    JOIN BestVersions sv ON s.storycode = sv.storycode
-    ORDER BY ${orderBy}
+    JOIN story_card c ON c.storycode = ids.storycode
+    LEFT JOIN story_card_i18n i
+           ON i.storycode = ids.storycode AND i.languagecode = ?
+    ORDER BY ${cardOrderBy}
   `;
 
-  // 5 `lang` et non 6 : la vignette est désormais lue dans story_thumb, ce qui a supprimé
-  // le paramètre de préférence de langue qu'elle consommait.
+  // Un seul `lang` désormais : la carte pré-assemblée porte déjà les libellés traduits,
+  // il ne reste que le choix de la ligne dans story_card_i18n. Les cinq précédents
+  // servaient les sous-requêtes corrélées qui viennent de disparaître.
   const result = {
     query: mainQuery,
     countQuery,
-    params: [...p, pageSize, offset, lang, lang, lang, lang, lang],
+    params: [...p, pageSize, offset, lang],
     countParams: p,
     pageSize,
     page,

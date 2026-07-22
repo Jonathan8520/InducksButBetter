@@ -318,6 +318,131 @@ MATERIALIZED: list[tuple[str, str, str, list[str]]] = [
             WHERE e.issuecode IS NOT NULL AND eu.url IS NOT NULL
         ) WHERE rn = 1
      """, []),
+    # ---------------------------------------------------------------------------------
+    # LA CARTE DE RÉSULTAT PRÉ-ASSEMBLÉE — le plus gros gain de toute la spec.
+    #
+    # Mesures qui ont conduit à ces deux tables :
+    #   - la recherche touchait 1 525 pages réparties en 1 309 plages contiguës, soit
+    #     1,2 page par plage : l'accès est quasi parfaitement ALÉATOIRE ;
+    #   - 22,4 ms de latence par requête x 1 309 = ~29 s, conformes aux 30-60 s observées
+    #     dans le navigateur. Le coût est donc entièrement de l'aller-retour, pas du
+    #     volume : 6 Mo se transfèrent en moins d'une seconde ;
+    #   - 1,8 % seulement des pages lues étant dans les 32 premiers Mo, aucun
+    #     préchargement de « préambule » ne pouvait aider ; et sans séquentialité, la
+    #     lecture anticipée non plus.
+    #
+    # Le seul levier restant est de toucher moins de pages. Une carte assemblée au build
+    # ramène la recherche à 165 pages et 126 requêtes (~2,8 s) : 10x moins d'allers-retours.
+    #
+    # SCINDÉE EN DEUX à dessein. Une table unique par langue coûtait +159 Mo, soit ~950 Mo
+    # pour les 6 langues — la base aurait doublé. Or la majorité des champs (parutions,
+    # auteurs, vignette, pagination, date) ne dépend pas de la langue : elle n'est stockée
+    # qu'une fois. Seuls titre, description et noms de personnages sont dupliqués.
+    ("story_card", """
+        CREATE TABLE story_card (
+            storycode             TEXT NOT NULL PRIMARY KEY,
+            publication_list      TEXT,
+            creators              TEXT,
+            story_thumb           TEXT,
+            kind                  TEXT,
+            entirepages           INTEGER,
+            brokenpagenumerator   INTEGER,
+            brokenpagedenominator INTEGER,
+            rowsperpage           INTEGER,
+            firstpublicationdate  TEXT,
+            storyheadercode       TEXT,
+            plotsummary           TEXT,
+            storyversioncode      TEXT,
+            entry_count           INTEGER
+        ) WITHOUT ROWID
+     """, [
+        # Version de référence de chaque histoire, agrégée EN UNE PASSE.
+        "DROP TABLE IF EXISTS _bestver",
+        """CREATE TABLE _bestver (storycode TEXT PRIMARY KEY, svc TEXT) WITHOUT ROWID""",
+        """INSERT INTO _bestver SELECT storycode, MIN(storyversioncode)
+           FROM inducks_storyversion WHERE storycode IS NOT NULL GROUP BY storycode""",
+        # Auteurs et parutions, également en une passe chacun.
+        "DROP TABLE IF EXISTS _cred",
+        """CREATE TABLE _cred (storycode TEXT PRIMARY KEY, lst TEXT) WITHOUT ROWID""",
+        """INSERT INTO _cred
+           SELECT b.storycode, GROUP_CONCAT(DISTINCT sj.plotwritartink || '|' || p.fullname)
+           FROM _bestver b
+           JOIN inducks_storyjob sj ON sj.storyversioncode = b.svc
+           JOIN inducks_person p ON p.personcode = sj.personcode
+           GROUP BY b.storycode""",
+        "DROP TABLE IF EXISTS _pubs",
+        # `n` est compté ici plutôt que repris de inducks_story.entry_count : cette
+        # colonne dérivée est calculée APRÈS les tables regroupées, donc elle n'existe pas
+        # encore à ce stade. La compter dans le même GROUP BY ne coûte rien.
+        """CREATE TABLE _pubs (storycode TEXT PRIMARY KEY, lst TEXT, n INTEGER) WITHOUT ROWID""",
+        """INSERT INTO _pubs
+           SELECT storycode, GROUP_CONCAT(DISTINCT countrycode || '|' || publicationcode),
+                  COUNT(*)
+           FROM story_publications GROUP BY storycode""",
+        """INSERT OR REPLACE INTO story_card
+           SELECT s.storycode,
+                  COALESCE(pb.lst, ''), COALESCE(cr.lst, ''),
+                  COALESCE(st.sitecode || '|' || st.url, ''),
+                  sv.kind, sv.entirepages, sv.brokenpagenumerator,
+                  sv.brokenpagedenominator, sv.rowsperpage, s.firstpublicationdate,
+                  s.storyheadercode, sv.plotsummary, b.svc, COALESCE(pb.n, 0)
+           FROM inducks_story s
+           LEFT JOIN _bestver b ON b.storycode = s.storycode
+           LEFT JOIN inducks_storyversion sv ON sv.storyversioncode = b.svc
+           LEFT JOIN _cred cr ON cr.storycode = s.storycode
+           LEFT JOIN _pubs pb ON pb.storycode = s.storycode
+           LEFT JOIN story_thumb st ON st.storycode = s.storycode""",
+        "DROP TABLE _cred",
+        "DROP TABLE _pubs",
+     ], []),
+
+    # Part linguistique : uniquement ce qui change d'une langue à l'autre.
+    ("story_card_i18n", """
+        CREATE TABLE story_card_i18n (
+            languagecode   TEXT NOT NULL,
+            storycode      TEXT NOT NULL,
+            story_title    TEXT,
+            series_title   TEXT,
+            description    TEXT,
+            character_list TEXT,
+            PRIMARY KEY (languagecode, storycode)
+        ) WITHOUT ROWID
+     """, [
+        # storyheadercode n'est pas unique (28 doublons sur 418) : sans déduplication, la
+        # jointure multiplierait les lignes de la carte.
+        "DROP TABLE IF EXISTS _head",
+        """CREATE TABLE _head (storyheadercode TEXT PRIMARY KEY, title TEXT) WITHOUT ROWID""",
+        """INSERT INTO _head SELECT storyheadercode, MIN(title)
+           FROM inducks_storyheader GROUP BY storyheadercode""",
+        # Une ligne par (langue, histoire), en repartant des tables déjà groupées.
+        """INSERT OR REPLACE INTO story_card_i18n
+           SELECT l.languagecode, s.storycode,
+                  COALESCE(s.title, h.title, ''),
+                  COALESCE(h.title, ''),
+                  COALESCE(sd.desctext, sc.plotsummary, ''),
+                  COALESCE(ch.lst, '')
+           FROM (SELECT 'fr' AS languagecode UNION ALL SELECT 'en' UNION ALL SELECT 'de'
+                 UNION ALL SELECT 'it' UNION ALL SELECT 'es' UNION ALL SELECT 'pt') l
+           CROSS JOIN inducks_story s
+           LEFT JOIN story_card sc ON sc.storycode = s.storycode
+           LEFT JOIN _head h ON h.storyheadercode = s.storyheadercode
+           LEFT JOIN inducks_storydescription sd
+                  ON sd.storyversioncode = sc.storyversioncode
+                 AND sd.languagecode = l.languagecode
+           LEFT JOIN (
+                SELECT sch.storycode, cn.languagecode AS lc,
+                       GROUP_CONCAT(sch.charactercode || '|' ||
+                                    COALESCE(cn.charactername, sch.charactername) || '|' ||
+                                    COALESCE(sch.appearancecomment, '') || '|' ||
+                                    COALESCE(sch.charactercomment, '') || '|', ';') AS lst
+                FROM story_characters sch
+                LEFT JOIN inducks_charactername cn
+                       ON cn.charactercode = sch.charactercode
+                GROUP BY sch.storycode, cn.languagecode
+           ) ch ON ch.storycode = s.storycode AND ch.lc = l.languagecode""",
+        "DROP TABLE _head",
+        "DROP TABLE IF EXISTS _bestver",
+     ], []),
 ]
 
 
@@ -366,6 +491,10 @@ INDEXES: list[tuple[str, list[str]]] = [
 
     # Chemin storycode -> parutions, dans le sens inverse de la PK.
     ("story_publications", ["issuecode"]),
+
+    # Tri par date sur la carte assemblée : la recherche ordonne par date de première
+    # publication avant de découper la page, donc l'index doit servir le tri directement.
+    ("story_card", ["firstpublicationdate", "storycode"]),
 
     # inducks_publishingjob est groupée sur (issuecode, publisherid) ; le filtre « par
     # éditeur » a besoin du sens inverse, sinon il impose un parcours des 258 551 numéros.

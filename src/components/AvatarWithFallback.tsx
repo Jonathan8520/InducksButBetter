@@ -33,13 +33,13 @@ export function AvatarWithFallback({
     <div 
       className={cn(
         square ? "rounded-md" : "rounded-full",
-        "overflow-hidden border border-border-subtle bg-zinc-100 dark:bg-zinc-800 shrink-0 relative flex items-center justify-center",
+        "overflow-hidden border border-border-subtle bg-surface-2 shrink-0 relative flex items-center justify-center",
         sizeClasses,
         className
       )}
     >
       {/* Fallback initials */}
-      <span className={cn("font-bold text-zinc-400 dark:text-zinc-500 absolute inset-0 flex items-center justify-center", textClasses)}>
+      <span className={cn("font-bold text-text-hint absolute inset-0 flex items-center justify-center", textClasses)}>
         {initials}
       </span>
       

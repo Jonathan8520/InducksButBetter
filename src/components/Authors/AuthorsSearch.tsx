@@ -211,7 +211,7 @@ export function AuthorsSearch({ selectedAuthorcode, setSelectedAuthorcode }: Aut
 
   if (selectedAuthorcode) {
     return (
-      <div className="flex-1 flex flex-col border-border-subtle/60 shadow-2xl shadow-blue-900/5 rounded-3xl overflow-hidden bg-surface h-full">
+      <div className="flex-1 flex flex-col border-border-subtle/60 shadow-2xl shadow-black/5 rounded-3xl overflow-hidden bg-surface h-full">
         <div className="px-8 py-5 border-b border-border-subtle bg-surface flex items-center gap-3 shrink-0">
           <Button
             variant="ghost"
@@ -236,7 +236,7 @@ export function AuthorsSearch({ selectedAuthorcode, setSelectedAuthorcode }: Aut
     <div className="h-full flex flex-col overflow-auto lg:overflow-hidden bg-background">
       <div className="flex-1 flex flex-col lg:flex-row min-h-0 p-4 lg:p-8 gap-8 px-4 lg:px-12">
         {/* Left Side: Search Form Card */}
-        <div className="flex-1 flex flex-col border border-border-subtle/60 shadow-2xl shadow-blue-900/5 rounded-3xl overflow-hidden bg-surface min-h-[600px] lg:min-h-0">
+        <div className="flex-1 flex flex-col border border-border-subtle/60 shadow-2xl shadow-black/5 rounded-3xl overflow-hidden bg-surface min-h-[600px] lg:min-h-0">
           <div className="px-6 py-4 border-b border-border-subtle bg-surface flex items-center justify-between shrink-0">
             <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
               <SlidersHorizontal className="w-4 h-4 text-primary" />

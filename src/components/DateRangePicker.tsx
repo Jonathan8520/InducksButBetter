@@ -70,7 +70,7 @@ export function DateRangePicker({
               !date && "text-muted-foreground"
             )}
           >
-            <CalendarIcon className="mr-2 h-4 w-4 text-zinc-400" />
+            <CalendarIcon className="mr-2 h-4 w-4 text-text-hint" />
             {date?.from ? (
               date.to ? (
                 <>
@@ -81,7 +81,7 @@ export function DateRangePicker({
                 format(date.from, "LLL dd, y")
               )
             ) : (
-              <span className="text-zinc-400 truncate">{t('search.all_periods')}</span>
+              <span className="text-text-hint truncate">{t('search.all_periods')}</span>
             )}
             <ChevronDown className="ml-auto h-4 w-4 opacity-50 flex-shrink-0" />
           </Button>

@@ -117,7 +117,7 @@ export function SearchResults<TFilters extends { sort?: string; page?: number | 
             </div>
           </ScrollArea>
         ) : isInitialState ? (
-          <div className="flex flex-col items-center justify-center h-full text-center bg-surface-2/40 dark:bg-surface-2/20 rounded-3xl border-2 border-dashed border-border p-12 transition-all hover:bg-surface-2/60 hover:border-blue-200 dark:hover:border-blue-800 group shadow-inner">
+          <div className="flex flex-col items-center justify-center h-full text-center bg-surface-2/40 dark:bg-surface-2/20 rounded-3xl border-2 border-dashed border-border p-12 transition-all hover:bg-surface-2/60 hover:border-primary/40 dark:hover:border-primary/40 group shadow-inner">
             <div className="relative mb-8 transform transition-transform group-hover:scale-110 duration-700">
               <Search className="w-20 h-20 text-text-secondary stroke-[1px]" />
             </div>
@@ -127,7 +127,7 @@ export function SearchResults<TFilters extends { sort?: string; page?: number | 
             </p>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-center bg-surface-2/40 dark:bg-surface-2/20 rounded-3xl border-2 border-dashed border-border p-12 transition-all hover:bg-surface-2/60 hover:border-blue-200 dark:hover:border-blue-800 group shadow-inner">
+          <div className="flex flex-col items-center justify-center h-full text-center bg-surface-2/40 dark:bg-surface-2/20 rounded-3xl border-2 border-dashed border-border p-12 transition-all hover:bg-surface-2/60 hover:border-primary/40 dark:hover:border-primary/40 group shadow-inner">
             <div className="relative mb-8 transform transition-transform group-hover:scale-110 duration-700">
               <Search className="w-20 h-20 text-text-secondary stroke-[1px] text-red-500" />
             </div>

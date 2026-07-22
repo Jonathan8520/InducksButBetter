@@ -26,8 +26,8 @@ export function SqlCodeBlock({ code, bubbleId, onCopyToEditor }: SqlCodeBlockPro
 
   return (
     <div className="my-2 flex flex-col gap-1">
-      <div className="bg-zinc-950 text-zinc-300 p-3 rounded-lg font-mono text-[11px] relative overflow-x-auto group">
-        <div className="rounded-lg overflow-hidden border border-zinc-800">
+      <div className="bg-surface-invert text-text-hint p-3 rounded-lg font-mono text-[11px] relative overflow-x-auto group">
+        <div className="rounded-lg overflow-hidden border border-border">
           <CodeMirror
             value={code}
             extensions={[sql(), EditorView.editable.of(false), EditorView.lineWrapping]}
@@ -38,13 +38,13 @@ export function SqlCodeBlock({ code, bubbleId, onCopyToEditor }: SqlCodeBlockPro
               highlightActiveLine: false,
               highlightActiveLineGutter: false,
             }}
-            className="text-[12px] bg-zinc-950"
+            className="text-[12px] bg-surface-invert"
           />
         </div>
         <Button
           size="icon"
           variant="ghost"
-          className="absolute top-2 right-2 h-7 w-7 text-zinc-500 hover:text-white transition-opacity opacity-0 group-hover:opacity-100"
+          className="absolute top-2 right-2 h-7 w-7 text-text-secondary hover:text-white transition-opacity opacity-0 group-hover:opacity-100"
           onClick={handleCopy}
         >
           {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
@@ -53,7 +53,7 @@ export function SqlCodeBlock({ code, bubbleId, onCopyToEditor }: SqlCodeBlockPro
           <Button
             size="sm"
             variant="secondary"
-            className="absolute bottom-2 right-2 h-7 px-2 text-[10px] gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-800 text-zinc-100 hover:bg-zinc-700"
+            className="absolute bottom-2 right-2 h-7 px-2 text-[10px] gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-surface-3 text-foreground hover:bg-surface-3"
             onClick={() => onCopyToEditor(code)}
           >
             <Database className="w-3 h-3" />

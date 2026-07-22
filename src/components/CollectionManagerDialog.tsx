@@ -66,7 +66,7 @@ export function CollectionManagerDialog({ open, onOpenChange }: CollectionManage
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
-          <div className="flex items-start gap-3 p-3 rounded-md bg-blue-500/10 text-blue-500 text-sm border border-blue-500/20">
+          <div className="flex items-start gap-3 p-3 rounded-md bg-primary/10 text-primary text-sm border border-primary/20">
             <Info className="w-5 h-5 shrink-0 mt-0.5" />
             <p leading-relaxed>{t('collection.alert_unavailable')}</p>
           </div>

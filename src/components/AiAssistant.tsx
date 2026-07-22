@@ -201,12 +201,12 @@ RÈGLES ABSOLUES :
           <CardHeader className="bg-surface-2 text-foreground p-4 shrink-0 flex flex-row items-center justify-between">
             <div className="flex flex-col gap-0.5">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-blue-400" />
+                <Sparkles className="w-4 h-4 text-primary" />
                 {t("ai.title")}
               </CardTitle>
               {modelName && (
-                <div className="text-[10px] text-zinc-400 font-medium ml-6">
-                  {t("ai.model")}: <span className="text-blue-400/80">{modelName}</span>
+                <div className="text-[10px] text-text-hint font-medium ml-6">
+                  {t("ai.model")}: <span className="text-primary/80">{modelName}</span>
                 </div>
               )}
             </div>
@@ -214,7 +214,7 @@ RÈGLES ABSOLUES :
               <Button
                 variant="ghost"
                 size="icon"
-                className={cn("h-8 w-8 text-zinc-400 hover:text-white hover:bg-white/10", isSpeakingEnabled && "text-blue-400")}
+                className={cn("h-8 w-8 text-text-hint hover:text-white hover:bg-white/10", isSpeakingEnabled && "text-primary")}
                 onClick={() => {
                   const next = !isSpeakingEnabled
                   setIsSpeakingEnabled(next)
@@ -227,7 +227,7 @@ RÈGLES ABSOLUES :
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-white/10"
+                className="h-8 w-8 text-text-hint hover:text-white hover:bg-white/10"
                 onClick={() => setIsOpen(false)}
               >
                 <X className="w-4 h-4" />
@@ -240,11 +240,11 @@ RÈGLES ABSOLUES :
             {!engine && (
               <div className="absolute inset-0 z-10 bg-surface/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in-95 duration-500">
                 <div className="relative">
-                  <div className={cn("absolute inset-0 bg-blue-500 blur-xl opacity-20 rounded-full transition-opacity duration-1000", hasStartedDownload ? "opacity-50 animate-pulse" : "opacity-0")} />
-                  <Sparkles className={cn("w-12 h-12 text-blue-500 mb-4 relative z-10 transition-transform duration-700", hasStartedDownload && "scale-110 animate-pulse")} />
+                  <div className={cn("absolute inset-0 bg-primary blur-xl opacity-20 rounded-full transition-opacity duration-1000", hasStartedDownload ? "opacity-50 animate-pulse" : "opacity-0")} />
+                  <Sparkles className={cn("w-12 h-12 text-primary mb-4 relative z-10 transition-transform duration-700", hasStartedDownload && "scale-110 animate-pulse")} />
                 </div>
                 <h3 className="text-lg font-bold text-foreground mb-2">{t("ai.activate_title")}</h3>
-                <p className="text-sm text-zinc-400 mb-8 max-w-[250px]">
+                <p className="text-sm text-text-hint mb-8 max-w-[250px]">
                   {t("ai.activate_desc", { 
                     size: modelName === 'Llama-3.2-3B-Instruct-q4f32_1-MLC' ? '(~1.8 Go) ' : 
                           modelName === 'TinyLlama-1.1B-Chat-v1.0-q4f32_1-MLC' ? '(~600 Mo) ' : 
@@ -254,7 +254,7 @@ RÈGLES ABSOLUES :
                 </p>
                 {!hasStartedDownload ? (
                   <Button 
-                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_25px_rgba(37,99,235,0.5)] transition-all duration-300 hover:-translate-y-0.5 rounded-xl"
+                    className="w-full bg-primary hover:bg-primary text-white font-bold shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_25px_rgba(37,99,235,0.5)] transition-all duration-300 hover:-translate-y-0.5 rounded-xl"
                     onClick={() => {
                       setHasStartedDownload(true)
                       init()
@@ -264,16 +264,16 @@ RÈGLES ABSOLUES :
                   </Button>
                 ) : (
                   <div className="w-full flex flex-col gap-3 animate-in slide-in-from-bottom-2 fade-in duration-500">
-                    <div className="flex justify-between items-center text-xs font-medium text-zinc-300">
+                    <div className="flex justify-between items-center text-xs font-medium text-text-hint">
                       <span className="flex items-center gap-2 truncate pr-4">
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400 shrink-0" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-primary shrink-0" />
                         <span className="truncate">{progressText === 'Initialisation...' ? t("ai.preparation") : progressText}</span>
                       </span>
-                      <span className="tabular-nums font-bold text-blue-400 shrink-0">{progressPercent}%</span>
+                      <span className="tabular-nums font-bold text-primary shrink-0">{progressPercent}%</span>
                     </div>
-                    <div className="w-full h-2.5 bg-zinc-800/50 rounded-full overflow-hidden border border-zinc-700/50 shadow-inner">
+                    <div className="w-full h-2.5 bg-surface-3/50 rounded-full overflow-hidden border border-border/50 shadow-inner">
                       <div 
-                        className="h-full bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-300 ease-out relative" 
+                        className="h-full bg-gradient-to-r from-primary to-primary transition-all duration-300 ease-out relative" 
                         style={{ width: `${progressPercent}%` }}
                       >
                         <div className="absolute inset-0 bg-white/20 animate-pulse" />
@@ -325,7 +325,7 @@ RÈGLES ABSOLUES :
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="absolute right-1 top-1 h-8 w-8 text-zinc-400 hover:text-zinc-600 rounded-lg"
+                      className="absolute right-1 top-1 h-8 w-8 text-text-hint hover:text-text-secondary rounded-lg"
                       onClick={() => setInput("")}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -334,7 +334,7 @@ RÈGLES ABSOLUES :
                 </div>
                 <Button
                   size="icon"
-                  className="h-10 w-10 shrink-0 bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-600/20"
+                  className="h-10 w-10 shrink-0 bg-primary hover:bg-primary rounded-xl shadow-lg shadow-primary/20"
                   onClick={handleSend}
                   disabled={webllmLoading || isGenerating || !input.trim() || !engine}
                 >
@@ -351,7 +351,7 @@ RÈGLES ABSOLUES :
         size="icon"
         className={cn(
           "h-14 w-14 rounded-full shadow-2xl transition-all duration-300 active:scale-95",
-          isOpen ? "bg-zinc-900 rotate-90" : "bg-blue-600 hover:bg-blue-700 hover:shadow-blue-600/40"
+          isOpen ? "bg-surface-invert rotate-90" : "bg-primary hover:bg-primary hover:shadow-primary/30"
         )}
         onClick={() => setIsOpen(!isOpen)}
       >
