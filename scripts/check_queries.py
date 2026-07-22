@@ -34,24 +34,24 @@ SMALL_TABLES = {
 
 QUERIES: list[tuple[str, str, tuple]] = [
     # ---- Autocomplétions : exécutées à chaque frappe, les plus critiques ----------------
-    ("autocompleteCharacter", """
-        SELECT c.charactercode, COALESCE(cn.charactername, c.charactername) as charactername
-        FROM inducks_character c
-        LEFT JOIN inducks_charactername cn ON c.charactercode = cn.charactercode AND cn.languagecode = ?
-        WHERE (COALESCE(cn.charactername, c.charactername) LIKE ? OR c.charactercode LIKE ?)
+    ("autocompleteCharacter (FTS)", """
+        SELECT c.charactercode, COALESCE(MAX(cn.charactername), c.charactername)
+        FROM fts_character f
+        JOIN inducks_character c ON c.charactercode = f.charactercode
+        LEFT JOIN inducks_charactername cn
+          ON cn.charactercode = c.charactercode AND cn.languagecode = ?
+        WHERE fts_character MATCH ?
         GROUP BY c.charactercode
-        ORDER BY MAX(COALESCE(cn.preferred, 0)) DESC, charactername ASC
+        ORDER BY MAX(COALESCE(cn.preferred, 0)) DESC, c.appearancecount DESC
         LIMIT 10
-    """, ("fr", "%donald%", "%donald%")),
+    """, ("fr", '"donald"')),
 
-    ("autocompletePerson", """
-        SELECT personcode, fullname, nationalitycountrycode
-        FROM inducks_person
-        WHERE fullname LIKE ? OR personcode LIKE ?
-        GROUP BY personcode
-        ORDER BY MAX(numberofindexedissues) DESC
-        LIMIT 10
-    """, ("%barks%", "%barks%")),
+    ("autocompletePerson (FTS)", """
+        SELECT p.personcode, p.fullname FROM fts_person f
+        JOIN inducks_person p ON p.personcode = f.personcode
+        WHERE fts_person MATCH ?
+        ORDER BY p.numberofindexedissues DESC LIMIT 10
+    """, ('"barks"',)),
 
     ("autocompleteStorycode", """
         SELECT storycode, storyheadercode, title
@@ -61,11 +61,10 @@ QUERIES: list[tuple[str, str, tuple]] = [
         LIMIT 15
     """, ("W OS", "W OT")),
 
-    ("autocompletePublisher", """
-        SELECT publisherid, publishername FROM inducks_publisher
-        WHERE publishername LIKE ? OR publisherid LIKE ?
-        ORDER BY publishername LIMIT 10
-    """, ("%egmont%", "%egmont%")),
+    ("autocompletePublisher (FTS)", """
+        SELECT publisherid, publishername FROM fts_publisher
+        WHERE fts_publisher MATCH ? LIMIT 10
+    """, ('"egmont"',)),
 
     ("autocompletePublicationTitle", """
         SELECT DISTINCT p.publicationcode, pn.publicationname
@@ -94,11 +93,12 @@ QUERIES: list[tuple[str, str, tuple]] = [
     """, ("W OS  178-02",)),
 
     ("getStoryDetail.characters", """
-        SELECT DISTINCT a.charactercode, c.charactername
-        FROM inducks_appearance a JOIN inducks_character c ON a.charactercode = c.charactercode
-        WHERE a.storyversioncode IN (SELECT storyversioncode FROM inducks_storyversion WHERE storycode = ?)
-        ORDER BY a.number ASC
-    """, ("W OS  178-02",)),
+        SELECT sc.charactercode, COALESCE(cn.charactername, sc.charactername)
+        FROM story_characters sc
+        LEFT JOIN inducks_charactername cn
+          ON cn.charactercode = sc.charactercode AND cn.languagecode = ?
+        WHERE sc.storycode = ? ORDER BY sc.number ASC
+    """, ("fr", "W OS  178-02")),
 
     ("getStoryDetail.descriptions", """
         SELECT sd.languagecode, sd.desctext FROM inducks_storydescription sd
@@ -106,12 +106,11 @@ QUERIES: list[tuple[str, str, tuple]] = [
     """, ("W OS  178-02",)),
 
     ("getStoryDetail.publications", """
-        SELECT DISTINCT e.entrycode, i.issuecode, i.issuenumber, p.publicationcode, p.countrycode
-        FROM inducks_entry e
-        JOIN inducks_issue i ON e.issuecode = i.issuecode
-        JOIN inducks_publication p ON i.publicationcode = p.publicationcode
-        WHERE e.storyversioncode IN (SELECT storyversioncode FROM inducks_storyversion WHERE storycode = ?)
-        ORDER BY p.countrycode ASC, i.oldestdate ASC, i.issuecode ASC
+        SELECT sp.entrycode, sp.issuecode, sp.issuenumber, sp.publicationcode, sp.countrycode
+        FROM story_publications sp
+        LEFT JOIN inducks_publication p ON sp.publicationcode = p.publicationcode
+        WHERE sp.storycode = ?
+        ORDER BY sp.countrycode ASC, sp.oldestdate ASC, sp.issuecode ASC
     """, ("W OS  178-02",)),
 
     # ---- Page Numéro -------------------------------------------------------------------
@@ -119,7 +118,7 @@ QUERIES: list[tuple[str, str, tuple]] = [
         SELECT i.issuecode, i.issuenumber, i.oldestdate, i.pages, p.title, p.countrycode
         FROM inducks_issue i JOIN inducks_publication p ON i.publicationcode = p.publicationcode
         WHERE i.issuecode = ?
-    """, ("fr/PM 1",)),
+    """, ("fr/303  33",)),
 
     ("getIssueDetail.stories", """
         SELECT e.entrycode, e.position, sv.entirepages, e.title, s.storycode
@@ -127,12 +126,23 @@ QUERIES: list[tuple[str, str, tuple]] = [
         LEFT JOIN inducks_storyversion sv ON e.storyversioncode = sv.storyversioncode
         LEFT JOIN inducks_story s ON sv.storycode = s.storycode
         WHERE e.issuecode = ? ORDER BY e.position ASC
-    """, ("fr/PM 1",)),
+    """, ("fr/303  33",)),
 
     ("issue.thumbnail", """
-        SELECT eu.sitecode, eu.url FROM inducks_entryurl eu
-        WHERE eu.entrycode = (SELECT entrycode FROM inducks_entry WHERE issuecode = ? ORDER BY position ASC LIMIT 1)
-    """, ("fr/PM 1",)),
+        SELECT sitecode, url FROM issue_thumb WHERE issuecode = ?
+    """, ("fr/303  33",)),
+
+    ("story.thumbnail", """
+        SELECT sitecode, url FROM story_thumb WHERE storycode = ?
+    """, ("W OS  178-02",)),
+
+    ("search.byStorycode (packed)", """
+        SELECT storycode FROM inducks_story WHERE storycode_packed LIKE ? LIMIT 15
+    """, ("wos178%",)),
+
+    ("search.byTitle (FTS)", """
+        SELECT storycode FROM fts_story WHERE fts_story MATCH ? LIMIT 24
+    """, ("treasure",)),
 
     # ---- Recherches --------------------------------------------------------------------
     ("search.byCharacter", """

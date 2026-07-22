@@ -474,7 +474,21 @@ contrainte navigateur.
 
 > Débit MEGA constaté : ~14 Mo/s. Le téléchargement complet n'est pas un obstacle.
 
-### Étape 1 — Convertisseur ISV → SQLite · *le socle*
+### Étape 1 — Convertisseur ISV → SQLite · ✅ *fait (commit `c1fec21`)*
+
+Tout est implémenté dans `scripts/build_db.py` + `scripts/schema_spec.py`. Les points
+ci-dessous listaient l'intention ; ce qui a réellement été construit et mesuré figure en
+§2bis. Deux enseignements non anticipés méritent d'être retenus :
+
+- **Le regroupement physique bat l'indexation** (62x mesuré). C'est devenu le principe
+  directeur de la spec, pas une optimisation de plus.
+- **Le typage et les clés doivent être vérifiés, pas supposés.** Une clé incluant une
+  colonne souvent vide écartait 68 % d'une table sans que rien n'échoue ; une affinité
+  INTEGER naïve aurait transformé le code d'un numéro `007` en `7`. `build_db.py` publie
+  désormais un récapitulatif des pertes à chaque construction.
+
+<details>
+<summary>Intention initiale (conservée pour mémoire)</summary>
 
 - [ ] Parseur en flux des fichiers `^`-séparés (ne jamais charger 200 Mo en mémoire)
 - [ ] S'appuyer sur **`src/lib/defaultSchema.ts`** (543 lignes) qui décrit déjà le schéma
@@ -488,6 +502,8 @@ contrainte navigateur.
 
 > **Livrable clé : la taille réelle de la base.** C'est le chiffre dont dépendent le
 > découpage et le choix final d'hébergeur.
+
+</details>
 
 ### Étape 2 — Moteur de lecture · ✅ *écrit (commit `0a909c3`)*
 
@@ -520,25 +536,27 @@ contrainte navigateur.
 - [ ] **Préserver `getStorycodeCandidates()`** : ~20 heuristiques répliquant
       `coa/util14-storycode.php`. Fonction pure → candidat idéal pour des tests unitaires
 
-### Étape 4 — Pipeline automatisé
+### Étape 4 — Pipeline automatisé · ✅ *écrit*
 
-- [ ] Workflow GitHub Actions, cron quotidien : télécharge les ISV → construit la base →
-      découpe → déploie sur Cloudflare Pages
-- [ ] Source pilotée par variable d'environnement : instantané MEGA tant qu'inducks.org est
-      HS, source officielle à son retour (un seul changement de valeur)
-- [ ] Adapter `base` dans `vite.config.ts:7` (`/InducksButBetter/` → `/` pour Pages)
-- [ ] Mettre à jour `homepage` dans `package.json`
+- [x] `.github/workflows/build-db.yml` : cron quotidien fetch → build → **check_queries**
+      → split → déploiement Cloudflare Pages
+- [x] Source pilotée par une entrée de workflow : `inducks` (officielle) ou `mega`
+      (sauvegarde), un seul paramètre à changer au retour d'inducks.org
+- [x] Garde-fou : la CI refuse de publier si le lot d'ISV compte moins de 60 fichiers —
+      un téléchargement partiel ne doit pas écraser une base en ligne valide
+- [ ] Adapter `base` dans `vite.config.ts:7` au domaine Pages retenu
+- [ ] Créer le projet Cloudflare Pages et poser les deux secrets
 
 ### Étape 5 — Nettoyage et robustesse
 
-- [ ] Supprimer `@libsql/client` et **le token Turso** (secrets GitHub compris)
+- [ ] Supprimer `@libsql/client` et **le token Turso** (secrets GitHub compris) — le repli
+      Turso reste actif tant que le chemin statique n'a pas tourné dans un navigateur
 - [ ] Corriger `manualChunks` (`vite.config.ts:38`) — P3
 - [ ] Tester la suppression du proxy d'images (§4.3) — P1/P2
 - [ ] ESLint + tests unitaires, en commençant par `getStorycodeCandidates()`
-- [ ] Persistance IndexedDB / cache des pages (P6, largement obtenu via l'étape 2)
+- [ ] Faire converger l'import ISV local sur `@sqlite.org/sqlite-wasm` (supprime `sql.js`,
+      résout P8) et supprimer `loadLocalDb()` mort (P5)
 - [ ] Traduire les libellés français en dur de `src/lib/constants.ts`
-      (`COMMON_LANGUAGES`, `AUTHOR_NATIONALITIES`) — 6 langues supportées mais ces listes
-      ne le sont pas
 
 ---
 

@@ -300,8 +300,14 @@ def create_fts(db: sqlite3.Connection, existing: set[str]) -> int:
         if source not in existing:
             continue
         try:
-            cols_sql = ", ".join([f'"{key}" UNINDEXED'] + [f'"{c}"' for c in cols])
-            select_cols = ", ".join(f'"{c}"' for c in [key] + cols)
+            # La colonne clé ne doit apparaître qu'une fois : la déclarer à la fois en
+            # UNINDEXED et parmi les colonnes indexées fait échouer le constructeur FTS5
+            # (« vtable constructor failed »). Quand la clé est elle-même à indexer —
+            # cas des codes, cherchés en sous-chaîne — on l'indexe simplement.
+            extra = [c for c in cols if c != key]
+            key_decl = f'"{key}"' if key in cols else f'"{key}" UNINDEXED'
+            cols_sql = ", ".join([key_decl] + [f'"{c}"' for c in extra])
+            select_cols = ", ".join(f'"{c}"' for c in [key] + extra)
             # Une ligne dont toutes les colonnes indexées sont vides n'apporte rien.
             not_empty = " OR ".join(f'("{c}" IS NOT NULL AND "{c}" <> \'\')' for c in cols)
 
@@ -445,6 +451,23 @@ def main() -> int:
         size_fts = os.path.getsize(args.out_db)
         print(f"[build] {n} tables FTS5 en {time.time()-t:.1f}s — {human(size_fts)} "
               f"(+{human(max(size_fts - size_idx, 0))})")
+
+    # Récapitulatif des pertes. Une clé primaire mal choisie peut faire disparaître une
+    # part énorme d'une table sans que rien n'échoue : mesuré, une clé
+    # (personcode, surname, givenname) écartait 68 % d'inducks_personalias parce que ces
+    # deux colonnes sont vides sur la majorité des lignes. Ce tableau rend la chose
+    # impossible à manquer.
+    if LOSSES:
+        print("\n[build] pertes de lignes par table")
+        for table, lost, total in sorted(LOSSES, key=lambda x: -x[1] / max(x[2], 1)):
+            pct = 100 * lost / max(total, 1)
+            flag = "[!!]" if pct >= 1 else "  . "
+            print(f"  {flag} {table:<34} {lost:>7,} / {total:>9,}  ({pct:5.2f} %)")
+        worst = max(100 * l / max(t, 1) for _, l, t in LOSSES)
+        if worst >= 1:
+            print("  [!!] Perte >= 1 % : vérifier PRIMARY_KEYS dans schema_spec.py — "
+                  "une clé non unique ou incluant une colonne souvent vide en est la "
+                  "cause la plus probable.")
 
     print("\n[build] ANALYZE + VACUUM...")
     db.execute("ANALYZE")
