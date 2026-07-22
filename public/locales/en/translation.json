@@ -108,7 +108,9 @@
   "common": {
     "loading": "Loading...",
     "no_data": "No data found",
-    "error": "An error occurred"
+    "error": "An error occurred",
+    "save": "Save",
+    "close": "Close"
   },
   "story": {
     "no_title": "Untitled",

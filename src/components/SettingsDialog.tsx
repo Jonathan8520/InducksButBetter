@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X, Loader2 } from "lucide-react"
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden"
 import { useTranslation } from "react-i18next"
 import { cn } from "@/lib/utils"
 
@@ -43,27 +44,29 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           className={cn(
             "fixed left-1/2 top-1/2 z-50 w-[min(46rem,calc(100vw-2rem))]",
             "max-h-[min(46rem,calc(100vh-4rem))] -translate-x-1/2 -translate-y-1/2",
-            "flex flex-col overflow-hidden rounded-lg border border-border",
+            "flex flex-col overflow-hidden rounded-2xl border border-border",
             "bg-card shadow-2xl",
             // Entrée et sortie : une montée courte accompagnée d'un léger zoom. Les durées
             // restent brèves — une modale de réglages ne doit pas se faire attendre.
-            "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-bottom-2",
-            "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:slide-out-to-bottom-2",
-            "duration-200",
+            "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
+            "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+            "duration-150 ease-out",
           )}
         >
-          <header className="flex items-center justify-between gap-4 border-b border-border-subtle px-6 py-4 shrink-0">
-            <DialogPrimitive.Title className="font-display text-lg text-foreground">
+          <VisuallyHidden.Root>
+            <DialogPrimitive.Title>
               {String(t("settings.title", { defaultValue: "Paramètres" }))}
             </DialogPrimitive.Title>
-            <DialogPrimitive.Close
-              className="rounded p-1.5 text-text-hint transition-colors hover:bg-surface-2 hover:text-foreground
-                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={String(t("common.close", { defaultValue: "Fermer" }))}
-            >
-              <X className="h-4 w-4" />
-            </DialogPrimitive.Close>
-          </header>
+          </VisuallyHidden.Root>
+
+          <DialogPrimitive.Close
+            className="absolute right-4 top-4 z-10 rounded-lg p-2 text-text-hint transition-colors
+                       hover:bg-surface-2 hover:text-foreground
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={String(t("common.close", { defaultValue: "Fermer" }))}
+          >
+            <X className="h-4 w-4" />
+          </DialogPrimitive.Close>
 
           {/* Le contenu défile à l'intérieur de la modale : c'est le seul endroit où un
               conteneur défilant dédié se justifie, puisque la modale a une hauteur bornée. */}

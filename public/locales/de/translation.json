@@ -109,7 +109,8 @@
     "loading": "Wird geladen...",
     "no_data": "Keine Daten gefunden",
     "error": "Ein Fehler ist aufgetreten",
-    "save": "Speichern"
+    "save": "Speichern",
+    "close": "Schließen"
   },
   "story": {
     "no_title": "Ohne Titel",

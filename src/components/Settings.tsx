@@ -279,7 +279,7 @@ export function Settings() {
             </div>
             <Button onClick={handleSaveCookie} disabled={isSavingCookie} className="w-full gap-2 rounded-xl">
               {isSavingCookie ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {t("common.save") || "Enregistrer"}
+              {String(t("common.save", { defaultValue: "Enregistrer" }))}
             </Button>
           </CardContent>
         </Card>

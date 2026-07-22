@@ -109,7 +109,8 @@
     "loading": "Caricamento...",
     "no_data": "Nessun dato trovato",
     "error": "Si è verificato un errore",
-    "save": "Salva"
+    "save": "Salva",
+    "close": "Chiudi"
   },
   "story": {
     "no_title": "Senza titolo",

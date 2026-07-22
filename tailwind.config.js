@@ -26,9 +26,8 @@ export default {
        * sur des familles présentes partout, choisies pour leur caractère.
        */
       fontFamily: {
-        // Titres : une serif d'imprimé, qui évoque la page plutôt que l'écran.
-        display: ['Georgia', '"Iowan Old Style"', '"Palatino Linotype"', 'Palatino', 'serif'],
-        // Interface : la grotesque système, neutre et dense.
+        // Pas de serif pour les titres : l'essai avec Georgia donnait un aspect daté
+        // plutôt que « patrimonial ». On garde la grotesque système partout.
         sans: ['"Segoe UI"', 'system-ui', '-apple-system', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
         // Codes Inducks (« W OS  178-02 ») : ce sont des identifiants, l'alignement des
         // colonnes compte autant que dans du code.

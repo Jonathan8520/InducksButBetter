@@ -79,7 +79,7 @@ export function SearchForm({
 
       <ScrollArea className="flex-1">
         <div className="p-8">
-          <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-2 gap-x-4 md:gap-x-8 gap-y-4 md:gap-y-7">
+          <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-2 items-start auto-rows-min gap-x-4 md:gap-x-8 gap-y-4 md:gap-y-5">
             {/* Row: Code & Keywords */}
             <div className="space-y-2">
               <Label className="text-sm font-medium text-foreground">{t("search.inducks_code")}</Label>

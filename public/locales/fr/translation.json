@@ -109,7 +109,9 @@
     "loading": "Chargement...",
     "no_data": "Aucune donnée trouvée",
     "error": "Une erreur est survenue",
-    "back": "Retour"
+    "back": "Retour",
+    "save": "Enregistrer",
+    "close": "Fermer"
   },
   "story": {
     "no_title": "Sans titre",
