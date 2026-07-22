@@ -24,6 +24,7 @@ const CharactersSearch = lazy(() => import("@/components/Characters/CharactersSe
 const CountryPublications = lazy(() => import("@/components/Publications/CountryPublications").then(module => ({ default: module.CountryPublications })))
 const PublicationDetail = lazy(() => import("@/components/Publications/PublicationDetail").then(module => ({ default: module.PublicationDetail })))
 const IssueDetail = lazy(() => import("@/components/Publications/IssueDetail").then(module => ({ default: module.IssueDetail })))
+const StoryDetail = lazy(() => import("@/components/Search/StoryDetail").then(module => ({ default: module.StoryDetail })))
 
 // Reusable loading fallback
 const TabFallback = () => (
@@ -272,7 +273,7 @@ function App() {
 
           {/* Content Viewport */}
           <div className="flex-1 min-h-0 overflow-hidden relative">
-            <TabsContent value="stories" className="h-full m-0 p-0 border-none outline-none overflow-hidden">
+            <TabsContent value="stories" className="h-full m-0 p-0 border-none outline-none overflow-y-auto overscroll-contain">
               <Suspense fallback={<TabFallback />}>
                 <AdvancedSearch
                   selectedStorycode={selectedStorycode}
@@ -291,9 +292,22 @@ function App() {
               </div>
             </TabsContent>
 
-            <TabsContent value="publications" className="h-full m-0 p-0 border-none outline-none overflow-hidden">
+            <TabsContent value="publications" className="h-full m-0 p-0 border-none outline-none overflow-y-auto overscroll-contain">
               <Suspense fallback={<TabFallback />}>
-                {selectedIssuecode ? (
+                {/* L'histoire passe AVANT le numéro : le ternaire testait selectedIssuecode
+                    en premier, si bien qu'ouvrir une histoire depuis le sommaire d'un numéro
+                    posait bien le storycode mais laissait IssueDetail affiché. Il fallait
+                    cliquer « retour » pour que l'histoire apparaisse enfin. */}
+                {selectedStorycode ? (
+                  <StoryDetail
+                    storycode={selectedStorycode}
+                    onBack={() => setSelectedStorycode(null)}
+                    onSelectIssue={(code) => {
+                      setSelectedStorycode(null);
+                      setSelectedIssuecode(code);
+                    }}
+                  />
+                ) : selectedIssuecode ? (
                   <IssueDetail
                     issuecode={selectedIssuecode}
                     onBack={() => setSelectedIssuecode(null)}
@@ -325,7 +339,7 @@ function App() {
               </Suspense>
             </TabsContent>
 
-            <TabsContent value="authors" className="h-full m-0 p-0 border-none outline-none overflow-hidden">
+            <TabsContent value="authors" className="h-full m-0 p-0 border-none outline-none overflow-y-auto overscroll-contain">
               <Suspense fallback={<TabFallback />}>
                 <AuthorsSearch
                   selectedAuthorcode={selectedPersoncode}
@@ -334,7 +348,7 @@ function App() {
               </Suspense>
             </TabsContent>
 
-            <TabsContent value="characters" className="h-full m-0 p-0 border-none outline-none overflow-hidden">
+            <TabsContent value="characters" className="h-full m-0 p-0 border-none outline-none overflow-y-auto overscroll-contain">
               <Suspense fallback={<TabFallback />}>
                 <CharactersSearch
                   selectedCharactercode={selectedCharactercode}
