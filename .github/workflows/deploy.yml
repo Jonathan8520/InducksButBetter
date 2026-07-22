@@ -37,6 +37,12 @@ jobs:
       - name: Build
         run: pnpm run build
         env:
+          # Déploiement historique, conservé tel quel tant que le chemin statique n'a pas
+          # été validé dans un navigateur. `off` est OBLIGATOIRE ici : sans cette valeur,
+          # l'application chercherait les tranches de base sous <base>/db/, qui n'existent
+          # pas sur ce déploiement — le site en ligne cesserait de fonctionner.
+          # Le nouveau chemin est .github/workflows/build-db.yml (Cloudflare Pages).
+          VITE_STATIC_DB_URL: "off"
           VITE_TURSO_DATABASE_URL: ${{ secrets.VITE_TURSO_DATABASE_URL }}
           VITE_TURSO_AUTH_TOKEN: ${{ secrets.VITE_TURSO_AUTH_TOKEN }}
           VITE_GA_MEASUREMENT_ID: "G-YDE0FS0VYY"
