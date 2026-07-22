@@ -20,6 +20,18 @@ export interface ChunkInfo {
 
 export interface DbManifest {
   format: "sqlite-chunked-v1";
+  /**
+   * Sous-dossier des tranches, relatif au manifeste, portant l'empreinte du fichier.
+   *
+   * Il change à chaque reconstruction : sans cela, les tranches reconstruites gardent le
+   * même nom avec un contenu différent, et le navigateur d'un visiteur déjà venu mélange
+   * ses tranches en cache aux nouvelles. SQLite signale alors une base corrompue alors que
+   * le fichier publié est intact. Vu en conditions réelles.
+   *
+   * Optionnel : un manifeste produit avant cette correction reste lisible.
+   */
+  basePath?: string;
+  version?: string;
   totalBytes: number;
   chunkBytes: number;
   chunkCount: number;
@@ -210,7 +222,7 @@ export class RangeReader {
 
   private httpRange(chunkName: string, from: number, to: number): Uint8Array {
     const xhr = new XMLHttpRequest();
-    xhr.open("GET", this.baseUrl + chunkName, /* async */ false);
+    xhr.open("GET", this.baseUrl + (this.manifest.basePath ?? "") + chunkName, false);
     xhr.responseType = "arraybuffer";
     xhr.setRequestHeader("Range", `bytes=${from}-${to}`);
     xhr.send();

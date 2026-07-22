@@ -79,12 +79,31 @@ def main() -> int:
     print(f"[split] page SQLite: {page_size} octets")
     print(f"[split] tranches   : {n_chunks} x {args.chunk_size} Mio -> {args.out_dir}\n")
 
+    # Empreinte du fichier complet : elle nomme le dossier des tranches.
+    #
+    # SANS CELA, une reconstruction produit des tranches au MÊME nom avec un contenu
+    # DIFFÉRENT. Le navigateur d'un visiteur déjà venu en garde d'anciennes en cache et les
+    # mélange aux nouvelles : SQLite renvoie alors « database disk image is malformed »
+    # alors que le fichier publié est parfaitement sain. Observé en conditions réelles.
+    # Une URL versionnée rend la collision impossible.
+    full = hashlib.sha256()
+    with open(args.db, "rb") as src:
+        while True:
+            blk = src.read(1 << 22)
+            if not blk:
+                break
+            full.update(blk)
+    version = full.hexdigest()[:12]
+    version_dir = os.path.join(args.out_dir, version)
+    os.makedirs(version_dir, exist_ok=True)
+    print(f"[split] version   : {version}\n")
+
     chunks = []
     digest = hashlib.sha256()
     with open(args.db, "rb") as src:
         for i in range(n_chunks):
             name = f"db-{i:04d}.bin"
-            path = os.path.join(args.out_dir, name)
+            path = os.path.join(version_dir, name)
             written = 0
             h = hashlib.sha256()
             with open(path, "wb") as out:
@@ -101,6 +120,10 @@ def main() -> int:
 
     manifest = {
         "format": "sqlite-chunked-v1",
+        # Chemin relatif au manifeste. Change à chaque reconstruction, ce qui garantit
+        # qu'aucune tranche mise en cache ne peut être réutilisée pour une autre version.
+        "basePath": version + "/",
+        "version": version,
         "totalBytes": total,
         "chunkBytes": chunk_bytes,
         "chunkCount": len(chunks),
@@ -118,6 +141,19 @@ def main() -> int:
         print(f"[!] incohérence : {produced} octets produits pour {total} attendus")
         return 1
     print(f"[split] manifeste : {mpath}")
+
+    # Les en-têtes de cache accompagnent les tranches : le manifeste ne doit JAMAIS être
+    # mis en cache (c'est lui qui annonce la nouvelle version), les tranches peuvent l'être
+    # éternellement puisque leur URL contient l'empreinte du fichier.
+    headers = os.path.join(args.out_dir, "_headers")
+    with open(headers, "w", encoding="utf-8") as fh:
+        fh.write(
+            "/db/manifest.json\n"
+            "  Cache-Control: no-cache, must-revalidate\n"
+            f"/db/{version}/*\n"
+            "  Cache-Control: public, max-age=31536000, immutable\n"
+        )
+    print(f"[split] en-têtes  : {headers}")
 
     over = [c for c in chunks if c["bytes"] > 25 * MIB]
     if over:
