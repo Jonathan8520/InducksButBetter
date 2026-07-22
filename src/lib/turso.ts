@@ -86,13 +86,11 @@ export async function autocompleteStorycode(q: string, lang: string = 'fr') {
         s.storycode as storycode,
         s.storycode as id,
         MAX(COALESCE(s.story_title, sh.title, 'Sans titre')) as storyname,
-        (SELECT eu.sitecode || '|' || eu.url
-         FROM inducks_storyversion sv_img
-         JOIN inducks_entry e_img ON sv_img.storyversioncode = e_img.storyversioncode
-         JOIN inducks_entryurl eu ON e_img.entrycode = eu.entrycode
-         WHERE sv_img.storycode = s.storycode
-           AND eu.sitecode IN ('webusers', 'thumbnails', 'thumbnails2', 'thumbnails3')
-         ORDER BY CASE WHEN eu.sitecode = 'webusers' THEN 0 ELSE 1 END LIMIT 1) as story_thumb
+        -- story_thumb est précalculée au build : une ligne par storycode, déjà arbitrée
+        -- selon la même priorité (webusers d'abord). Remplace trois jointures et un tri
+        -- sur les 2,7 M de lignes d'inducks_entryurl.
+        (SELECT st.sitecode || '|' || st.url
+         FROM story_thumb st WHERE st.storycode = s.storycode) as story_thumb
       FROM MatchedStories s
       LEFT JOIN inducks_storyheader sh ON s.storyheadercode = sh.storyheadercode
       GROUP BY s.storycode
@@ -131,14 +129,20 @@ export async function autocompletePublicationTitle(q: string) {
   const like = `%${q}%`;
   const result = await executeQuery({
     sql: `
-      SELECT DISTINCT p.publicationcode as value, pn.publicationname || ' (' || p.publicationcode || ')' as label
+      -- inducks_publicationname ne couvre que 148 des 7 281 publications : une jointure
+      -- interne rendait 98 % du catalogue introuvable, et neutralisait la recherche par
+      -- code pour tout le reste. LEFT JOIN + repli sur p.title.
+      SELECT DISTINCT p.publicationcode as value,
+             COALESCE(pn.publicationname, p.title, p.publicationcode)
+               || ' (' || p.publicationcode || ')' as label,
+             COALESCE(pn.publicationname, p.title, p.publicationcode) as sortkey
       FROM inducks_publication p
-      JOIN inducks_publicationname pn ON p.publicationcode = pn.publicationcode
-      WHERE pn.publicationname LIKE ? OR p.publicationcode LIKE ?
-      ORDER BY pn.publicationname
+      LEFT JOIN inducks_publicationname pn ON p.publicationcode = pn.publicationcode
+      WHERE pn.publicationname LIKE ? OR p.title LIKE ? OR p.publicationcode LIKE ?
+      ORDER BY sortkey
       LIMIT 10
     `,
-    args: [like, like]
+    args: [like, like, like]
   });
   return result.rows.map((r: any) => ({
     publicationcode: r.value,
@@ -150,7 +154,8 @@ export async function getStoryDetail(storycode: string, lang: string = "fr") {
   // 1. Core story info
   const coreResult = await executeQuery({
     sql: `
-      SELECT s.storycode, s.firstpublicationdate, s.storyheadercode, s.storycomment, s.title,
+      SELECT s.storycode, s.firstpublicationdate, s.storyheadercode, s.storycomment,
+        s.title, s.title as story_title,
         COALESCE(
           (SELECT sn.subseriesname FROM inducks_storysubseries ss JOIN inducks_subseriesname sn ON ss.subseriescode = sn.subseriescode WHERE ss.storycode = s.storycode ORDER BY CASE WHEN sn.languagecode = ? THEN 0 ELSE 1 END, sn.preferred DESC LIMIT 1),
           (SELECT sh.title FROM inducks_storyheader sh WHERE sh.storyheadercode = s.storyheadercode LIMIT 1)
@@ -168,15 +173,8 @@ export async function getStoryDetail(storycode: string, lang: string = "fr") {
   const versionResult = await executeQuery({
     sql: `
       SELECT sv.storyversioncode, sv.kind, sv.entirepages, sv.brokenpagenumerator, sv.brokenpagedenominator, sv.plotsummary,
-        COALESCE(
-          (SELECT eu.sitecode || '|' || eu.url
-           FROM inducks_entry e_img
-           JOIN inducks_entryurl eu ON e_img.entrycode = eu.entrycode
-           WHERE e_img.storyversioncode = sv.storyversioncode
-             AND eu.sitecode IN ('webusers', 'thumbnails', 'thumbnails2', 'thumbnails3')
-           ORDER BY CASE WHEN eu.sitecode = 'webusers' THEN 0 ELSE 1 END LIMIT 1),
-          NULL
-        ) as story_thumb
+        (SELECT st.sitecode || '|' || st.url
+         FROM story_thumb st WHERE st.storycode = sv.storycode) as story_thumb
       FROM inducks_storyversion sv
       WHERE sv.storycode = ?
       ORDER BY sv.storyversioncode ASC
@@ -201,12 +199,17 @@ export async function getStoryDetail(storycode: string, lang: string = "fr") {
   // 3. Characters list
   const charactersResult = await executeQuery({
     sql: `
-      SELECT DISTINCT app_c.charactercode, COALESCE(cn.charactername, c.charactername) as charactername, app_c.appearancecomment, COALESCE(cn.characternamecomment, c.charactercomment, '') as charactercomment
-      FROM inducks_appearance app_c
-      JOIN inducks_character c ON app_c.charactercode = c.charactercode
-      LEFT JOIN inducks_charactername cn ON app_c.charactercode = cn.charactercode AND cn.languagecode = ? AND cn.preferred = 'Y'
-      WHERE app_c.storyversioncode IN (SELECT storyversioncode FROM inducks_storyversion WHERE storycode = ?)
-      ORDER BY app_c.number ASC
+      -- story_characters est groupée par storycode et embarque déjà le nom par défaut :
+      -- il ne reste que la jointure de traduction, sur une table minuscule.
+      SELECT sc.charactercode,
+             COALESCE(cn.charactername, sc.charactername) as charactername,
+             sc.appearancecomment,
+             COALESCE(cn.characternamecomment, sc.charactercomment, '') as charactercomment
+      FROM story_characters sc
+      LEFT JOIN inducks_charactername cn
+        ON cn.charactercode = sc.charactercode AND cn.languagecode = ? AND cn.preferred = 'Y'
+      WHERE sc.storycode = ?
+      ORDER BY sc.number ASC
     `,
     args: [lang, storycode]
   });
@@ -224,22 +227,26 @@ export async function getStoryDetail(storycode: string, lang: string = "fr") {
   // 5. Publications list
   const publicationsResult = await executeQuery({
     sql: `
-      SELECT DISTINCT 
-        e.entrycode,
-        i.issuecode, 
-        i.issuenumber, 
-        p.publicationcode, 
-        p.title as publication_title, 
-        p.countrycode, 
+      -- story_publications est précalculée et physiquement groupée par storycode : les
+      -- parutions d'une histoire tiennent sur quelques pages contiguës. La forme
+      -- précédente (entry -> issue -> publication à la volée) dispersait les lectures sur
+      -- des centaines de pages — mesuré à 448 pages et 358 requêtes HTTP pour une seule
+      -- fiche, contre 9 et 9 avec cette table.
+      SELECT
+        sp.entrycode,
+        sp.issuecode,
+        sp.issuenumber,
+        sp.publicationcode,
+        p.title as publication_title,
+        sp.countrycode,
         c.countryname,
-        e.position,
-        e.title as entry_title
-      FROM inducks_entry e
-      JOIN inducks_issue i ON e.issuecode = i.issuecode
-      JOIN inducks_publication p ON i.publicationcode = p.publicationcode
-      LEFT JOIN inducks_country c ON p.countrycode = c.countrycode
-      WHERE e.storyversioncode IN (SELECT storyversioncode FROM inducks_storyversion WHERE storycode = ?)
-      ORDER BY p.countrycode ASC, i.oldestdate ASC, i.issuecode ASC
+        sp.position,
+        sp.entry_title
+      FROM story_publications sp
+      LEFT JOIN inducks_publication p ON sp.publicationcode = p.publicationcode
+      LEFT JOIN inducks_country c ON sp.countrycode = c.countrycode
+      WHERE sp.storycode = ?
+      ORDER BY sp.countrycode ASC, sp.oldestdate ASC, sp.issuecode ASC
     `,
     args: [storycode]
   });
@@ -313,11 +320,9 @@ export async function getIssueDetail(issuecode: string) {
   // 2. Cover / thumbnail
   const thumbResult = await executeQuery({
     sql: `
-      SELECT eu.sitecode || '|' || eu.url as issue_thumb
-      FROM inducks_entryurl eu
-      WHERE eu.entrycode = (
-        SELECT entrycode FROM inducks_entry WHERE issuecode = ? ORDER BY position ASC LIMIT 1
-      )
+      -- issue_thumb : une ligne par numéro, la couverture, arbitrée au build.
+      SELECT it.sitecode || '|' || it.url as issue_thumb
+      FROM issue_thumb it WHERE it.issuecode = ?
     `,
     args: [issuecode]
   });

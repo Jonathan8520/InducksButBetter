@@ -163,6 +163,54 @@ export function getStorycodeCandidates(code: string): StorycodeCandidate[] {
   return out;
 }
 
+/**
+ * Vérifie que chaque `?` de la requête a bien un paramètre en face.
+ *
+ * Les requêtes sont assemblées par concaténation et leurs paramètres sont positionnels :
+ * ajouter ou retirer un `?` sans toucher au tableau décale silencieusement TOUS les
+ * paramètres suivants, ce qui produit des résultats faux plutôt qu'une erreur. Ce contrôle
+ * transforme cette classe de bug en échec immédiat et lisible.
+ *
+ * Les `?` situés dans un commentaire SQL (`--`) sont ignorés, tout comme ceux d'un
+ * littéral entre apostrophes.
+ */
+function countPlaceholders(sql: string): number {
+  let count = 0;
+  let inString = false;
+  let inComment = false;
+  for (let i = 0; i < sql.length; i++) {
+    const ch = sql[i];
+    if (inComment) {
+      if (ch === "\n") inComment = false;
+      continue;
+    }
+    if (inString) {
+      if (ch === "'") inString = false;
+      continue;
+    }
+    if (ch === "'") inString = true;
+    else if (ch === "-" && sql[i + 1] === "-") inComment = true;
+    else if (ch === "?") count++;
+  }
+  return count;
+}
+
+function assertParamCount(r: SearchQueryResponse, label: string): void {
+  const expected = countPlaceholders(r.query);
+  if (expected !== r.params.length) {
+    throw new Error(
+      `${label}: ${expected} marqueurs '?' dans la requête pour ${r.params.length} paramètres. ` +
+      `Un décalage positionnel donnerait des résultats faux.`,
+    );
+  }
+  const expectedCount = countPlaceholders(r.countQuery);
+  if (expectedCount !== r.countParams.length) {
+    throw new Error(
+      `${label} (count): ${expectedCount} marqueurs '?' pour ${r.countParams.length} paramètres.`,
+    );
+  }
+}
+
 export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryResponse {
   const pageSize = Math.max(1, parseInt(String(filters.rowsperpage || "24"), 10) || 24);
   const page = Math.max(1, parseInt(String(filters.page || "1"), 10) || 1);
@@ -297,12 +345,17 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
     const roles = filters.personRoles.filter(pr => pr.code && String(pr.code).trim());
     if (roles.length > 0) {
       roles.forEach(pr => {
+        // Le rôle est concaténé nulle part : il est passé en paramètre lié, comme le code
+        // de la personne. L'interface le contraint à un jeu fermé (any|p|w|a|i), mais rien
+        // ne garantit qu'un futur appelant fera de même.
         let roleCondition = "";
+        const bind: string[] = [pr.code.trim()];
         if (pr.role && pr.role !== 'any') {
-          roleCondition = `AND sj.plotwritartink LIKE '%${pr.role}%'`;
+          roleCondition = `AND sj.plotwritartink LIKE ?`;
+          bind.push(`%${pr.role}%`);
         }
         svWhere.push(`EXISTS (SELECT 1 FROM inducks_storyjob sj WHERE sj.storyversioncode = sv.storyversioncode AND sj.personcode = ? ${roleCondition})`);
-        p.push(pr.code.trim());
+        p.push(...bind);
       });
     }
   }
@@ -324,7 +377,15 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
   }
 
   if (filters.publisherid) {
-    svWhere.push(`EXISTS (SELECT 1 FROM inducks_publishingjob pjob WHERE pjob.storyversioncode = sv.storyversioncode AND pjob.publisherid = ?)`);
+    // inducks_publishingjob relie un ÉDITEUR à un NUMÉRO : ses colonnes sont
+    // publisherid^issuecode^publishingjobcomment. Le filtre interrogeait une colonne
+    // `storyversioncode` qui n'existe pas sur cette table — il ne renvoyait donc jamais
+    // rien. Le lien correct passe par les parutions de l'histoire.
+    svWhere.push(`EXISTS (
+      SELECT 1 FROM inducks_entry e_pub
+      JOIN inducks_publishingjob pjob ON pjob.issuecode = e_pub.issuecode
+      WHERE e_pub.storyversioncode = sv.storyversioncode AND pjob.publisherid = ?
+    )`);
     p.push(filters.publisherid);
   }
 
@@ -358,7 +419,7 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
   }
 
   if (filters.hasImage && filters.hasImage !== 'all') {
-    const existsClause = `EXISTS (SELECT 1 FROM inducks_entry e_img JOIN inducks_entryurl eu ON e_img.entrycode = eu.entrycode WHERE e_img.storyversioncode = sv.storyversioncode AND eu.url IS NOT NULL AND eu.url != '' AND eu.sitecode IN ('webusers', 'thumbnails'))`;
+    const existsClause = `EXISTS (SELECT 1 FROM story_thumb st_img WHERE st_img.storycode = sv.storycode AND st_img.url IS NOT NULL AND st_img.url != '')`;
     if (filters.hasImage === 'yes') {
       svWhere.push(existsClause);
     } else if (filters.hasImage === 'no') {
@@ -478,31 +539,13 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
         s.title,
         NULL
       ) as story_title,
-      COALESCE(
-        (SELECT eu.sitecode || '|' || eu.url
-         FROM inducks_entry e_img
-         JOIN inducks_entryurl eu ON e_img.entrycode = eu.entrycode
-         JOIN inducks_issue i_img ON e_img.issuecode = i_img.issuecode
-         LEFT JOIN inducks_publication p_img ON i_img.publicationcode = p_img.publicationcode
-         WHERE e_img.storyversioncode = sv.storyversioncode
-           AND eu.sitecode IN ('webusers', 'thumbnails', 'thumbnails2', 'thumbnails3')
-         ORDER BY
-           CASE WHEN eu.sitecode = 'webusers' THEN 0 ELSE 1 END,
-           COALESCE(i_img.oldestdate, '9999-99-99') ASC,
-           CASE WHEN p_img.languagecode = ? THEN 0 ELSE 1 END
-         LIMIT 1),
-        (SELECT eu.sitecode || '|' || eu.url
-         FROM inducks_entry e_img
-         JOIN inducks_entryurl eu ON e_img.entrycode = eu.entrycode
-         JOIN inducks_issue i_img ON e_img.issuecode = i_img.issuecode
-         WHERE e_img.storyversioncode = sv.storyversioncode
-           AND sv.kind = 'c'
-           AND eu.sitecode IN ('webusers', 'thumbnails', 'thumbnails2', 'thumbnails3')
-         ORDER BY
-           CASE WHEN eu.sitecode = 'webusers' THEN 0 ELSE 1 END,
-           COALESCE(i_img.oldestdate, '9999-99-99') ASC
-         LIMIT 1)
-      ) as story_thumb,
+      -- Vignette : story_thumb est précalculée au build avec le même arbitrage
+      -- (webusers d'abord, puis la parution la plus ancienne). Remplace deux sous-requêtes
+      -- à trois jointures exécutées pour CHACUNE des 24 lignes de la page.
+      -- Nuance assumée : la préférence de langue, qui ne dépend que de l'utilisateur, ne
+      -- peut pas être précalculée ; elle n'intervenait qu'en troisième critère de tri.
+      (SELECT st.sitecode || '|' || st.url
+       FROM story_thumb st WHERE st.storycode = sv.storycode) as story_thumb,
       COALESCE(
         (SELECT CASE
            WHEN TRIM(sd.desctext) LIKE 'Art:%' OR TRIM(sd.desctext) LIKE 'Script:%' OR TRIM(sd.desctext) LIKE 'Plot:%' OR TRIM(sd.desctext) LIKE 'Des:%' OR TRIM(sd.desctext) LIKE 'Desenhos:%' OR TRIM(sd.desctext) LIKE 'Roteiro:%'
@@ -563,7 +606,18 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
     ORDER BY ${orderBy}
   `;
 
-  return { query: mainQuery, countQuery, params: [...p, pageSize, offset, lang, lang, lang, lang, lang, lang], countParams: p, pageSize, page };
+  // 5 `lang` et non 6 : la vignette est désormais lue dans story_thumb, ce qui a supprimé
+  // le paramètre de préférence de langue qu'elle consommait.
+  const result = {
+    query: mainQuery,
+    countQuery,
+    params: [...p, pageSize, offset, lang, lang, lang, lang, lang],
+    countParams: p,
+    pageSize,
+    page,
+  };
+  assertParamCount(result, "buildAdvancedSearchQuery");
+  return result;
 }
 
 export interface PublicationsSearchFilters {
@@ -730,12 +784,14 @@ export function buildPublicationsSearchQuery(filters: PublicationsSearchFilters)
     ORDER BY ${orderBy}
   `;
 
-  return { 
-    query: mainQuery, 
-    countQuery, 
-    params: [...p, pageSize, offset], 
-    countParams: p, 
-    pageSize, 
-    page 
+  const result = {
+    query: mainQuery,
+    countQuery,
+    params: [...p, pageSize, offset],
+    countParams: p,
+    pageSize,
+    page,
   };
+  assertParamCount(result, "buildPublicationsSearchQuery");
+  return result;
 }
