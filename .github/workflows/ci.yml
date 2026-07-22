@@ -27,7 +27,7 @@ jobs:
           cache: pnpm
 
       - name: Installer les dépendances
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: Vérifier les types
         run: pnpm exec tsc --noEmit

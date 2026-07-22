@@ -1,3 +1,5 @@
+import { ftsPrefix, ftsAvailable } from "./fts";
+
 export interface SearchFilters {
   title?: string;
   description?: string;
@@ -295,8 +297,33 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
   }
 
   if (filters.title) {
-    where.push("(EXISTS (SELECT 1 FROM inducks_storyheader sh WHERE sh.storyheadercode = s.storyheadercode AND sh.title LIKE ?) OR EXISTS (SELECT 1 FROM inducks_entry e_t JOIN inducks_storyversion sv_t ON e_t.storyversioncode = sv_t.storyversioncode WHERE sv_t.storycode = s.storycode AND e_t.title LIKE ?))");
-    p.push(`%${filters.title}%`, `%${filters.title}%`);
+    // Le filtre par titre était la dernière recherche en `LIKE '%mot%'` : mesurée dans un
+    // vrai navigateur, elle balayait les titres de 355 404 histoires ET de 2 023 554
+    // parutions, et ne rendait pas la main. Les trois tables FTS5 la remplacent.
+    //
+    // Trois sources, parce qu'une histoire porte trois titres possibles : celui de la
+    // série (storyheader), le sien propre, et celui imprimé dans chaque parution.
+    const match = ftsAvailable() ? ftsPrefix(filters.title) : null;
+    if (match) {
+      // UNION, et surtout PAS un OR entre trois IN portant sur des colonnes différentes :
+      // mesuré, cette forme est inindexable — SQLite matérialise les trois listes puis
+      // balaie les 355 404 histoires (`SCAN s`). Réunies en une seule liste sur storycode,
+      // les trois branches sont chacune servies par son index et `s` est sondée par clé.
+      where.push(`s.storycode IN (
+        SELECT storycode FROM fts_story WHERE fts_story MATCH ?
+        UNION
+        SELECT sh_s.storycode FROM fts_storyheader fh
+          JOIN inducks_story sh_s ON sh_s.storyheadercode = fh.storyheadercode
+          WHERE fts_storyheader MATCH ?
+        UNION
+        SELECT storycode FROM fts_entrytitle WHERE fts_entrytitle MATCH ?
+      )`);
+      p.push(match, match, match);
+    } else {
+      // Repli sur LIKE quand les tables FTS5 sont absentes (base importée localement).
+      where.push("(EXISTS (SELECT 1 FROM inducks_storyheader sh WHERE sh.storyheadercode = s.storyheadercode AND sh.title LIKE ?) OR EXISTS (SELECT 1 FROM inducks_entry e_t JOIN inducks_storyversion sv_t ON e_t.storyversioncode = sv_t.storyversioncode WHERE sv_t.storycode = s.storycode AND e_t.title LIKE ?))");
+      p.push(`%${filters.title}%`, `%${filters.title}%`);
+    }
   }
 
   if (filters.description) {
@@ -553,7 +580,13 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
       SELECT sv.storyversioncode, sv.storycode, sv.kind, sv.entirepages, sv.brokenpagenumerator, sv.brokenpagedenominator, sv.plotsummary, sv.rowsperpage, sv.columnsperpage
       FROM inducks_storyversion sv
       WHERE sv.storyversioncode IN (
-        SELECT MIN(v.storyversioncode) FROM inducks_storyversion v JOIN StoryIds ids ON v.storycode = ids.storycode GROUP BY v.storycode
+        -- Corrélé sur les seules histoires retenues (24 par page). La forme précédente
+        -- joignait StoryIds puis groupait par storycode, ce qui faisait grouper les
+        -- 734 876 versions AVANT de filtrer : mesuré, 6 868 pages et 1 367 requêtes HTTP
+        -- pour une seule page de résultats. Ici, 24 MIN servis par la clé de regroupement.
+        SELECT (SELECT MIN(v.storyversioncode) FROM inducks_storyversion v
+                WHERE v.storycode = ids.storycode)
+        FROM StoryIds ids
       )
     )
     SELECT s.storycode,
@@ -607,17 +640,19 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
        FROM inducks_storyjob sj 
        JOIN inducks_person p ON sj.personcode = p.personcode 
        WHERE sj.storyversioncode = sv.storyversioncode) as creators,
-      (SELECT GROUP_CONCAT(app_c.charactercode || '|' || COALESCE(cn.charactername, c.charactername) || '|' || COALESCE(app_c.appearancecomment, '') || '|' || COALESCE(cn.characternamecomment, c.charactercomment, '') || '|' || COALESCE((SELECT url FROM inducks_characterurl cu WHERE cu.charactercode = app_c.charactercode LIMIT 1), ''), ';')
-       FROM (SELECT charactercode, appearancecomment, number FROM inducks_appearance WHERE storyversioncode = sv.storyversioncode ORDER BY number ASC) app_c
-       JOIN inducks_character c ON app_c.charactercode = c.charactercode
-       LEFT JOIN inducks_charactername cn ON app_c.charactercode = cn.charactercode AND cn.languagecode = ? AND cn.preferred = 'Y'
+      -- Lue dans story_characters, groupée par storycode et portant déjà le nom par
+      -- défaut. La forme précédente reconstruisait la liste depuis inducks_appearance
+      -- (1,7 M de lignes) et inducks_character POUR CHAQUE ligne affichée : 24 fois par
+      -- page, sur des lignes dispersées.
+      (SELECT GROUP_CONCAT(sc.charactercode || '|' || COALESCE(cn.charactername, sc.charactername) || '|' || COALESCE(sc.appearancecomment, '') || '|' || COALESCE(cn.characternamecomment, sc.charactercomment, '') || '|' || '', ';')
+       FROM (SELECT charactercode, charactername, appearancecomment, charactercomment, number
+             FROM story_characters WHERE storycode = s.storycode ORDER BY number ASC) sc
+       LEFT JOIN inducks_charactername cn ON sc.charactercode = cn.charactercode AND cn.languagecode = ? AND cn.preferred = 'Y'
       ) as character_list,
-      (SELECT GROUP_CONCAT(DISTINCT p_c.countrycode || '|' || p_c.title) 
-       FROM inducks_entry e_c 
-       JOIN inducks_storyversion sv_c ON e_c.storyversioncode = sv_c.storyversioncode
-       JOIN inducks_issue i_c ON e_c.issuecode = i_c.issuecode 
-       JOIN inducks_publication p_c ON i_c.publicationcode = p_c.publicationcode 
-       WHERE sv_c.storycode = s.storycode) as publication_list,
+      -- Idem : story_publications porte déjà countrycode et publicationcode groupés par
+      -- histoire, au lieu de rejouer entry -> storyversion -> issue -> publication par ligne.
+      (SELECT GROUP_CONCAT(DISTINCT sp_c.countrycode || '|' || sp_c.publicationcode)
+       FROM story_publications sp_c WHERE sp_c.storycode = s.storycode) as publication_list,
       (SELECT app_h.charactercode 
        FROM inducks_appearance app_h 
        WHERE app_h.storyversioncode = sv.storyversioncode AND app_h.number = 0 

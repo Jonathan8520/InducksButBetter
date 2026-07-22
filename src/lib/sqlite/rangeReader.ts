@@ -37,20 +37,42 @@ export interface ReaderStats {
   cacheHits: number;
 }
 
-/** Taille de bloc du cache. Un multiple de la page SQLite (4096) limite le gaspillage. */
-const BLOCK_SIZE = 16 * 1024;
+/**
+ * Taille de bloc du cache : exactement la page SQLite.
+ *
+ * Un bloc plus gros amplifie tout accès dispersé — mesuré, des blocs de 32 Ko faisaient
+ * transférer 107 Mo là où les pages réellement lues n'en représentaient que 7. Le gain sur
+ * les parcours séquentiels vient de la lecture anticipée ci-dessous, pas de la taille de
+ * bloc : c'est elle qui doit s'adapter, pas le grain de base.
+ */
+const BLOCK_SIZE = 4096;
 
 /**
- * Nombre maximal de blocs gardés en mémoire (16 Ko x 4096 = 64 Mio).
+ * Nombre maximal de blocs gardés en mémoire (4 Ko x 16384 = 64 Mio).
  * Au-delà, on évince les plus anciens : sans cela, une requête balayant une grosse table
  * ferait enfler la mémoire du worker sans limite.
  */
-const MAX_BLOCKS = 4096;
+const MAX_BLOCKS = 16384;
+
+/**
+ * Lecture anticipée. Les lectures étant SYNCHRONES et donc strictement séquentielles, le
+ * coût d'une requête est dominé par sa latence, pas par les octets transférés : mesuré,
+ * une page de résultats déclenchait plus d'un millier de requêtes et ne rendait pas la
+ * main, alors qu'elle ne demandait que quelques mégaoctets.
+ *
+ * Dès que SQLite lit des blocs consécutifs — ce que fait tout parcours d'index — on élargit
+ * la demande de façon exponentielle, jusqu'à `MAX_READAHEAD` blocs. Un accès non
+ * séquentiel remet la fenêtre à 1 : les lectures ponctuelles ne paient pas le surcoût.
+ */
+const MAX_READAHEAD = 64; // 64 x 4 Ko = 256 Ko par requête au plus
 
 export class RangeReader {
   readonly manifest: DbManifest;
   private baseUrl: string;
   private blocks = new Map<number, Uint8Array>();
+  /** Dernier bloc DEMANDÉ par SQLite, et longueur de la série séquentielle en cours. */
+  private lastReadBlock = -1;
+  private runLength = 0;
   stats: ReaderStats = { requests: 0, bytesFetched: 0, cacheHits: 0 };
 
   constructor(baseUrl: string, manifest: DbManifest) {
@@ -90,6 +112,15 @@ export class RangeReader {
     while (written < length) {
       const pos = offset + written;
       const blockIndex = Math.floor(pos / BLOCK_SIZE);
+
+      // La séquentialité se mesure sur les blocs DEMANDÉS, pas sur les défauts de cache :
+      // sinon, chaque défaut tombant juste après la fenêtre précédemment ramenée est pris
+      // pour une lecture séquentielle, et la fenêtre ne redescend jamais. Mesuré, ce
+      // travers faisait transférer 205 Mo là où 7 suffisaient.
+      if (blockIndex === this.lastReadBlock + 1) this.runLength++;
+      else if (blockIndex !== this.lastReadBlock) this.runLength = 0;
+      this.lastReadBlock = blockIndex;
+
       const block = this.getBlock(blockIndex);
       const inBlock = pos - blockIndex * BLOCK_SIZE;
       const take = Math.min(length - written, block.length - inBlock);
@@ -112,16 +143,34 @@ export class RangeReader {
     }
 
     const start = index * BLOCK_SIZE;
-    const end = Math.min(start + BLOCK_SIZE, this.manifest.totalBytes) - 1;
-    if (start > end) return new Uint8Array(0);
+    if (start >= this.manifest.totalBytes) return new Uint8Array(0);
 
-    const block = this.fetchRange(start, end);
+    // La fenêtre suit la longueur de la série séquentielle en cours : une lecture isolée
+    // ne ramène qu'un bloc, un parcours d'index s'élargit progressivement.
+    const readahead = Math.min(1 << Math.min(this.runLength, 6), MAX_READAHEAD);
+
+    // Ne pas déborder sur la tranche suivante : cela forcerait une seconde requête HTTP
+    // et annulerait le bénéfice.
+    const chunkEnd =
+      (Math.floor(start / this.manifest.chunkBytes) + 1) * this.manifest.chunkBytes;
+    const wanted = start + readahead * BLOCK_SIZE;
+    const end = Math.min(wanted, chunkEnd, this.manifest.totalBytes) - 1;
+
+    const span = this.fetchRange(start, end);
+
+    // Découper la réponse en blocs de cache individuels.
+    for (let off = 0; off < span.length; off += BLOCK_SIZE) {
+      this.store(index + off / BLOCK_SIZE, span.subarray(off, off + BLOCK_SIZE));
+    }
+    return span.subarray(0, BLOCK_SIZE);
+  }
+
+  private store(index: number, block: Uint8Array): void {
     this.blocks.set(index, block);
     if (this.blocks.size > MAX_BLOCKS) {
       const oldest = this.blocks.keys().next().value;
       if (oldest !== undefined) this.blocks.delete(oldest);
     }
-    return block;
   }
 
   /**

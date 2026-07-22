@@ -347,6 +347,9 @@ INDEXES: list[tuple[str, list[str]]] = [
     ("inducks_story", ["firstpublicationdate", "storycode"]),
     # Recherche par storycode, rendue possible par la colonne dérivée.
     ("inducks_story", ["storycode_packed"]),
+    # Remonter d'un en-tête de série vers ses histoires : sert la branche storyheader de
+    # la recherche par titre, sans quoi cette branche imposerait un parcours complet.
+    ("inducks_story", ["storyheadercode", "storycode"]),
 
     # Filtres de date ET tris date_asc/date_desc (SQLite parcourt un index ASC à l'envers).
     ("inducks_issue", ["oldestdate", "issuecode"]),
@@ -395,7 +398,12 @@ FTS_TABLES: list[tuple[str, str, str, list[str], str]] = [
      "unicode61 remove_diacritics 2"),
     ("fts_story", "inducks_story", "storycode", ["title"],
      "unicode61 remove_diacritics 2"),
-    ("fts_entry", "inducks_entry", "entrycode", ["title"],
+    # Indexée depuis story_publications, PAS depuis inducks_entry : cette dernière est
+    # groupée sur (issuecode, entrycode), donc une jointure sur entrycode seul n'a aucun
+    # index à emprunter — mesuré, le planificateur balayait alors les 734 876 versions
+    # d'histoires. story_publications porte déjà storycode ET entry_title côte à côte :
+    # la recherche par titre imprimé se fait sans la moindre jointure.
+    ("fts_entrytitle", "story_publications", "storycode", ["entry_title"],
      "unicode61 remove_diacritics 2"),
     ("fts_storydescription", "inducks_storydescription", "storyversioncode", ["desctext"],
      "unicode61 remove_diacritics 2"),

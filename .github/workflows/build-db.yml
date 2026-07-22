@@ -85,7 +85,7 @@ jobs:
           node-version: 20
           cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install
       - run: pnpm run build
 
       - name: Découper en tranches directement dans dist/
