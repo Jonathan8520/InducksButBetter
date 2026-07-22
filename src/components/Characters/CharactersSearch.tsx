@@ -8,7 +8,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { executeQuery } from "@/lib/db";
+import { executeQuery } from "@/lib/db"
+import { ftsSubstring, ftsAvailable } from "@/lib/fts"
+import { normalizeText } from "@/lib/normalize";
 import CharacterDetail from "./CharacterDetail";
 import { SearchableMultiSelect } from "@/components/SearchableMultiSelect";
 import { useMetadata } from "@/hooks/useMetadata";
@@ -69,15 +71,30 @@ export function CharactersSearch({ selectedCharactercode, setSelectedCharacterco
     const params: any[] = [];
 
     if (searchFilters.characterName.trim()) {
-      const likeVal = `%${searchFilters.characterName.trim()}%`;
-      where.push(`(c.charactername LIKE ? OR EXISTS (
-        SELECT 1 FROM inducks_characteralias ca 
-        WHERE ca.charactercode = c.charactercode AND ca.charactername LIKE ?
-      ) OR EXISTS (
-        SELECT 1 FROM inducks_charactername cn 
-        WHERE cn.charactercode = c.charactercode AND cn.charactername LIKE ?
-      ))`);
-      params.push(likeVal, likeVal, likeVal);
+      // Réunies par UNION en UNE liste de charactercode, puis sondées par clé.
+      //
+      // La forme précédente combinait un LIKE '%...%' et deux EXISTS par ligne : mesuré,
+      // 352 requêtes HTTP rien que pour le COUNT, et l'écran ne rendait pas la main.
+      // fts_character et fts_charactername sont en tokenizer trigram, donc capables de
+      // retrouver une sous-chaîne — ce que le préfixe seul ne permet pas.
+      const term = normalizeText(searchFilters.characterName);
+      const match = ftsSubstring(term);
+      if (match && ftsAvailable()) {
+        where.push(`c.charactercode IN (
+          SELECT charactercode FROM fts_character WHERE fts_character MATCH ?
+          UNION
+          SELECT charactercode FROM fts_charactername WHERE fts_charactername MATCH ?
+        )`);
+        params.push(match, match);
+      } else {
+        // Repli : terme trop court pour le trigram, ou base locale sans tables FTS.
+        const likeVal = `%${searchFilters.characterName.trim()}%`;
+        where.push(`(c.charactername LIKE ? OR EXISTS (
+          SELECT 1 FROM inducks_charactername cn
+          WHERE cn.charactercode = c.charactercode AND cn.charactername LIKE ?
+        ))`);
+        params.push(likeVal, likeVal);
+      }
     }
 
     if (searchFilters.characterCode.trim()) {

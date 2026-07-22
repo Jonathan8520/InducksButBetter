@@ -10,7 +10,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SearchableMultiSelect } from "@/components/SearchableMultiSelect";
 import { useMetadata } from "@/hooks/useMetadata";
 import { COUNTRY_CONTINENTS } from "@/lib/types";
-import { executeQuery } from "@/lib/db";
+import { executeQuery } from "@/lib/db"
+import { ftsSubstring, ftsAvailable } from "@/lib/fts"
+import { normalizeText } from "@/lib/normalize";
 import AuthorDetail from "./AuthorDetail";
 import { getFlagUrl } from "@/lib/utils";
 import { Autocomplete } from "@/components/Autocomplete";
@@ -22,6 +24,7 @@ interface Author {
   fullname: string;
   nationalitycountrycode?: string;
   numberofindexedissues?: number;
+  story_count?: number;
   borndate?: string;
   deceaseddate?: string;
 }
@@ -78,12 +81,18 @@ export function AuthorsSearch({ selectedAuthorcode, setSelectedAuthorcode }: Aut
     const params: any[] = [];
 
     if (searchFilters.fullName.trim()) {
-      const likeVal = `%${searchFilters.fullName.trim()}%`;
-      where.push(`(p.fullname LIKE ? OR p.personcode LIKE ? OR EXISTS (
-        SELECT 1 FROM inducks_personalias pa 
-        WHERE pa.personcode = p.personcode AND (pa.surname LIKE ? OR pa.givenname LIKE ?)
-      ))`);
-      params.push(likeVal, likeVal, likeVal, likeVal);
+      // Même correction que pour les personnages : une liste de personcode issue de
+      // l'index plein texte, au lieu d'un LIKE '%...%' doublé d'un EXISTS par ligne.
+      const term = normalizeText(searchFilters.fullName);
+      const match = ftsSubstring(term);
+      if (match && ftsAvailable()) {
+        where.push("p.personcode IN (SELECT personcode FROM fts_person WHERE fts_person MATCH ?)");
+        params.push(match);
+      } else {
+        const likeVal = `%${searchFilters.fullName.trim()}%`;
+        where.push("(p.fullname LIKE ? OR p.personcode LIKE ?)");
+        params.push(likeVal, likeVal);
+      }
     }
 
     if (searchFilters.nationality && searchFilters.nationality.length > 0) {
@@ -119,7 +128,7 @@ export function AuthorsSearch({ selectedAuthorcode, setSelectedAuthorcode }: Aut
     }
 
     if (searchFilters.minStories.trim()) {
-      where.push("CAST(p.numberofindexedissues AS INTEGER) >= ?");
+      where.push("COALESCE(p.story_count, 0) >= ?");
       params.push(parseInt(searchFilters.minStories.trim(), 10));
     }
 
@@ -133,9 +142,9 @@ export function AuthorsSearch({ selectedAuthorcode, setSelectedAuthorcode }: Aut
 
     const whereClause = "WHERE " + where.join(" AND ");
     
-    let orderBy = "CAST(p.numberofindexedissues AS INTEGER) DESC, p.fullname ASC";
+    let orderBy = "COALESCE(p.story_count, 0) DESC, p.fullname ASC";
     if (searchFilters.sort === "stories_asc") {
-      orderBy = "CAST(p.numberofindexedissues AS INTEGER) ASC, p.fullname ASC";
+      orderBy = "COALESCE(p.story_count, 0) ASC, p.fullname ASC";
     } else if (searchFilters.sort === "name_asc") {
       orderBy = "p.fullname ASC";
     } else if (searchFilters.sort === "name_desc") {
@@ -152,7 +161,7 @@ export function AuthorsSearch({ selectedAuthorcode, setSelectedAuthorcode }: Aut
     `;
 
     const mainQuery = `
-      SELECT p.personcode, p.fullname, p.nationalitycountrycode, p.numberofindexedissues, p.borndate, p.deceaseddate
+      SELECT p.personcode, p.fullname, p.nationalitycountrycode, COALESCE(p.story_count, 0) as story_count, p.borndate, p.deceaseddate
       FROM inducks_person p
       ${whereClause}
       ORDER BY ${orderBy}
@@ -438,7 +447,7 @@ export function AuthorsSearch({ selectedAuthorcode, setSelectedAuthorcode }: Aut
                   </div>
                   <div className="flex items-center gap-1 font-semibold text-foreground">
                     <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
-                    <span>{author.numberofindexedissues || 0}</span>
+                    <span>{author.story_count ?? 0}</span>
                   </div>
                 </div>
               </Card>

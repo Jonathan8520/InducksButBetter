@@ -103,7 +103,13 @@
     "published_least": "Le moins publié",
     "country_code": "Pays & Code",
     "date_asc": "Date (anciennes)",
-    "date_desc": "Date (récentes)"
+    "date_desc": "Date (récentes)",
+    "appearances_desc": "Apparitions (décroissant)",
+    "appearances_asc": "Apparitions (croissant)",
+    "stories_desc": "Histoires (décroissant)",
+    "stories_asc": "Histoires (croissant)",
+    "name_asc": "Nom (A-Z)",
+    "name_desc": "Nom (Z-A)"
   },
   "common": {
     "loading": "Chargement...",

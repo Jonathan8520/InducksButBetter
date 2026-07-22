@@ -103,7 +103,13 @@
     "published_least": "Least published",
     "country_code": "Country & Code",
     "date_asc": "Date (oldest)",
-    "date_desc": "Date (newest)"
+    "date_desc": "Date (newest)",
+    "appearances_desc": "Appearances (most first)",
+    "appearances_asc": "Appearances (fewest first)",
+    "stories_desc": "Stories (most first)",
+    "stories_asc": "Stories (fewest first)",
+    "name_asc": "Name (A-Z)",
+    "name_desc": "Name (Z-A)"
   },
   "common": {
     "loading": "Loading...",

@@ -103,7 +103,13 @@
     "published_least": "El menos publicado",
     "country_code": "País y Código",
     "date_asc": "Fecha (antiguos)",
-    "date_desc": "Fecha (recientes)"
+    "date_desc": "Fecha (recientes)",
+    "appearances_desc": "Apariciones (desc.)",
+    "appearances_asc": "Apariciones (asc.)",
+    "stories_desc": "Historias (desc.)",
+    "stories_asc": "Historias (asc.)",
+    "name_asc": "Nombre (A-Z)",
+    "name_desc": "Nombre (Z-A)"
   },
   "common": {
     "loading": "Cargando...",

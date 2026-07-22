@@ -188,6 +188,22 @@ DERIVED_COLUMNS: list[tuple[str, str, str, list[str]]] = [
            COALESCE((SELECT n FROM _agg WHERE k = countrycode), 0)""",
         "DROP TABLE _agg",
     ]),
+    # inducks_person.numberofindexedissues est quasi vide dans le dump : renseignée sur
+    # 190 lignes seulement sur 12 225 (Carl Barks y vaut 0). L'onglet Auteurs affichait donc
+    # « 0 histoires » pour presque tout le monde. On compte réellement.
+    ("inducks_person", "story_count", "INTEGER", [
+        "DROP TABLE IF EXISTS _agg",
+        "CREATE TABLE _agg (k TEXT PRIMARY KEY, n INTEGER) WITHOUT ROWID",
+        """INSERT INTO _agg SELECT sj.personcode, COUNT(DISTINCT sv.storycode)
+           FROM inducks_storyjob sj
+           JOIN inducks_storyversion sv ON sv.storyversioncode = sj.storyversioncode
+           WHERE sj.personcode IS NOT NULL AND sv.storycode IS NOT NULL
+           GROUP BY sj.personcode""",
+        """UPDATE inducks_person SET story_count =
+           COALESCE((SELECT n FROM _agg WHERE k = personcode), 0)""",
+        "DROP TABLE _agg",
+    ]),
+
     # Remplace le tri published_most/published_least, qui comptait les parutions par
     # histoire candidate sur la table de 183,6 Mo — le pire tri de l'application.
     ("inducks_story", "entry_count", "INTEGER", [
@@ -493,6 +509,7 @@ NORMALIZED_COLUMNS: list[tuple[str, str, str]] = [
     ("inducks_issue", "title", "title_norm"),
     ("inducks_person", "fullname", "fullname_norm"),
     ("inducks_character", "charactername", "charactername_norm"),
+    ("inducks_charactername", "charactername", "charactername_norm"),
 ]
 
 
@@ -596,10 +613,12 @@ FTS_TABLES: list[tuple[str, str, str, list[str], str]] = [
     # Colonnes portant des codes : trigram, seul tokenizer capable de retrouver une
     # sous-chaîne au milieu d'un identifiant (l'appli fait `charactercode LIKE '%x%'`).
     # unicode61 ne sait faire que du préfixe et perdrait ces correspondances.
-    ("fts_person", "inducks_person", "personcode", ["personcode", "fullname"], "trigram"),
+    # Toutes indexées sur les colonnes NORMALISÉES : le tokenizer trigram ignore la casse
+    # mais pas les accents, et l'application interroge avec un terme normalisé.
+    ("fts_person", "inducks_person", "personcode", ["personcode", "fullname_norm"], "trigram"),
     ("fts_character", "inducks_character", "charactercode",
-     ["charactercode", "charactername"], "trigram"),
-    ("fts_charactername", "inducks_charactername", "charactercode", ["charactername"],
+     ["charactercode", "charactername_norm"], "trigram"),
+    ("fts_charactername", "inducks_charactername", "charactercode", ["charactername_norm"],
      "trigram"),
     ("fts_publisher", "inducks_publisher", "publisherid",
      ["publisherid", "publishername"], "trigram"),
