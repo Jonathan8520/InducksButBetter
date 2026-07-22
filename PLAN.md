@@ -609,6 +609,48 @@ ci-dessous listaient l'intention ; ce qui a réellement été construit et mesur
 
 ---
 
+## 7bis. État au 22/07/2026 — ce qui tourne, ce qui reste
+
+Branche `feat/static-sqlite-migration`.
+
+### Fait et vérifié
+
+| | Vérification |
+|---|---|
+| Chaîne complète ISV → SQLite → tranches | Exécutée de bout en bout sur les 745,8 Mo réels |
+| 23 requêtes sur 23 entièrement indexées | `check_queries.py` sous EXPLAIN QUERY PLAN |
+| Trafic mesuré par requête | VFS instrumentée (apsw), cache vide |
+| Injection SQL, filtre éditeur mort, titre jamais affiché, autocomplétion amputée | Lus dans les fichiers avant correction |
+| 19 tests unitaires sur les heuristiques de storycode | `pnpm test` |
+| Types et bundle | `tsc --noEmit` et `vite build` |
+| CI applicative (types + tests + bundle) et cohérence de la spec | `.github/workflows/ci.yml` |
+
+### Écrit mais NON vérifié à l'exécution
+
+**Le VFS HTTP Range n'a jamais tourné dans un navigateur.** C'est la réserve principale.
+Il ne peut pas être exercé depuis cet environnement : il lui faut un vrai worker, un vrai
+serveur répondant aux requêtes Range, et WebAssembly. Le code est écrit avec soin — un
+défaut d'ordonnancement y a d'ailleurs été corrigé à la relecture (les champs de la
+structure VFS doivent être renseignés *avant* l'enregistrement, sinon le VFS est
+introuvable par son nom) — mais il faut le considérer comme non validé tant qu'une page
+ne l'a pas exécuté.
+
+Premier test à faire : `pnpm dev`, ouvrir l'onglet SQL, lancer
+`SELECT COUNT(*) FROM inducks_story` et regarder l'onglet réseau. On doit voir une poignée
+de requêtes `206 Partial Content` sur `db-00xx.bin`, pas un téléchargement complet.
+
+### Reste à faire
+
+1. **Valider le VFS dans un navigateur** (ci-dessus) — bloque tout le reste.
+2. Créer le projet Cloudflare Pages, poser `CLOUDFLARE_API_TOKEN` et
+   `CLOUDFLARE_ACCOUNT_ID`, ajuster `base` dans `vite.config.ts`.
+3. Supprimer `@libsql/client` et le token Turso **une fois le point 1 validé** — le repli
+   Turso est délibérément conservé jusque-là.
+4. Cache des pages persistant (API Cache indexée par ETag) → hors-ligne réel.
+5. Faire converger l'import ISV local sur le même moteur, supprimer `sql.js` (P8).
+6. Tester la suppression du proxy d'images (P1/P2) au retour d'inducks.org.
+7. Corriger `manualChunks` (P3) et traduire `constants.ts`.
+
 ## 8. Annexes
 
 ### 8.1 État du fork
