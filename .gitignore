@@ -9,3 +9,17 @@ dist-ssr
 brain
 scratch
 .system_generated
+
+# Dumps Inducks (.isv) et bases construites — jamais dans git
+data/
+*.sqlite
+*.sqlite-journal
+
+# Tranches de base générées par scripts/split_db.py (~1,1 Go).
+# Produites par la CI et déployées directement, jamais versionnées.
+public/db/
+dist/
+
+# Python
+__pycache__/
+*.pyc

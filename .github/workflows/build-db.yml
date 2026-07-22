@@ -1,0 +1,121 @@
+name: Build database
+
+# Reconstruit la base SQLite statique depuis les fichiers ISV d'Inducks, la découpe en
+# tranches déployables, et publie le tout sur Cloudflare Pages.
+#
+# Coût : 0 €. GitHub Actions est illimité sur dépôt public, Cloudflare Pages ne facture
+# pas la bande passante et ne peut pas générer de dépassement payant.
+
+on:
+  schedule:
+    # Tous les jours à 03:00 UTC — après la régénération quotidienne des ISV par Inducks.
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      source:
+        description: "Source des données ISV"
+        required: false
+        default: "inducks"
+        type: choice
+        options: [inducks, mega]
+
+env:
+  # Source officielle. Bascule sur la sauvegarde MEGA tant qu'inducks.org est hors service.
+  ISV_BASE: "https://inducks.org/inducks/isv"
+  CHUNK_SIZE_MIB: "20"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Déterminer la source
+        id: src
+        run: |
+          SOURCE="${{ github.event.inputs.source || 'inducks' }}"
+          echo "source=$SOURCE" >> "$GITHUB_OUTPUT"
+          echo "Source retenue : $SOURCE"
+
+      # --- Récupération des ISV -------------------------------------------------------
+      - name: Télécharger les ISV depuis inducks.org
+        if: steps.src.outputs.source == 'inducks'
+        run: |
+          mkdir -p data/isv
+          python scripts/fetch_isv.py data/isv --base "$ISV_BASE"
+
+      - name: Télécharger les ISV depuis la sauvegarde MEGA
+        if: steps.src.outputs.source == 'mega'
+        run: |
+          pip install --quiet pycryptodome
+          mkdir -p data/isv
+          python scripts/fetch_isv.py data/isv --mega
+
+      - name: Vérifier le lot récupéré
+        run: |
+          COUNT=$(ls data/isv/*.isv 2>/dev/null | wc -l)
+          SIZE=$(du -sh data/isv | cut -f1)
+          echo "$COUNT fichiers ISV, $SIZE"
+          if [ "$COUNT" -lt 60 ]; then
+            echo "::error::Seulement $COUNT fichiers ISV — lot incomplet, on n'écrase pas la base en ligne."
+            exit 1
+          fi
+
+      # --- Construction ---------------------------------------------------------------
+      - name: Construire la base SQLite
+        run: python scripts/build_db.py data/isv data/inducks.sqlite
+
+      - name: Vérifier que les requêtes réelles sont indexées
+        run: python scripts/check_queries.py data/inducks.sqlite
+
+      - name: Découper en tranches
+        run: |
+          python scripts/split_db.py data/inducks.sqlite public/db \
+            --chunk-size "$CHUNK_SIZE_MIB"
+
+      # --- Construction du site -------------------------------------------------------
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+
+      - name: Recopier les tranches dans dist/
+        run: |
+          mkdir -p dist/db
+          cp -r public/db/* dist/db/
+          du -sh dist
+
+      # --- Déploiement ----------------------------------------------------------------
+      # Cloudflare Pages n'envoie que les fichiers dont l'empreinte a changé : une
+      # reconstruction quotidienne ne re-téléverse donc pas le gigaoctet en entier.
+      - name: Déployer sur Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=inducksbutbetter
+
+      - name: Résumé
+        run: |
+          {
+            echo "### Base reconstruite"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Source | ${{ steps.src.outputs.source }} |"
+            echo "| ISV | $(du -sh data/isv | cut -f1) |"
+            echo "| SQLite | $(du -sh data/inducks.sqlite | cut -f1) |"
+            echo "| Tranches | $(ls public/db/db-*.bin | wc -l) |"
+          } >> "$GITHUB_STEP_SUMMARY"
