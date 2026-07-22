@@ -259,6 +259,36 @@ MATERIALIZED: list[tuple[str, str, str, list[str]]] = [
            WHERE kind IS NOT NULL AND kind <> ''""",
      ], []),
 
+    # Les histoires d'un personnage, groupées par (personnage, date).
+    #
+    # La fiche Personnage demandait « première apparition » et « 30 histoires récentes » en
+    # joignant inducks_appearance -> storyversion -> story puis en triant par date. Pour
+    # Donald Duck, cela signifie parcourir ses 245 557 apparitions avant d'en garder une.
+    # Regroupée par date, la première apparition est la première ligne et les récentes sont
+    # les dernières : deux lectures, sans tri.
+    ("character_stories", """
+        CREATE TABLE character_stories (
+            charactercode        TEXT NOT NULL,
+            firstpublicationdate TEXT NOT NULL,
+            storycode            TEXT NOT NULL,
+            story_title          TEXT,
+            appearances          INTEGER,
+            PRIMARY KEY (charactercode, firstpublicationdate, storycode)
+        ) WITHOUT ROWID
+     """, [
+        """INSERT OR REPLACE INTO character_stories
+           SELECT a.charactercode,
+                  COALESCE(s.firstpublicationdate, ''),
+                  sv.storycode,
+                  s.title,
+                  COUNT(*)
+           FROM inducks_appearance a
+           JOIN inducks_storyversion sv ON sv.storyversioncode = a.storyversioncode
+           JOIN inducks_story s ON s.storycode = sv.storycode
+           WHERE a.charactercode IS NOT NULL AND sv.storycode IS NOT NULL
+           GROUP BY a.charactercode, sv.storycode""",
+     ], []),
+
     # Second point chaud mesuré : les personnages d'une histoire coûtaient 87 pages et
     # 79 requêtes, parce que les 170 lignes d'appearance renvoient vers autant de lignes
     # dispersées d'inducks_character. Le nom par défaut est embarqué ici ; la traduction
@@ -552,8 +582,13 @@ INDEXES: list[tuple[str, list[str]]] = [
     # Recherche de publication insensible aux accents et à la casse.
     ("inducks_publication", ["title_norm"]),
 
-    # statpersoncharacter est la seule table de stats interrogée dans les deux sens.
+    # Les fiches Auteur et Personnage affichent un top 5 trié par `total`. La clé de
+    # regroupement de ces tables commence par le code mais pas par le total : sans ces
+    # index, SQLite lit TOUTES les lignes du personnage avant d'en garder cinq — mesuré à
+    # 995 et 506 requêtes HTTP sur Donald Duck, qui compte 2 010 lignes de statistiques.
     ("inducks_statpersoncharacter", ["charactercode", "total"]),
+    ("inducks_statcharactercharacter", ["charactercode", "total"]),
+    ("inducks_statpersonperson", ["personcode", "total"]),
 
     # Tri des auteurs par volume indexé.
     ("inducks_person", ["numberofindexedissues", "fullname"]),

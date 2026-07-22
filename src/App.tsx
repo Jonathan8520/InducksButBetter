@@ -176,6 +176,21 @@ function App() {
     selectedPublicationcode
   ]);
 
+  /**
+   * Ouvre la fiche d'un personnage, depuis n'importe quel onglet.
+   *
+   * On efface les autres sélections : sans cela, l'onglet Personnages afficherait bien le
+   * personnage mais l'histoire d'origine resterait mémorisée, et un simple changement
+   * d'onglet y ramènerait sans prévenir.
+   */
+  const openCharacter = (code: string) => {
+    setSelectedStorycode(null);
+    setSelectedIssuecode(null);
+    setSelectedPublicationcode(null);
+    setSelectedCharactercode(code);
+    setActiveTab("characters");
+  };
+
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     setSelectedStorycode(null);
@@ -280,6 +295,7 @@ function App() {
                   setSelectedStorycode={setSelectedStorycode}
                   selectedIssuecode={selectedIssuecode}
                   setSelectedIssuecode={setSelectedIssuecode}
+                  onOpenCharacter={openCharacter}
                 />
               </Suspense>
             </TabsContent>
@@ -306,6 +322,7 @@ function App() {
                       setSelectedStorycode(null);
                       setSelectedIssuecode(code);
                     }}
+                    onSelectCharacter={(code) => openCharacter(code)}
                   />
                 ) : selectedIssuecode ? (
                   <IssueDetail

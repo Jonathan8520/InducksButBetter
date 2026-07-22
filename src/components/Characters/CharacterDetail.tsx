@@ -88,7 +88,7 @@ export default function CharacterDetail({ charactercode, onSelectStory }: Charac
                   FROM inducks_statpersoncharacter sc
                   JOIN inducks_person p ON sc.personcode = p.personcode
                   WHERE sc.charactercode = ?
-                  ORDER BY CAST(sc.total AS INTEGER) DESC
+                  ORDER BY sc.total DESC
                   LIMIT 5`,
             args: [charactercode],
           });
@@ -101,7 +101,7 @@ export default function CharacterDetail({ charactercode, onSelectStory }: Charac
                   JOIN inducks_character c ON scc.cocharactercode = c.charactercode
                   LEFT JOIN inducks_charactername cn ON c.charactercode = cn.charactercode AND cn.languagecode = ?
                   WHERE scc.charactercode = ?
-                  ORDER BY CAST(scc.total AS INTEGER) DESC
+                  ORDER BY scc.total DESC
                   LIMIT 5`,
             args: [currentLang, charactercode],
           });
@@ -109,12 +109,14 @@ export default function CharacterDetail({ charactercode, onSelectStory }: Charac
 
           // 6. Fetch first appearance story
           const firstAppResult = await executeQuery({
-            sql: `SELECT s.storycode, s.title, s.firstpublicationdate
-                  FROM inducks_appearance a
-                  JOIN inducks_storyversion sv ON a.storyversioncode = sv.storyversioncode
-                  JOIN inducks_story s ON sv.storycode = s.storycode
-                  WHERE a.charactercode = ? AND s.firstpublicationdate != ''
-                  ORDER BY s.firstpublicationdate ASC
+            // character_stories est groupée par (personnage, date) : la première apparition
+            // est littéralement la première ligne. La forme précédente joignait
+            // inducks_appearance -> storyversion -> story puis triait — soit, pour Donald
+            // Duck, un parcours de ses 245 557 apparitions pour en garder une.
+            sql: `SELECT storycode, story_title as title, firstpublicationdate
+                  FROM character_stories
+                  WHERE charactercode = ? AND firstpublicationdate != ''
+                  ORDER BY firstpublicationdate ASC
                   LIMIT 1`,
             args: [charactercode],
           });
@@ -124,15 +126,15 @@ export default function CharacterDetail({ charactercode, onSelectStory }: Charac
 
           // 7. Fetch stories
           const storiesResult = await executeQuery({
-            sql: `SELECT DISTINCT s.storycode, s.title as story_title, s.firstpublicationdate,
-                         (SELECT COUNT(*) FROM inducks_appearance WHERE charactercode = ? AND storyversioncode = sv.storyversioncode) as appearances
-                  FROM inducks_appearance a
-                  JOIN inducks_storyversion sv ON a.storyversioncode = sv.storyversioncode
-                  JOIN inducks_story s ON sv.storycode = s.storycode
-                  WHERE a.charactercode = ?
-                  ORDER BY s.firstpublicationdate DESC
+            // Même table, parcourue à l'envers : les 30 plus récentes sont les 30 dernières
+            // lignes. Le décompte d'apparitions est déjà agrégé, ce qui supprime la
+            // sous-requête corrélée qui s'exécutait pour chaque ligne affichée.
+            sql: `SELECT storycode, story_title, firstpublicationdate, appearances
+                  FROM character_stories
+                  WHERE charactercode = ?
+                  ORDER BY firstpublicationdate DESC
                   LIMIT 30`,
-            args: [charactercode, charactercode],
+            args: [charactercode],
           });
           setStories(storiesResult.rows as any[]);
         }

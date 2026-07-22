@@ -87,7 +87,7 @@ export default function AuthorDetail({ personcode, onSelectStory }: AuthorDetail
                   FROM inducks_statpersonperson sp
                   JOIN inducks_person p ON sp.copersoncode = p.personcode
                   WHERE sp.personcode = ?
-                  ORDER BY CAST(sp.total AS INTEGER) DESC
+                  ORDER BY sp.total DESC
                   LIMIT 5`,
             args: [personcode],
           });
@@ -100,7 +100,7 @@ export default function AuthorDetail({ personcode, onSelectStory }: AuthorDetail
                   JOIN inducks_character c ON sc.charactercode = c.charactercode
                   LEFT JOIN inducks_charactername cn ON c.charactercode = cn.charactercode AND cn.languagecode = ?
                   WHERE sc.personcode = ?
-                  ORDER BY CAST(sc.total AS INTEGER) DESC
+                  ORDER BY sc.total DESC
                   LIMIT 5`,
             args: [currentLang, personcode],
           });

@@ -13,13 +13,22 @@ interface AdvancedSearchProps {
   setSelectedStorycode: (code: string | null) => void;
   selectedIssuecode: string | null;
   setSelectedIssuecode: (code: string | null) => void;
+  /**
+   * Ouvre la fiche d'un personnage depuis une histoire.
+   *
+   * Le clic filtrait auparavant la recherche d'histoires sur ce personnage. C'est utile,
+   * mais ce n'est pas ce qu'on attend d'un nom cliquable dans une fiche : on veut voir le
+   * personnage. Le filtrage reste accessible depuis le formulaire de recherche.
+   */
+  onOpenCharacter?: (code: string) => void;
 }
 
 export function AdvancedSearch({
   selectedStorycode,
   setSelectedStorycode,
   selectedIssuecode,
-  setSelectedIssuecode
+  setSelectedIssuecode,
+  onOpenCharacter
 }: AdvancedSearchProps) {
   const { meta } = useMetadata();
   const {
@@ -54,6 +63,10 @@ export function AdvancedSearch({
   });
 
   const handleSelectCharacter = (code: string, name: string) => {
+    if (onOpenCharacter) {
+      onOpenCharacter(code);
+      return;
+    }
     setSelectedStorycode(null);
     setSelectedIssuecode(null);
     addSelection("charactercode", code, name);
