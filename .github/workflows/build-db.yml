@@ -106,12 +106,15 @@ jobs:
       # --- Déploiement ----------------------------------------------------------------
       # Cloudflare Pages n'envoie que les fichiers dont l'empreinte a changé : une
       # reconstruction quotidienne ne re-téléverse donc pas le gigaoctet en entier.
+      # Le projet s'appelle « inducksbutbetter-demo » à dessein : le sous-domaine
+      # *.pages.dev est unique au monde, et `inducksbutbetter.pages.dev` est laissé
+      # disponible pour le dépôt d'origine (WizyxGH).
       - name: Déployer sur Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=inducksbutbetter
+          command: pages deploy dist --project-name=inducksbutbetter-demo
 
       - name: Résumé
         run: |

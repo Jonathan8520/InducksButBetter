@@ -1,8 +1,22 @@
-name: Deploy to GitHub Pages
+name: Deploy to GitHub Pages (hérité — Turso, ne plus utiliser)
+
+# DÉCLENCHEMENT AUTOMATIQUE RETIRÉ VOLONTAIREMENT.
+#
+# Ce workflow est celui d'origine : il construit avec VITE_STATIC_DB_URL="off", c'est-à-dire
+# l'application branchée sur TURSO — la base payante dont le quota est épuisé — puis la publie
+# sur GitHub Pages. Tant qu'il se déclenchait sur `push: main`, le premier merge de la
+# migration statique dans `main` aurait donc écrasé le site par la version à quota.
+#
+# Il ne peut plus partir que manuellement, et n'est conservé que comme filet de repli le temps
+# que le déploiement Cloudflare soit éprouvé.
+#
+# Le chemin actuel est .github/workflows/build-db.yml : base SQLite statique découpée,
+# déployée sur Cloudflare Pages, sans serveur de base ni facture possible.
+#
+# À noter : GitHub Pages plafonne à 1 Go par site, alors que la base découpée pèse ~2,1 Go —
+# ce déploiement ne pourra donc JAMAIS servir l'architecture statique.
 
 on:
-  push:
-    branches: ["main"]
   workflow_dispatch:
 
 permissions:
