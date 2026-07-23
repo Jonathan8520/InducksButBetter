@@ -132,6 +132,14 @@ QUERIES: list[tuple[str, str, tuple, int]] = [
      "JOIN inducks_publication p ON i.publicationcode = p.publicationcode "
      "WHERE p.countrycode = ? ORDER BY p.countrycode, i.issuecode LIMIT 24",
      (COUNTRY,), 15),
+    # Champ « Titre spécifique du numéro ». L'ancienne forme (i.title LIKE '%...%') balayait
+    # les 258 551 numéros ; par fts_issue elle passe par l'index plein texte.
+    ("search.pub.bySpecificTitle (fts_issue)",
+     "SELECT i.issuecode FROM inducks_issue i "
+     "JOIN inducks_publication p ON i.publicationcode = p.publicationcode "
+     "WHERE i.issuecode IN (SELECT issuecode FROM fts_issue WHERE fts_issue MATCH ?) "
+     "ORDER BY p.countrycode, i.issuecode LIMIT 24",
+     ('"vie" "trepidante"*',), 25),
 
     # =============================================================================
     # Fiche Histoire (StoryDetail / getStoryDetail).

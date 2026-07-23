@@ -839,8 +839,25 @@ export function buildPublicationsSearchQuery(filters: PublicationsSearchFilters)
   }
 
   if (filters.specificTitle) {
-    where.push("i.title LIKE ?");
-    p.push(`%${filters.specificTitle.trim()}%`);
+    // « Titre spécifique du numéro » : le titre propre donné à UN numéro (rare, ex. un
+    // hors-série thématique). La forme précédente — i.title LIKE '%...%' — balayait les
+    // 258 551 numéros (`SCAN i`) et ne rendait jamais la main : c'est le champ signalé
+    // comme « infini ». fts_issue (unicode61 remove_diacritics 2) sert la même recherche
+    // par l'index plein texte, accents et casse transparents.
+    //
+    // À NE PAS confondre avec le titre d'une HISTOIRE : « La vie trépidante d'Onc' Picsou »
+    // est un titre imprimé en parution, qui se cherche par le champ « Titre » de la
+    // recherche d'histoires (fts_entrytitle), pas ici.
+    const match = ftsAvailable() ? ftsPrefix(filters.specificTitle) : null;
+    if (match) {
+      where.push("i.issuecode IN (SELECT issuecode FROM fts_issue WHERE fts_issue MATCH ?)");
+      p.push(match);
+    } else {
+      // Repli sans FTS (base importée localement) : la colonne normalisée reste indexable
+      // et rend la recherche insensible aux accents comme à la casse.
+      where.push("i.title_norm LIKE ?");
+      p.push(normalizedLike(filters.specificTitle));
+    }
   }
 
   if (filters.pages !== undefined) {
