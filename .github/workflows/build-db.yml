@@ -106,6 +106,17 @@ jobs:
       # --- Déploiement ----------------------------------------------------------------
       # Cloudflare Pages n'envoie que les fichiers dont l'empreinte a changé : une
       # reconstruction quotidienne ne re-téléverse donc pas le gigaoctet en entier.
+      # `pages deploy` exige que le projet existe déjà. On le crée donc ici plutôt que de
+      # demander un passage par le tableau de bord : l'étape échoue si le projet est déjà
+      # là, d'où le continue-on-error, qui la rend inoffensive à chaque exécution.
+      - name: Créer le projet Cloudflare Pages s'il n'existe pas
+        uses: cloudflare/wrangler-action@v3
+        continue-on-error: true
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages project create inducksbutbetter-demo --production-branch=main
+
       # Le projet s'appelle « inducksbutbetter-demo » à dessein : le sous-domaine
       # *.pages.dev est unique au monde, et `inducksbutbetter.pages.dev` est laissé
       # disponible pour le dépôt d'origine (WizyxGH).
