@@ -411,6 +411,13 @@
     "issues_count": "Ausgabenanzahl",
     "search_placeholder": "Veröffentlichungen filtern..."
   },
+  "publisher": {
+    "title": "Verlag: {{publisher}}",
+    "subtitle": "Entdecken Sie die von diesem Verlag herausgegebenen Magazine und Reihen.",
+    "view": "Katalog dieses Verlags ansehen",
+    "sort_issues_desc": "Meiste Ausgaben",
+    "sort_issues_asc": "Wenigste Ausgaben"
+  },
   "publication": {
     "title": "Magazin: {{title}}",
     "code": "Code",

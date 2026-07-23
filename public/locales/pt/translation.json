@@ -411,6 +411,13 @@
     "issues_count": "Número de edições",
     "search_placeholder": "Filtrar publicações..."
   },
+  "publisher": {
+    "title": "Editora: {{publisher}}",
+    "subtitle": "Explore as revistas e séries publicadas por esta editora.",
+    "view": "Ver o catálogo desta editora",
+    "sort_issues_desc": "Mais edições",
+    "sort_issues_asc": "Menos edições"
+  },
   "publication": {
     "title": "Revista: {{title}}",
     "code": "Código",

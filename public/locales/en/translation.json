@@ -411,6 +411,13 @@
     "issues_count": "Issues count",
     "search_placeholder": "Filter publications..."
   },
+  "publisher": {
+    "title": "Publisher: {{publisher}}",
+    "subtitle": "Browse the magazines and series published by this publishing house.",
+    "view": "View this publisher's catalogue",
+    "sort_issues_desc": "Most issues",
+    "sort_issues_asc": "Fewest issues"
+  },
   "publication": {
     "title": "Magazine: {{title}}",
     "code": "Code",

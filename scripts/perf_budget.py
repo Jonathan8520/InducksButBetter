@@ -31,6 +31,9 @@ PERSON = "CB"
 ISSUE = "fr/SPG 150"
 PUBLICATION = "fr/SPG"
 COUNTRY = "fr"
+# Abril : l'éditeur au catalogue le plus dispersé (432 publications) — le pire cas mesuré
+# pour la fiche Éditeur, à 37 requêtes. Aftonbladet a plus de jobs mais une seule publication.
+PUBLISHER = "Abril"
 
 QUERIES: list[tuple[str, str, tuple, int]] = [
 
@@ -140,6 +143,23 @@ QUERIES: list[tuple[str, str, tuple, int]] = [
      "WHERE i.issuecode IN (SELECT issuecode FROM fts_issue WHERE fts_issue MATCH ?) "
      "ORDER BY p.countrycode, i.issuecode LIMIT 24",
      ('"vie" "trepidante"*',), 25),
+
+    # =============================================================================
+    # Fiche Éditeur (PublisherDetail) — catalogue d'une maison d'édition.
+    # =============================================================================
+    # L'index couvrant (publisherid, issuecode) ramène les numéros de l'éditeur d'un bloc ;
+    # les jointures issue/publication sont par clé. Porté du dépôt amont, GROUP BY corrigé.
+    ("publisher.publications (PublisherDetail)",
+     "SELECT p.publicationcode, "
+     "COALESCE((SELECT pn.publicationname FROM inducks_publicationname pn "
+     "WHERE pn.publicationcode = p.publicationcode LIMIT 1), p.title) as title, "
+     "p.languagecode, p.countrycode, p.publicationcomment, "
+     "COUNT(DISTINCT i.issuecode) as issueCount "
+     "FROM inducks_publishingjob pj "
+     "JOIN inducks_issue i ON pj.issuecode = i.issuecode "
+     "JOIN inducks_publication p ON i.publicationcode = p.publicationcode "
+     "WHERE pj.publisherid = ? GROUP BY p.publicationcode",
+     (PUBLISHER,), 50),
 
     # =============================================================================
     # Fiche Histoire (StoryDetail / getStoryDetail).

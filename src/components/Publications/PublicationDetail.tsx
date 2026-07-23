@@ -15,15 +15,17 @@ interface PublicationDetailData {
   languagecode: string;
   publicationcomment?: string;
   publishername?: string;
+  publisherid?: string;
 }
 
 interface PublicationDetailProps {
   publicationcode: string;
   onBack: () => void;
   onSelectIssue: (code: string) => void;
+  onSelectPublisher?: (publisherid: string) => void;
 }
 
-export function PublicationDetail({ publicationcode, onBack, onSelectIssue }: PublicationDetailProps) {
+export function PublicationDetail({ publicationcode, onBack, onSelectIssue, onSelectPublisher }: PublicationDetailProps) {
   const { t } = useTranslation();
   const [publication, setPublication] = useState<PublicationDetailData | null>(null);
   const [issues, setIssues] = useState<any[]>([]);
@@ -53,12 +55,17 @@ export function PublicationDetail({ publicationcode, onBack, onSelectIssue }: Pu
           const pubResult = await executeQuery({
             sql: `
               SELECT p.publicationcode, p.title, p.countrycode, p.languagecode, p.publicationcomment,
-                     (SELECT pub.publishername 
-                      FROM inducks_publishingjob pj 
-                      JOIN inducks_publisher pub ON pj.publisherid = pub.publisherid 
+                     (SELECT pub.publishername
+                      FROM inducks_publishingjob pj
+                      JOIN inducks_publisher pub ON pj.publisherid = pub.publisherid
                       JOIN inducks_issue i ON pj.issuecode = i.issuecode
-                      WHERE i.publicationcode = p.publicationcode 
-                      LIMIT 1) as publishername
+                      WHERE i.publicationcode = p.publicationcode
+                      LIMIT 1) as publishername,
+                     (SELECT pj2.publisherid
+                      FROM inducks_publishingjob pj2
+                      JOIN inducks_issue i2 ON pj2.issuecode = i2.issuecode
+                      WHERE i2.publicationcode = p.publicationcode
+                      LIMIT 1) as publisherid
               FROM inducks_publication p
               WHERE p.publicationcode = ?
             `,
@@ -184,9 +191,20 @@ export function PublicationDetail({ publicationcode, onBack, onSelectIssue }: Pu
                 <span className="font-semibold text-foreground uppercase">{publication.languagecode}</span>
               </div>
               {publication.publishername && (
-                <div className="flex justify-between py-1 border-b border-border-subtle/30">
-                  <span className="font-bold text-muted-foreground">{t("publication.publisher") || "Éditeur"}</span>
-                  <span className="font-semibold text-foreground text-right">{publication.publishername}</span>
+                <div className="flex justify-between py-1 border-b border-border-subtle/30 items-center gap-2">
+                  <span className="font-bold text-muted-foreground shrink-0">{t("publication.publisher") || "Éditeur"}</span>
+                  {publication.publisherid && onSelectPublisher ? (
+                    <button
+                      type="button"
+                      onClick={() => onSelectPublisher(publication.publisherid!)}
+                      className="font-semibold text-primary text-right hover:underline underline-offset-2 truncate"
+                      title={t("publisher.view") || "Voir le catalogue de cet éditeur"}
+                    >
+                      {publication.publishername}
+                    </button>
+                  ) : (
+                    <span className="font-semibold text-foreground text-right">{publication.publishername}</span>
+                  )}
                 </div>
               )}
               {publication.publicationcomment && (

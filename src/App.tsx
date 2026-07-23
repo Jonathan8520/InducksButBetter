@@ -23,6 +23,7 @@ const AuthorsSearch = lazy(() => import("@/components/Authors/AuthorsSearch").th
 const CharactersSearch = lazy(() => import("@/components/Characters/CharactersSearch").then(module => ({ default: module.CharactersSearch })))
 const CountryPublications = lazy(() => import("@/components/Publications/CountryPublications").then(module => ({ default: module.CountryPublications })))
 const PublicationDetail = lazy(() => import("@/components/Publications/PublicationDetail").then(module => ({ default: module.PublicationDetail })))
+const PublisherDetail = lazy(() => import("@/components/Publications/PublisherDetail").then(module => ({ default: module.PublisherDetail })))
 const IssueDetail = lazy(() => import("@/components/Publications/IssueDetail").then(module => ({ default: module.IssueDetail })))
 const StoryDetail = lazy(() => import("@/components/Search/StoryDetail").then(module => ({ default: module.StoryDetail })))
 
@@ -41,11 +42,12 @@ interface Route {
   charactercode: string | null;
   countrycode: string | null;
   publicationcode: string | null;
+  publisherid: string | null;
 }
 
 const EMPTY_ROUTE: Route = {
   tab: "stories", storycode: null, issuecode: null, personcode: null,
-  charactercode: null, countrycode: null, publicationcode: null,
+  charactercode: null, countrycode: null, publicationcode: null, publisherid: null,
 };
 
 /**
@@ -80,6 +82,7 @@ function parseHash(): Route {
     if (parts[1] === "story" && parts[2]) r.storycode = parts.slice(2).join("/");
     else if (parts[1] === "issue" && parts[2]) r.issuecode = restoreIssue(parts.slice(2).join("/"));
     else if (parts[1] === "publication" && parts[2]) r.publicationcode = parts.slice(2).join("/");
+    else if (parts[1] === "publisher" && parts[2]) r.publisherid = parts.slice(2).join("/");
   } else if (root === "authors") {
     r.tab = "authors";
     if (parts[1]) r.personcode = parts.slice(1).join("/");
@@ -111,6 +114,7 @@ function App() {
   const [selectedCharactercode, setSelectedCharactercode] = useState<string | null>(initial.charactercode);
   const [selectedCountrycode, setSelectedCountrycode] = useState<string | null>(initial.countrycode);
   const [selectedPublicationcode, setSelectedPublicationcode] = useState<string | null>(initial.publicationcode);
+  const [selectedPublisherid, setSelectedPublisherid] = useState<string | null>(initial.publisherid);
 
   // Call route metadata hook to update page title and description
   useRouteMetadata({
@@ -135,6 +139,7 @@ function App() {
       setSelectedCharactercode(r.charactercode);
       setSelectedCountrycode(r.countrycode);
       setSelectedPublicationcode(r.publicationcode);
+      setSelectedPublisherid(r.publisherid);
     };
 
     window.addEventListener("popstate", handleUrlRouting);
@@ -177,17 +182,20 @@ function App() {
       pushHashState(`#/countries/${encodeURI(selectedCountrycode)}`);
     } else if (selectedPublicationcode) {
       pushHashState(`#/publications/publication/${encodeURI(selectedPublicationcode)}`);
+    } else if (selectedPublisherid) {
+      pushHashState(`#/publications/publisher/${encodeURI(selectedPublisherid)}`);
     } else {
       pushHashState(`#/${rootPrefix}`);
     }
   }, [
-    activeTab, 
-    selectedStorycode, 
-    selectedIssuecode, 
-    selectedPersoncode, 
-    selectedCharactercode, 
-    selectedCountrycode, 
-    selectedPublicationcode
+    activeTab,
+    selectedStorycode,
+    selectedIssuecode,
+    selectedPersoncode,
+    selectedCharactercode,
+    selectedCountrycode,
+    selectedPublicationcode,
+    selectedPublisherid
   ]);
 
   /**
@@ -201,8 +209,23 @@ function App() {
     setSelectedStorycode(null);
     setSelectedIssuecode(null);
     setSelectedPublicationcode(null);
+    setSelectedPublisherid(null);
     setSelectedCharactercode(code);
     setActiveTab("characters");
+  };
+
+  /**
+   * Ouvre la fiche d'un éditeur. On quitte la publication/le numéro en cours mais on RESTE
+   * dans l'onglet publications : l'éditeur y affiche son catalogue, d'où l'on peut replonger
+   * dans une publication (le retour ramène alors à l'éditeur, publisherid étant conservé).
+   */
+  const openPublisher = (id: string) => {
+    setSelectedStorycode(null);
+    setSelectedIssuecode(null);
+    setSelectedPublicationcode(null);
+    setSelectedCountrycode(null);
+    setSelectedPublisherid(id);
+    setActiveTab("publications");
   };
 
   const handleTabChange = (tab: string) => {
@@ -213,6 +236,7 @@ function App() {
     setSelectedCharactercode(null);
     setSelectedCountrycode(null);
     setSelectedPublicationcode(null);
+    setSelectedPublisherid(null);
   };
 
   return (
@@ -349,6 +373,13 @@ function App() {
                     publicationcode={selectedPublicationcode}
                     onBack={() => setSelectedPublicationcode(null)}
                     onSelectIssue={(code) => setSelectedIssuecode(code)}
+                    onSelectPublisher={openPublisher}
+                  />
+                ) : selectedPublisherid ? (
+                  <PublisherDetail
+                    publisherid={selectedPublisherid}
+                    onBack={() => setSelectedPublisherid(null)}
+                    onSelectPublication={(code) => setSelectedPublicationcode(code)}
                   />
                 ) : selectedCountrycode ? (
                   <CountryPublications

@@ -411,6 +411,13 @@
     "issues_count": "Numero di albi",
     "search_placeholder": "Filtra pubblicazioni..."
   },
+  "publisher": {
+    "title": "Editore: {{publisher}}",
+    "subtitle": "Esplora le riviste e le serie pubblicate da questa casa editrice.",
+    "view": "Vedi il catalogo di questo editore",
+    "sort_issues_desc": "Più albi",
+    "sort_issues_asc": "Meno albi"
+  },
   "publication": {
     "title": "Rivista: {{title}}",
     "code": "Codice",

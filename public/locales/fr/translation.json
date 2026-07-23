@@ -412,6 +412,13 @@
     "issues_count": "Nombre de numéros",
     "search_placeholder": "Filtrer les publications..."
   },
+  "publisher": {
+    "title": "Éditeur : {{publisher}}",
+    "subtitle": "Explorez les magazines et séries édités par cette maison d'édition.",
+    "view": "Voir le catalogue de cet éditeur",
+    "sort_issues_desc": "Plus de numéros",
+    "sort_issues_asc": "Moins de numéros"
+  },
   "publication": {
     "title": "Magazine : {{title}}",
     "code": "Code",
