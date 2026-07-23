@@ -27,7 +27,7 @@ env:
   # est donc le coût réel d'une lecture. À 20 Mio, toucher une tranche coûtait 20 Mo ; à
   # 256 Kio, une recherche lourde revient à quelques dizaines de Mo, mis en cache ensuite.
   # ~8 300 tranches, sous la limite de 20 000 fichiers par déploiement.
-  CHUNK_SIZE_MIB: "0.25"
+  CHUNK_SIZE_MIB: "1"
 
 jobs:
   build:
