@@ -24,10 +24,16 @@ env:
   ISV_BASE: "https://inducks.org/inducks/isv"
   # 0,25 Mio = 256 Kio. Cloudflare Pages ne répond PAS 206 aux requêtes Range (limitation
   # reconnue, cloudflare/workers-sdk#3861) : il sert le fichier ENTIER. La taille de tranche
-  # est donc le coût réel d'une lecture. À 20 Mio, toucher une tranche coûtait 20 Mo ; à
-  # 256 Kio, une recherche lourde revient à quelques dizaines de Mo, mis en cache ensuite.
+  # est donc le coût réel d'une lecture, et à 20 Mio toucher une tranche coûtait 20 Mo.
+  #
+  # 256 Kio retenu APRÈS MESURE, contre un essai à 1 Mio (mêmes pages, cache vierge) :
+  #     256 Kio : 5,9 s — 212 requêtes —  7,9 Mo
+  #       1 Mio : 8,3 s — 212 requêtes — 14,9 Mo
+  # Le nombre de requêtes est IDENTIQUE : elles ne viennent pas des frontières de tranches
+  # traversées, mais du nombre de lectures que SQLite demande, chacune tenant déjà dans une
+  # tranche. Grossir les tranches ne fait donc que doubler les octets transférés.
   # ~8 300 tranches, sous la limite de 20 000 fichiers par déploiement.
-  CHUNK_SIZE_MIB: "1"
+  CHUNK_SIZE_MIB: "0.25"
 
 jobs:
   build:
