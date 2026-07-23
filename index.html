@@ -19,11 +19,39 @@
     <meta property="twitter:card" content="summary_large_image" />
 
     <title>InducksButBetter</title>
+
+    <!-- CSS critique EN LIGNE : appliqué dès le premier pixel, AVANT le bundle JS/CSS.
+         Sans lui, le lien d'évitement s'affichait nu au lancement — Tailwind ne scanne pas
+         index.html et le CSS n'arrive qu'avec le bundle — seul sur une page encore vide. -->
+    <style>
+      /* Lien d'accessibilité : hors champ par défaut, révélé au clavier (touche Tab). */
+      .skip-link {
+        position: absolute; left: -9999px; top: 0; z-index: 100;
+        padding: 1rem; background: #2563eb; color: #fff; font-weight: 700;
+        border-bottom-right-radius: .5rem; text-decoration: none;
+      }
+      .skip-link:focus { left: 0; }
+
+      /* Spinner de démarrage, centré. React remplace le contenu de #root à son montage,
+         ce qui le retire automatiquement dès que l'appli prend la main. */
+      #app-loading {
+        position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      }
+      #app-loading .ring {
+        width: 40px; height: 40px; border-radius: 50%;
+        border: 3px solid rgba(37, 99, 235, .2); border-top-color: #2563eb;
+        animation: app-spin .7s linear infinite;
+      }
+      @keyframes app-spin { to { transform: rotate(360deg); } }
+    </style>
   </head>
   <body>
-    <!-- Skip navigation link for keyboard / screen reader users -->
-    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:p-4 focus:bg-primary focus:text-primary-foreground focus:font-bold focus:rounded-br-lg">Skip to main content</a>
-    <div id="root"></div>
+    <!-- Lien d'évitement clavier / lecteur d'écran (masqué, révélé au focus). -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <div id="root">
+      <!-- Animation de démarrage, retirée par React au montage de l'appli. -->
+      <div id="app-loading"><div class="ring"></div></div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
