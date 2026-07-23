@@ -289,6 +289,76 @@ MATERIALIZED: list[tuple[str, str, str, list[str]]] = [
            GROUP BY a.charactercode, sv.storycode""",
      ], []),
 
+    # Les histoires d'un AUTEUR, groupées par (personne, date). Pendant équivalent de
+    # character_stories pour la fiche Auteur et pour le filtre « histoires de cet auteur ».
+    #
+    # Sans elle, filtrer une recherche par un auteur prolifique passait par
+    # `storycode IN (SELECT sv.storycode FROM storyjob sj JOIN storyversion sv WHERE
+    # personcode = ?)` : storyjob (2,1 M lignes) renvoie vers autant de storyversion
+    # dispersés. Mesuré à 1 796 requêtes HTTP pour Carl Barks. Groupée par personcode, la
+    # liste de ses storycodes est contiguë.
+    ("person_stories", """
+        CREATE TABLE person_stories (
+            personcode           TEXT NOT NULL,
+            firstpublicationdate TEXT NOT NULL,
+            storycode            TEXT NOT NULL,
+            story_title          TEXT,
+            PRIMARY KEY (personcode, firstpublicationdate, storycode)
+        ) WITHOUT ROWID
+     """, [
+        """INSERT OR REPLACE INTO person_stories
+           SELECT sj.personcode, COALESCE(s.firstpublicationdate, ''), sv.storycode, s.title
+           FROM inducks_storyjob sj
+           JOIN inducks_storyversion sv ON sv.storyversioncode = sj.storyversioncode
+           JOIN inducks_story s ON s.storycode = sv.storycode
+           WHERE sj.personcode IS NOT NULL AND sv.storycode IS NOT NULL
+           GROUP BY sj.personcode, sv.storycode""",
+     ], []),
+
+    # Le sommaire d'un NUMÉRO, groupé par (numéro, position). La fiche Numéro lisait
+    # inducks_entry WHERE issuecode ORDER BY position, puis joignait CHAQUE entrée à
+    # storyversion et story (deux accès par clé, dispersés) : mesuré à 78 requêtes HTTP
+    # pour un gros numéro. Ici, storycode et titre sont déjà résolus et contigus.
+    ("issue_stories", """
+        CREATE TABLE issue_stories (
+            issuecode   TEXT NOT NULL,
+            position    TEXT NOT NULL,
+            entrycode   TEXT NOT NULL,
+            entry_title TEXT,
+            storycode   TEXT,
+            story_title TEXT,
+            entirepages INTEGER,
+            writers     TEXT,
+            artists     TEXT,
+            PRIMARY KEY (issuecode, position, entrycode)
+        ) WITHOUT ROWID
+     """, [
+        # Auteurs et dessinateurs agrégés PAR VERSION une seule fois, puis joints. La fiche
+        # les affichait via deux sous-requêtes GROUP_CONCAT corrélées par entrée du numéro.
+        "DROP TABLE IF EXISTS _svjob",
+        """CREATE TABLE _svjob (storyversioncode TEXT PRIMARY KEY, writers TEXT, artists TEXT)
+           WITHOUT ROWID""",
+        """INSERT INTO _svjob
+           SELECT sj.storyversioncode,
+                  GROUP_CONCAT(CASE WHEN sj.plotwritartink IN ('w','p','wa','pw')
+                                    THEN p.fullname END, ', '),
+                  GROUP_CONCAT(CASE WHEN sj.plotwritartink IN ('a','i','pa','wa')
+                                    THEN p.fullname END, ', ')
+           FROM inducks_storyjob sj
+           JOIN inducks_person p ON p.personcode = sj.personcode
+           WHERE sj.storyversioncode IS NOT NULL
+           GROUP BY sj.storyversioncode""",
+        """INSERT OR REPLACE INTO issue_stories
+           SELECT e.issuecode, COALESCE(e.position, ''), e.entrycode, e.title,
+                  sv.storycode, s.title, sv.entirepages, j.writers, j.artists
+           FROM inducks_entry e
+           LEFT JOIN inducks_storyversion sv ON sv.storyversioncode = e.storyversioncode
+           LEFT JOIN inducks_story s ON s.storycode = sv.storycode
+           LEFT JOIN _svjob j ON j.storyversioncode = e.storyversioncode
+           WHERE e.issuecode IS NOT NULL""",
+        "DROP TABLE _svjob",
+     ], []),
+
     # Second point chaud mesuré : les personnages d'une histoire coûtaient 87 pages et
     # 79 requêtes, parce que les 170 lignes d'appearance renvoient vers autant de lignes
     # dispersées d'inducks_character. Le nom par défaut est embarqué ici ; la traduction
@@ -587,6 +657,11 @@ INDEXES: list[tuple[str, list[str]]] = [
     # index, SQLite lit TOUTES les lignes du personnage avant d'en garder cinq — mesuré à
     # 995 et 506 requêtes HTTP sur Donald Duck, qui compte 2 010 lignes de statistiques.
     ("inducks_statpersoncharacter", ["charactercode", "total"]),
+    # statpersoncharacter est interrogée dans les DEUX sens : par personnage (fiche
+    # Personnage : « auteurs qui l'ont le plus dessiné ») et par personne (fiche Auteur :
+    # « personnages qu'il a le plus dessinés »). Chaque sens a son index, sinon le second
+    # impose un tri temporaire sur toutes les lignes — mesuré à 260 requêtes HTTP.
+    ("inducks_statpersoncharacter", ["personcode", "total"]),
     ("inducks_statcharactercharacter", ["charactercode", "total"]),
     ("inducks_statpersonperson", ["personcode", "total"]),
 

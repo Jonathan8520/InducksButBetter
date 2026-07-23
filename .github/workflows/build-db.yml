@@ -74,6 +74,15 @@ jobs:
       - name: Vérifier que les requêtes réelles sont indexées
         run: python scripts/check_queries.py data/inducks.sqlite
 
+      # Budget de requêtes HTTP par requête de l'appli. Échoue si une requête dépasse son
+      # plafond — c'est-à-dire si un changement de schéma a réintroduit un parcours de
+      # table. C'est le garde-fou de rapidité : sur ce backend, le nombre de requêtes est
+      # la métrique qui compte.
+      - name: Vérifier les budgets de performance
+        run: |
+          pip install --quiet apsw
+          python scripts/perf_test.py data/inducks.sqlite
+
       # --- Construction du site -------------------------------------------------------
       # Le site est bâti AVANT le découpage : Vite recopie tout `public/` dans `dist/`,
       # donc y déposer 1,2 Go de tranches au préalable les ferait copier deux fois.

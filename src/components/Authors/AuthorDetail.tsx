@@ -107,14 +107,14 @@ export default function AuthorDetail({ personcode, onSelectStory }: AuthorDetail
           setFavCharacters(favCharResult.rows as FavCharacter[]);
 
           // 6. Fetch stories
+          // person_stories est groupée par (personcode, date) : les histoires les plus
+          // récentes de l'auteur sont les dernières lignes, sans jointure ni tri sur
+          // storyjob (2,1 M lignes).
           const storiesResult = await executeQuery({
-            sql: `SELECT DISTINCT s.storycode, s.title as story_title, COUNT(*) as appearances
-                  FROM inducks_storyjob sj
-                  JOIN inducks_storyversion sv ON sj.storyversioncode = sv.storyversioncode
-                  JOIN inducks_story s ON sv.storycode = s.storycode
-                  WHERE sj.personcode = ?
-                  GROUP BY s.storycode
-                  ORDER BY appearances DESC
+            sql: `SELECT storycode, story_title, firstpublicationdate
+                  FROM person_stories
+                  WHERE personcode = ?
+                  ORDER BY firstpublicationdate DESC
                   LIMIT 20`,
             args: [personcode],
           });
@@ -347,7 +347,7 @@ export default function AuthorDetail({ personcode, onSelectStory }: AuthorDetail
                   >
                     <div className="space-y-0.5 min-w-0">
                       <p className="font-semibold text-foreground text-xs truncate group-hover:text-primary transition-colors">
-                        {story.story_title || "Sans titre"}
+                        {story.story_title || story.storycode}
                       </p>
                       <p className="text-[10px] text-muted-foreground font-mono">{story.storycode}</p>
                     </div>

@@ -251,16 +251,15 @@ export async function getStoryDetail(storycode: string, lang: string = "fr") {
   if (coreResult.rows.length === 0) return null;
   const story = coreResult.rows[0];
 
-  // Get best version/thumb
+  // Version de référence : lue dans story_card, qui a figé au build la version choisie
+  // (MIN storyversioncode) avec tout ce dont la fiche a besoin. La forme précédente,
+  // `ORDER BY storyversioncode LIMIT 1` sur inducks_storyversion, imposait un tri
+  // temporaire faute d'index dans ce sens — mesuré à 86 requêtes HTTP par fiche.
   const versionResult = await executeQuery({
     sql: `
-      SELECT sv.storyversioncode, sv.kind, sv.entirepages, sv.brokenpagenumerator, sv.brokenpagedenominator, sv.plotsummary,
-        (SELECT st.sitecode || '|' || st.url
-         FROM story_thumb st WHERE st.storycode = sv.storycode) as story_thumb
-      FROM inducks_storyversion sv
-      WHERE sv.storycode = ?
-      ORDER BY sv.storyversioncode ASC
-      LIMIT 1
+      SELECT storyversioncode, kind, entirepages, brokenpagenumerator, brokenpagedenominator,
+             plotsummary, story_thumb
+      FROM story_card WHERE storycode = ?
     `,
     args: [storycode]
   });
@@ -412,22 +411,17 @@ export async function getIssueDetail(issuecode: string) {
   const thumb = thumbResult.rows[0]?.issue_thumb || null;
 
   // 3. Contained stories (index)
+  // Tout est pré-assemblé dans issue_stories, groupée par (issuecode, position) : le
+  // sommaire d'un numéro est une lecture contiguë. La forme précédente joignait chaque
+  // entrée à storyversion et story, plus deux GROUP_CONCAT corrélés pour les crédits —
+  // mesuré à 78 requêtes HTTP sur un gros numéro.
   const storiesResult = await executeQuery({
     sql: `
-      SELECT 
-        e.entrycode,
-        e.position,
-        sv.entirepages,
-        e.title as entry_title,
-        s.storycode,
-        s.title as original_title,
-        (SELECT GROUP_CONCAT(p_w.fullname, ', ') FROM inducks_storyjob sj_w JOIN inducks_person p_w ON sj_w.personcode = p_w.personcode WHERE sj_w.storyversioncode = e.storyversioncode AND sj_w.plotwritartink IN ('w', 'p', 'wa', 'pw')) as writers,
-        (SELECT GROUP_CONCAT(p_a.fullname, ', ') FROM inducks_storyjob sj_a JOIN inducks_person p_a ON sj_a.personcode = p_a.personcode WHERE sj_a.storyversioncode = e.storyversioncode AND sj_a.plotwritartink IN ('a', 'i', 'pa', 'wa')) as artists
-      FROM inducks_entry e
-      LEFT JOIN inducks_storyversion sv ON e.storyversioncode = sv.storyversioncode
-      LEFT JOIN inducks_story s ON sv.storycode = s.storycode
-      WHERE e.issuecode = ?
-      ORDER BY e.position ASC
+      SELECT entrycode, position, entirepages, entry_title,
+             storycode, story_title as original_title, writers, artists
+      FROM issue_stories
+      WHERE issuecode = ?
+      ORDER BY position ASC
     `,
     args: [issuecode]
   });

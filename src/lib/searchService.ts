@@ -1,5 +1,5 @@
 import { ftsPrefix, ftsAvailable } from "./fts";
-import { normalizedLike } from "./normalize";
+import { normalizedLike, normalizeText } from "./normalize";
 
 export interface SearchFilters {
   title?: string;
@@ -228,10 +228,106 @@ function assertParamCount(r: SearchQueryResponse, label: string): void {
   }
 }
 
+/**
+ * Voie rapide « une seule entité, tri par date ».
+ *
+ * Cliquer un personnage, ou chercher les histoires d'un auteur, produit une recherche dont
+ * le SEUL filtre est un charactercode ou un personcode, avec le tri par défaut (date). Dans
+ * ce cas, character_stories / person_stories — groupées sur (code, date, storycode) — sont
+ * DÉJÀ triées : les 24 premières lignes se lisent d'un bloc.
+ *
+ * La forme générale, elle, ramène TOUS les storycodes de l'entité (13 000+ pour Donald Duck)
+ * puis va chercher la date de chacun dans inducks_story pour trier : mesuré à 430 et 582
+ * requêtes HTTP. Par la table groupée : 1 et 5. Le gain n'existe que lorsque AUCUN autre
+ * filtre ne restreint le résultat — sinon on retombe sur la forme générale.
+ *
+ * Renvoie null si la recherche ne se réduit pas à ce cas.
+ */
+function tryClusteredEntitySearch(
+  filters: SearchFilters,
+  pageSize: number,
+  offset: number,
+  lang: string,
+): SearchQueryResponse | null {
+  // Aucun autre champ restrictif ne doit être posé.
+  const restricting: (keyof SearchFilters)[] = [
+    "title", "description", "storycode", "excludeCharactercode", "excludePersoncode",
+    "publisherid", "kind", "pagesMin", "pagesMax", "pagesExact", "language", "country",
+    "herocode", "onlyCollection", "dateAfter", "dateBefore", "nationality", "universes",
+    "subseriescode", "noOtherCharacters", "indexingIncomplete", "multipleParts",
+    "panelsperstrip", "stripsperpage",
+  ];
+  const isSet = (v: unknown) =>
+    Array.isArray(v) ? v.filter(Boolean).length > 0 : v !== undefined && v !== "" && v !== false;
+  if (restricting.some((k) => isSet(filters[k]))) return null;
+  if (filters.hasImage && filters.hasImage !== "all") return null;
+
+  const sort = filters.sort || "pubdate_desc";
+  if (sort !== "pubdate_desc" && sort !== "pubdate_asc") return null;
+  const dir = sort === "pubdate_asc" ? "ASC" : "DESC";
+
+  // Exactement un personnage, OU exactement un auteur sans rôle précis.
+  const chars = (Array.isArray(filters.charactercode)
+    ? filters.charactercode
+    : filters.charactercode ? [filters.charactercode] : []).map(String).map(c => c.trim()).filter(Boolean);
+  const roles = (filters.personRoles || []).filter(pr => pr.code && String(pr.code).trim());
+  const anyRole = roles.length === 1 && (!roles[0].role || roles[0].role === "any");
+
+  let table: string, keyCol: string, keyVal: string;
+  if (chars.length === 1 && roles.length === 0) {
+    table = "character_stories"; keyCol = "charactercode"; keyVal = chars[0];
+  } else if (anyRole && chars.length === 0) {
+    table = "person_stories"; keyCol = "personcode"; keyVal = roles[0].code.trim();
+  } else {
+    return null;
+  }
+
+  const query = `
+    WITH StoryIds AS (
+      SELECT storycode FROM ${table}
+      WHERE ${keyCol} = ?
+      ORDER BY firstpublicationdate ${dir}, storycode ${dir}
+      LIMIT ? OFFSET ?
+    )
+    SELECT
+      c.storycode,
+      COALESCE(NULLIF(i.story_title, ''), c.storycode) as story_title,
+      NULLIF(i.series_title, '')   as series_title,
+      NULLIF(i.description, '')     as full_description,
+      NULLIF(i.character_list, '')  as character_list,
+      NULLIF(c.publication_list, '') as publication_list,
+      NULLIF(c.creators, '')        as creators,
+      NULLIF(c.story_thumb, '')     as story_thumb,
+      NULL as hero_name,
+      c.kind, c.entirepages, c.brokenpagenumerator, c.brokenpagedenominator,
+      c.rowsperpage, c.firstpublicationdate
+    FROM StoryIds ids
+    JOIN story_card c ON c.storycode = ids.storycode
+    LEFT JOIN story_card_i18n i ON i.storycode = ids.storycode AND i.languagecode = ?
+    ORDER BY c.firstpublicationdate ${dir}, c.storycode ${dir}
+  `;
+  // COUNT DISTINCT storycode : character_stories a une ligne par (code, date, storycode),
+  // donc un storycode apparaît une seule fois par entité — COUNT(*) suffit.
+  const countQuery = `SELECT COUNT(*) as total FROM ${table} WHERE ${keyCol} = ?`;
+
+  const result = {
+    query, countQuery,
+    params: [keyVal, pageSize, offset, lang],
+    countParams: [keyVal],
+    pageSize, page: Math.floor(offset / pageSize) + 1,
+  };
+  assertParamCount(result, "tryClusteredEntitySearch");
+  return result;
+}
+
 export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryResponse {
   const pageSize = Math.max(1, parseInt(String(filters.rowsperpage || "24"), 10) || 24);
   const page = Math.max(1, parseInt(String(filters.page || "1"), 10) || 1);
   const offset = (page - 1) * pageSize;
+
+  // Voie rapide pour « un personnage » / « un auteur » seul, triés par date (cf. plus haut).
+  const fast = tryClusteredEntitySearch(filters, pageSize, offset, filters.lang || "fr");
+  if (fast) return fast;
 
   const where: string[] = [];
   const svWhere: string[] = [];
@@ -349,11 +445,11 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
     const codes = (Array.isArray(filters.charactercode) ? filters.charactercode : String(filters.charactercode).split(",")).map(c => c.trim()).filter(Boolean);
     if (codes.length > 0) {
       codes.forEach(code => {
-        // Réorienté : on part de la table SÉLECTIVE (les apparitions du personnage) au
-        // lieu de balayer les 355 404 histoires en évaluant une sous-requête corrélée
-        // pour chacune. Plan mesuré avant : `SCAN s` + sous-requête corrélée. Après :
-        // `SEARCH a USING INDEX (charactercode=?)` puis accès par clé primaire.
-        where.push(`s.storycode IN (SELECT sv_c.storycode FROM inducks_appearance app_c JOIN inducks_storyversion sv_c ON sv_c.storyversioncode = app_c.storyversioncode WHERE app_c.charactercode = ?)`);
+        // Lu dans character_stories, groupée par charactercode : les storycodes d'un
+        // personnage sont contigus. La forme précédente joignait inducks_appearance
+        // (1,7 M lignes) à storyversion, ce qui, pour Donald Duck, renvoyait vers des
+        // milliers de lignes dispersées — mesuré à 1 038 requêtes HTTP.
+        where.push(`s.storycode IN (SELECT storycode FROM character_stories WHERE charactercode = ?)`);
         p.push(code);
       });
     }
@@ -401,17 +497,20 @@ export function buildAdvancedSearchQuery(filters: SearchFilters): SearchQueryRes
     const roles = filters.personRoles.filter(pr => pr.code && String(pr.code).trim());
     if (roles.length > 0) {
       roles.forEach(pr => {
-        // Le rôle est concaténé nulle part : il est passé en paramètre lié, comme le code
-        // de la personne. L'interface le contraint à un jeu fermé (any|p|w|a|i), mais rien
-        // ne garantit qu'un futur appelant fera de même.
-        let roleCondition = "";
-        const bind: string[] = [pr.code.trim()];
-        if (pr.role && pr.role !== 'any') {
-          roleCondition = `AND sj.plotwritartink LIKE ?`;
-          bind.push(`%${pr.role}%`);
+        // Le rôle est passé en paramètre lié (jamais concaténé). L'interface le contraint
+        // à un jeu fermé (any|p|w|a|i), mais rien ne garantit qu'un futur appelant fera de
+        // même.
+        if (!pr.role || pr.role === 'any') {
+          // Cas courant : n'importe quel rôle. person_stories est groupée par personcode,
+          // donc les storycodes d'un auteur sont contigus — au lieu de balayer storyjob
+          // (2,1 M lignes) pour un auteur prolifique. Mesuré : 1 796 -> quelques requêtes.
+          where.push(`s.storycode IN (SELECT storycode FROM person_stories WHERE personcode = ?)`);
+          p.push(pr.code.trim());
+        } else {
+          // Rôle précis : la sélectivité vient du rôle, on garde storyjob.
+          svWhere.push(`EXISTS (SELECT 1 FROM inducks_storyjob sj WHERE sj.storyversioncode = sv.storyversioncode AND sj.personcode = ? AND sj.plotwritartink LIKE ?)`);
+          p.push(pr.code.trim(), `%${pr.role}%`);
         }
-        svWhere.push(`EXISTS (SELECT 1 FROM inducks_storyjob sj WHERE sj.storyversioncode = sv.storyversioncode AND sj.personcode = ? ${roleCondition})`);
-        p.push(...bind);
       });
     }
   }
@@ -680,14 +779,24 @@ export function buildPublicationsSearchQuery(filters: PublicationsSearchFilters)
     where.push("p.publicationcode = ?");
     p.push(filters.publicationcode.trim());
   } else if (filters.title) {
-    // Comparaison sur les colonnes normalisées : le LIKE de SQLite ne replie la casse que
-    // pour l'ASCII, si bien que « géant » ne trouvait pas « Géant » et que chercher
-    // « Super picsou géant » ne renvoyait rien. Les colonnes *_norm sont calculées au
-    // build par la même transformation que normalizeText (accents retirés, minuscules),
-    // ce qui rend aussi la recherche insensible aux accents dans les deux sens.
-    const like = normalizedLike(filters.title);
-    where.push("(pn.publicationname_norm LIKE ? OR i.title_norm LIKE ? OR p.title_norm LIKE ? OR p.publicationcode LIKE ?)");
-    p.push(like, like, like, like);
+    // Recherche texte libre (l'utilisateur n'a pas choisi de suggestion). L'index plein
+    // texte trigram sur la colonne normalisée ramène d'abord les codes de publication qui
+    // correspondent, puis on filtre les numéros dessus. La forme précédente — quatre
+    // LIKE '%...%' sur des colonnes normalisées — balayait la table : mesurée à 444
+    // requêtes HTTP. FTS insensible aux accents comme à la casse (« geant » -> « Géant »).
+    const term = normalizeText(filters.title);
+    const match = ftsAvailable() && term.length >= 3 ? term : null;
+    if (match) {
+      where.push(
+        "p.publicationcode IN (SELECT publicationcode FROM fts_publication WHERE fts_publication MATCH ?)",
+      );
+      p.push(`"${match.replace(/"/g, '""')}"`);
+    } else {
+      // Repli : terme trop court pour le trigram, ou base locale sans tables FTS.
+      const like = normalizedLike(filters.title);
+      where.push("(p.title_norm LIKE ? OR p.publicationcode LIKE ?)");
+      p.push(like, like);
+    }
   }
 
   if (filters.issuenumber) {

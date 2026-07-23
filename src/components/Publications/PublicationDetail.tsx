@@ -85,46 +85,25 @@ export function PublicationDetail({ publicationcode, onBack, onSelectIssue }: Pu
         setPublication(pubData);
 
         // Fetch all issues of this publication
-        try {
-          // Try with full join
-          const issuesResult = await executeQuery({
-            sql: `
-              SELECT i.issuecode, i.issuenumber, i.title as issue_title, i.pages, i.price, i.oldestdate, i.size, i.attached,
-                     p.title as series_title, p.countrycode, p.publicationcode,
-                     (SELECT pub.publishername FROM inducks_publishingjob pj JOIN inducks_publisher pub ON pj.publisherid = pub.publisherid WHERE pj.issuecode = i.issuecode LIMIT 1) as publishername,
-                     (SELECT eu.sitecode || '|' || eu.url 
-                      FROM inducks_entry e 
-                      JOIN inducks_entryurl eu ON e.entrycode = eu.entrycode 
-                      WHERE e.issuecode = i.issuecode 
-                      LIMIT 1) as issue_thumb
-              FROM inducks_issue i
-              JOIN inducks_publication p ON i.publicationcode = p.publicationcode
-              WHERE i.publicationcode = ?
-              ORDER BY i.oldestdate ASC, i.issuenumber ASC
-            `,
-            args: [publicationcode]
-          });
-          setIssues(issuesResult.rows);
-        } catch (e) {
-          console.warn("Could not fetch issues with JOIN (missing table?). Trying fallback:", e);
-          // Fallback without joining inducks_publication
-          const fallbackResult = await executeQuery({
-            sql: `
-              SELECT i.issuecode, i.issuenumber, i.title as issue_title, i.pages, i.price, i.oldestdate, i.size, i.attached,
-                     ? as series_title, ? as countrycode, ? as publicationcode,
-                     (SELECT eu.sitecode || '|' || eu.url 
-                      FROM inducks_entry e 
-                      JOIN inducks_entryurl eu ON e.entrycode = eu.entrycode 
-                      WHERE e.issuecode = i.issuecode 
-                      LIMIT 1) as issue_thumb
-              FROM inducks_issue i
-              WHERE i.publicationcode = ? OR i.issuecode LIKE ? || ' %'
-              ORDER BY i.oldestdate ASC, i.issuenumber ASC
-            `,
-            args: [pubData.title, pubData.countrycode, pubData.publicationcode, publicationcode, publicationcode]
-          });
-          setIssues(fallbackResult.rows);
-        }
+        // La vignette vient d'issue_thumb (une ligne par numéro, arbitrée au build). La
+        // forme précédente joignait inducks_entryurl — une table SUPPRIMÉE de la base
+        // construite : cette page était donc entièrement cassée, le fallback l'étant
+        // autant. issue.publicationcode est servi par l'index couvrant
+        // (publicationcode, oldestdate, issuenumber), qui rend aussi le tri.
+        const issuesResult = await executeQuery({
+          sql: `
+            SELECT i.issuecode, i.issuenumber, i.title as issue_title, i.pages, i.price, i.oldestdate, i.size, i.attached,
+                   p.title as series_title, p.countrycode, p.publicationcode,
+                   (SELECT pub.publishername FROM inducks_publishingjob pj JOIN inducks_publisher pub ON pj.publisherid = pub.publisherid WHERE pj.issuecode = i.issuecode LIMIT 1) as publishername,
+                   (SELECT it.sitecode || '|' || it.url FROM issue_thumb it WHERE it.issuecode = i.issuecode) as issue_thumb
+            FROM inducks_issue i
+            JOIN inducks_publication p ON i.publicationcode = p.publicationcode
+            WHERE i.publicationcode = ?
+            ORDER BY i.oldestdate ASC, i.issuenumber ASC
+          `,
+          args: [publicationcode]
+        });
+        setIssues(issuesResult.rows);
       } catch (err) {
         console.error("Error fetching publication detail:", err);
       } finally {

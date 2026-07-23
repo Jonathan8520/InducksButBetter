@@ -47,7 +47,7 @@ export function CountryPublications({ countrycode, onBack, onSelectPublication }
         const result = await executeQuery({
           sql: `
             SELECT p.publicationcode, p.title, p.languagecode, p.publicationcomment,
-                   (SELECT COUNT(*) FROM inducks_issue WHERE publicationcode = p.publicationcode) as issueCount
+                   COALESCE(p.issue_count, 0) as issueCount
             FROM inducks_publication p
             WHERE p.countrycode = ?
             ORDER BY p.title ASC

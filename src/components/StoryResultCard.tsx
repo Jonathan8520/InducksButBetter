@@ -240,7 +240,7 @@ export function StoryResultCard({ row, onSelect, onSelectCharacter }: StoryResul
                   </span>
                 )}
                 <h3 className="text-lg font-bold text-foreground leading-tight mb-1 truncate group-hover:text-primary transition-colors">
-                  {cleanText(row.story_title) || t('story.no_title')}
+                  {cleanText(row.story_title) || row.storycode}
                 </h3>
                 <div className="text-[11px] font-mono text-text-hint font-semibold tracking-wider">
                   {row.storycode}

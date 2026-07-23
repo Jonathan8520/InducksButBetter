@@ -218,7 +218,7 @@ export default function CharacterDetail({ charactercode, onSelectStory }: Charac
                   }}
                   className="text-primary hover:underline font-semibold cursor-pointer"
                 >
-                  {firstAppearance.title || "Sans titre"} ({firstAppearance.firstpublicationdate})
+                  {(firstAppearance.title || firstAppearance.storycode)} ({firstAppearance.firstpublicationdate})
                 </span>
               </span>
             </div>
@@ -354,7 +354,7 @@ export default function CharacterDetail({ charactercode, onSelectStory }: Charac
                   >
                     <div className="space-y-0.5 min-w-0">
                       <p className="font-semibold text-foreground text-xs truncate group-hover:text-primary transition-colors">
-                        {story.story_title || "Sans titre"}
+                        {story.story_title || story.storycode}
                       </p>
                       <p className="text-[10px] text-muted-foreground font-mono">{story.storycode}</p>
                     </div>
