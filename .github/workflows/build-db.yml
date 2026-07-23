@@ -89,10 +89,13 @@ jobs:
       - uses: pnpm/action-setup@v3
         with:
           version: 9
+      # PAS de `cache: pnpm` : l'action exige un pnpm-lock.yaml versionné, que ce dépôt n'a
+      # pas — elle échouait donc sur « Dependencies lock file is not found », après avoir
+      # pourtant construit les 2 Go de base. Le cache ne ferait gagner que quelques dizaines
+      # de secondes sur un job qui en dure des milliers.
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
 
       - run: pnpm install
       - run: pnpm run build
