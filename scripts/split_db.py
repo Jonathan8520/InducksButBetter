@@ -55,7 +55,12 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("db")
     ap.add_argument("out_dir")
-    ap.add_argument("--chunk-size", type=int, default=20, help="taille de tranche en Mio")
+    # Fractionnaire À DESSEIN : Cloudflare Pages ne répond PAS 206 aux requêtes Range
+    # (limitation reconnue, cloudflare/workers-sdk#3861) — il renvoie le fichier entier.
+    # La taille de tranche devient donc le coût réel d'une lecture, et il faut pouvoir
+    # descendre sous le Mio. 0.25 => 256 Kio.
+    ap.add_argument("--chunk-size", type=float, default=20,
+                    help="taille de tranche en Mio (fractionnaire accepté, ex. 0.25)")
     ap.add_argument("--keep", action="store_true", help="ne pas vider le dossier de sortie")
     args = ap.parse_args()
 
@@ -63,9 +68,21 @@ def main() -> int:
         print(f"Introuvable : {args.db}", file=sys.stderr)
         return 1
 
-    chunk_bytes = args.chunk_size * MIB
+    chunk_bytes = int(args.chunk_size * MIB)
     if chunk_bytes > 25 * MIB:
         print(f"[!] {args.chunk_size} Mio dépasse la limite de 25 Mio de Cloudflare Pages")
+
+    # La tranche doit rester un multiple de la page SQLite, sinon une page se retrouve à
+    # cheval sur deux fichiers à chaque frontière et double le coût de sa lecture.
+    _ps = sqlite_page_size(args.db)
+    if chunk_bytes % _ps:
+        chunk_bytes = max(_ps, (chunk_bytes // _ps) * _ps)
+        print(f"[split] tranche ajustée à {chunk_bytes} octets (multiple de {_ps})")
+
+    # Cloudflare Pages plafonne à 20 000 fichiers par déploiement.
+    if (os.path.getsize(args.db) + chunk_bytes - 1) // chunk_bytes > 19_000:
+        print(f"[!] plus de 19 000 tranches : on approche la limite de 20 000 fichiers "
+              f"de Cloudflare Pages — augmenter --chunk-size")
 
     total = os.path.getsize(args.db)
     page_size = sqlite_page_size(args.db)

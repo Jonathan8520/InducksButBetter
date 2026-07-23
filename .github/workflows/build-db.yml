@@ -22,7 +22,12 @@ on:
 env:
   # Source officielle. Bascule sur la sauvegarde MEGA tant qu'inducks.org est hors service.
   ISV_BASE: "https://inducks.org/inducks/isv"
-  CHUNK_SIZE_MIB: "20"
+  # 0,25 Mio = 256 Kio. Cloudflare Pages ne répond PAS 206 aux requêtes Range (limitation
+  # reconnue, cloudflare/workers-sdk#3861) : il sert le fichier ENTIER. La taille de tranche
+  # est donc le coût réel d'une lecture. À 20 Mio, toucher une tranche coûtait 20 Mo ; à
+  # 256 Kio, une recherche lourde revient à quelques dizaines de Mo, mis en cache ensuite.
+  # ~8 300 tranches, sous la limite de 20 000 fichiers par déploiement.
+  CHUNK_SIZE_MIB: "0.25"
 
 jobs:
   build:

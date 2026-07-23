@@ -48,7 +48,12 @@ function imageProxyDevPlugin(): Plugin {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/InducksButBetter/',
+  // Racine par défaut. Le déploiement Cloudflare Pages sert le site à la racine du domaine,
+  // alors que la valeur héritée « /InducksButBetter/ » venait de GitHub Pages : les assets
+  // étaient alors cherchés sous /InducksButBetter/assets/, absents, et Cloudflare répondait
+  // index.html — d'où les erreurs « Expected a JavaScript module but got text/html ».
+  // db.ts dérive aussi l'URL de la base de import.meta.env.BASE_URL, donc les deux suivent.
+  base: process.env.VITE_BASE ?? '/',
   plugins: [react(), imageProxyDevPlugin()],
   resolve: {
     alias: {
