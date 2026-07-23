@@ -33,19 +33,84 @@ const TabFallback = () => (
   </div>
 )
 
+interface Route {
+  tab: string;
+  storycode: string | null;
+  issuecode: string | null;
+  personcode: string | null;
+  charactercode: string | null;
+  countrycode: string | null;
+  publicationcode: string | null;
+}
+
+const EMPTY_ROUTE: Route = {
+  tab: "stories", storycode: null, issuecode: null, personcode: null,
+  charactercode: null, countrycode: null, publicationcode: null,
+};
+
+/**
+ * Traduit le hash de l'URL en état de navigation.
+ *
+ * Fonction PURE, appelée à la fois par les initialiseurs useState (premier rendu) et par
+ * l'écouteur hashchange. C'est ce qui règle un bug de démarrage : auparavant, l'effet qui
+ * ÉCRIT l'URL s'exécutait au montage avec un état encore vide et réécrivait
+ * « #/entries/story/... » en « #/entries », effaçant le lien avant que l'effet de lecture
+ * n'ait pris effet. En lisant l'URL dès l'initialisation, le premier rendu porte déjà le
+ * bon état et l'écriture devient un no-op.
+ */
+function parseHash(): Route {
+  const hash = typeof window !== "undefined" ? window.location.hash : "";
+  if (!hash) return { ...EMPTY_ROUTE };
+
+  const parts = decodeURIComponent(hash).replace("#/", "").split("/");
+  const root = parts[0];
+  const r: Route = { ...EMPTY_ROUTE };
+
+  // Un issuecode a la forme « pays/PUB numéro » ; l'URL remplace l'espace par un « / »
+  // pour rester lisible, il faut donc le restaurer.
+  const restoreIssue = (code: string) => {
+    const a = code.split("/");
+    return a.length >= 3 ? `${a[0]}/${a[1]} ${a.slice(2).join("/")}` : code;
+  };
+
+  if (root === "settings") {
+    r.tab = "settings";
+  } else if (root === "entries" || root === "stories" || root === "publications") {
+    r.tab = root === "publications" ? "publications" : "stories";
+    if (parts[1] === "story" && parts[2]) r.storycode = parts.slice(2).join("/");
+    else if (parts[1] === "issue" && parts[2]) r.issuecode = restoreIssue(parts.slice(2).join("/"));
+    else if (parts[1] === "publication" && parts[2]) r.publicationcode = parts.slice(2).join("/");
+  } else if (root === "authors") {
+    r.tab = "authors";
+    if (parts[1]) r.personcode = parts.slice(1).join("/");
+  } else if (root === "characters") {
+    r.tab = "characters";
+    if (parts[1]) r.charactercode = parts.slice(1).join("/");
+  } else if (root === "countries") {
+    r.tab = "countries";
+    if (parts[1]) r.countrycode = parts.slice(1).join("/");
+  } else if (root === "sql") {
+    r.tab = "sql";
+  }
+  return r;
+}
+
 function App() {
   const { i18n, t } = useTranslation();
   useTheme(); // initialise theme from localStorage / system preference
-  const [activeTab, setActiveTab] = useState("stories");
+  // État de navigation initialisé DEPUIS l'URL, de façon synchrone : le premier rendu
+  // porte déjà la bonne fiche si l'on arrive sur un lien direct.
+  const initial = parseHash();
+  const [activeTab, setActiveTab] = useState(initial.tab);
   const [prevTab, setPrevTab] = useState("stories");
   const [sqlQuery, setSqlQuery] = useState("SELECT * FROM inducks_story LIMIT 10");
 
-  const [selectedStorycode, setSelectedStorycode] = useState<string | null>(null);
-  const [selectedIssuecode, setSelectedIssuecode] = useState<string | null>(null);
-  const [selectedPersoncode, setSelectedPersoncode] = useState<string | null>(null);
-  const [selectedCharactercode, setSelectedCharactercode] = useState<string | null>(null);
-  const [selectedCountrycode, setSelectedCountrycode] = useState<string | null>(null);
-  const [selectedPublicationcode, setSelectedPublicationcode] = useState<string | null>(null);
+  const [selectedStorycode, setSelectedStorycode] = useState<string | null>(initial.storycode);
+  const [selectedIssuecode, setSelectedIssuecode] = useState<string | null>(initial.issuecode);
+  const [selectedPersoncode, setSelectedPersoncode] = useState<string | null>(initial.personcode);
+  const [selectedCharactercode, setSelectedCharactercode] = useState<string | null>(initial.charactercode);
+  const [selectedCountrycode, setSelectedCountrycode] = useState<string | null>(initial.countrycode);
+  const [selectedPublicationcode, setSelectedPublicationcode] = useState<string | null>(initial.publicationcode);
 
   // Call route metadata hook to update page title and description
   useRouteMetadata({
@@ -59,70 +124,19 @@ function App() {
   });
 
   useEffect(() => {
+    // L'état initial vient déjà de parseHash (initialiseurs useState) : on ne traite ici
+    // que les changements ultérieurs — retour arrière du navigateur, clic sur un lien.
     const handleUrlRouting = () => {
-      const hash = window.location.hash;
-      
-      // Reset all codes
-      setSelectedStorycode(null);
-      setSelectedIssuecode(null);
-      setSelectedPersoncode(null);
-      setSelectedCharactercode(null);
-      setSelectedCountrycode(null);
-      setSelectedPublicationcode(null);
-
-      if (!hash) {
-        setActiveTab("stories");
-        return;
-      }
-
-      const decodedHash = decodeURIComponent(hash);
-      const parts = decodedHash.replace("#/", "").split("/");
-      const rootPart = parts[0];
-
-      if (rootPart === "settings") {
-        setActiveTab("settings");
-      } else if (rootPart === "entries" || rootPart === "stories") {
-        setActiveTab("stories");
-        if (parts[1] === "story" && parts[2]) {
-          const code = parts.slice(2).join("/");
-          setSelectedStorycode(code);
-        } else if (parts[1] === "issue" && parts[2]) {
-          const code = parts.slice(2).join("/");
-          const partsArr = code.split("/");
-          const restoredCode = partsArr.length >= 3 ? `${partsArr[0]}/${partsArr[1]} ${partsArr.slice(2).join("/")}` : code;
-          setSelectedIssuecode(restoredCode);
-        }
-      } else if (rootPart === "publications") {
-        setActiveTab("publications");
-        if (parts[1] === "publication" && parts[2]) {
-          const code = parts.slice(2).join("/");
-          setSelectedPublicationcode(code);
-        } else if (parts[1] === "story" && parts[2]) {
-          const code = parts.slice(2).join("/");
-          setSelectedStorycode(code);
-        } else if (parts[1] === "issue" && parts[2]) {
-          const code = parts.slice(2).join("/");
-          const partsArr = code.split("/");
-          const restoredCode = partsArr.length >= 3 ? `${partsArr[0]}/${partsArr[1]} ${partsArr.slice(2).join("/")}` : code;
-          setSelectedIssuecode(restoredCode);
-        }
-      } else if (rootPart === "authors") {
-        setActiveTab("authors");
-        if (parts[1]) setSelectedPersoncode(parts.slice(1).join("/"));
-      } else if (rootPart === "characters") {
-        setActiveTab("characters");
-        if (parts[1]) setSelectedCharactercode(parts.slice(1).join("/"));
-      } else if (rootPart === "countries") {
-        setActiveTab("countries");
-        if (parts[1]) setSelectedCountrycode(parts.slice(1).join("/"));
-      } else if (rootPart === "sql") {
-        setActiveTab("sql");
-      } else {
-        setActiveTab("stories");
-      }
+      const r = parseHash();
+      setActiveTab(r.tab);
+      setSelectedStorycode(r.storycode);
+      setSelectedIssuecode(r.issuecode);
+      setSelectedPersoncode(r.personcode);
+      setSelectedCharactercode(r.charactercode);
+      setSelectedCountrycode(r.countrycode);
+      setSelectedPublicationcode(r.publicationcode);
     };
 
-    handleUrlRouting();
     window.addEventListener("popstate", handleUrlRouting);
     window.addEventListener("hashchange", handleUrlRouting);
     return () => {
