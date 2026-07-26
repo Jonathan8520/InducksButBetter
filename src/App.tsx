@@ -91,7 +91,12 @@ function parseHash(): Route {
     r.tab = "characters";
     if (parts[1]) r.charactercode = parts.slice(1).join("/");
   } else if (root === "countries") {
-    r.tab = "countries";
+    // Les pays s'affichent DANS l'onglet Publications (via selectedCountrycode), il n'existe
+    // pas d'onglet "countries". Au rechargement direct de #/countries/xx il faut donc
+    // restaurer l'onglet "publications" — sinon <Tabs value="countries"> n'a aucun contenu
+    // et la page reste blanche (le clic, lui, ne changeait pas activeTab, d'où le bug visible
+    // seulement au refresh).
+    r.tab = "publications";
     if (parts[1]) r.countrycode = parts.slice(1).join("/");
   } else if (root === "sql") {
     r.tab = "sql";

@@ -104,7 +104,7 @@ export function CountryPublications({ countrycode, onBack, onSelectPublication }
                   className="w-6 h-4.5 rounded object-cover shadow-xs border border-border-subtle/10 shrink-0"
                 />
               )}
-              {t("countries.publications_title", { country: countryName }) || `Publications de : ${countryName}`}
+              {t("countries.publications_title", { country: countryName, defaultValue: "Publications de : {{country}}" })}
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               Explorez les magazines et séries Disney publiés dans ce pays.
