@@ -65,8 +65,11 @@ export function useWebLLM() {
     if (onUpdate) {
       const asyncChunkGenerator = await engine.chat.completions.create({
         messages: fullMessages,
-        temperature: 0.1,
-        frequency_penalty: 1.0,
+        // Génération de SQL : température 0 (déterministe, plus fiable) et AUCUNE pénalité de
+        // fréquence — un frequency_penalty > 0 pénalise les mots-clés SQL forcément répétés
+        // (JOIN, ON, =…) et dégrade nettement la sortie. Mesuré sur banc de test.
+        temperature: 0,
+        frequency_penalty: 0,
         stream: true,
       });
 
@@ -81,7 +84,7 @@ export function useWebLLM() {
     } else {
       const reply = await engine.chat.completions.create({
         messages: fullMessages,
-        temperature: 0.1,
+        temperature: 0,
       });
       return reply.choices[0].message.content as string;
     }
