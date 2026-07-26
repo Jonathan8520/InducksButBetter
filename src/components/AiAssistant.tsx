@@ -245,9 +245,11 @@ RÈGLES ABSOLUES :
                 </div>
                 <h3 className="text-lg font-bold text-foreground mb-2">{t("ai.activate_title")}</h3>
                 <p className="text-sm text-text-hint mb-8 max-w-[250px]">
-                  {t("ai.activate_desc", { 
-                    size: modelName === 'Llama-3.2-3B-Instruct-q4f32_1-MLC' ? '(~1.8 Go) ' : 
-                          modelName === 'TinyLlama-1.1B-Chat-v1.0-q4f32_1-MLC' ? '(~600 Mo) ' : 
+                  {t("ai.activate_desc", {
+                    size: modelName === 'Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC' ? '(~950 Mo) ' :
+                          modelName === 'Qwen2.5-Coder-0.5B-Instruct-q4f16_1-MLC' ? '(~500 Mo) ' :
+                          modelName === 'Llama-3.2-3B-Instruct-q4f32_1-MLC' ? '(~1.8 Go) ' :
+                          modelName === 'TinyLlama-1.1B-Chat-v1.0-q4f32_1-MLC' ? '(~600 Mo) ' :
                           modelName === 'Llama-3.2-1B-Instruct-q4f32_1-MLC' ? '(~850 Mo) ' :
                           ''
                   })}

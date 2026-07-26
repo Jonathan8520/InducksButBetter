@@ -1,9 +1,15 @@
 import { useState, useCallback, useEffect } from 'react';
 import { CreateWebWorkerMLCEngine, InitProgressCallback, MLCEngineInterface, ChatCompletionMessageParam, hasModelInCache } from '@mlc-ai/web-llm';
 
-// Reverted to Llama-3.2-1B f32. The 3B model is too heavy for the GPU
-// and causes a complete WebGPU crash at the browser level!
-export const DEFAULT_MODEL = 'Llama-3.2-1B-Instruct-q4f32_1-MLC';
+// Modèle local (WebLLM/WebGPU) pour l'assistant langage -> SQL.
+//
+// Qwen2.5-Coder-1.5B : le meilleur PETIT modèle sur le texte->SQL (spécialisé code, il bat
+// nettement un généraliste comme Llama-3.2-1B à taille comparable). Quantifié q4f16, il pèse
+// à peine plus que l'ancien Llama-1B q4f32 (~950 Mo vs 850) pour une qualité SQL bien
+// supérieure. VRAM ~1,6 Go : sans risque — seul le modèle 3B provoquait un crash WebGPU.
+// Alternative plus légère si besoin : 'Qwen2.5-Coder-0.5B-Instruct-q4f16_1-MLC' (moitié du
+// poids, mais moins fiable sur les requêtes complexes).
+export const DEFAULT_MODEL = 'Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC';
 
 export function useWebLLM() {
   const [engine, setEngine] = useState<MLCEngineInterface | null>(null);
