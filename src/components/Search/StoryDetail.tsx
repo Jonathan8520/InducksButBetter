@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { getFlagUrl } from "@/lib/utils"
 import { toast } from "sonner"
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
+import { KindBadge } from "@/components/KindBadge"
+import { EntityBadge } from "@/components/EntityBadge"
 
 interface StoryDetailProps {
   storycode: string
@@ -152,9 +153,7 @@ export function StoryDetail({ storycode, onBack, onSelectIssue, onSelectCharacte
                 </>
               )}
               <div className="flex items-center gap-1.5 ml-2">
-                <Badge variant="secondary" className="font-medium text-[10px]">
-                  {story.kind ? (t(`kinds.${story.kind}`, story.kind) as string) : (t("kinds.s") as string)}
-                </Badge>
+                <KindBadge kind={story.kind || "s"} />
                 {(story.entirepages || story.brokenpagenumerator) && (
                   <Badge variant="outline" className="font-medium text-[10px] gap-1 bg-surface">
                     <FileText className="w-3 h-3" />
@@ -247,13 +246,11 @@ export function StoryDetail({ storycode, onBack, onSelectIssue, onSelectCharacte
                     Scénaristes
                   </h4>
                   {writers.length > 0 ? (
-                    <ul className="space-y-1">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1.5">
                       {writers.map((c: any) => (
-                        <li key={`${c.personcode}-${c.role}`} className="text-sm font-semibold text-foreground">
-                          {c.fullname}
-                        </li>
+                        <EntityBadge key={`${c.personcode}-${c.role}`} type="creator" code={c.personcode} name={c.fullname} />
                       ))}
-                    </ul>
+                    </div>
                   ) : (
                     <p className="text-xs text-text-secondary italic">Non crédité.</p>
                   )}
@@ -268,13 +265,11 @@ export function StoryDetail({ storycode, onBack, onSelectIssue, onSelectCharacte
                     Dessinateurs
                   </h4>
                   {artists.length > 0 ? (
-                    <ul className="space-y-1">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1.5">
                       {artists.map((c: any) => (
-                        <li key={`${c.personcode}-${c.role}`} className="text-sm font-semibold text-foreground">
-                          {c.fullname}
-                        </li>
+                        <EntityBadge key={`${c.personcode}-${c.role}`} type="creator" code={c.personcode} name={c.fullname} />
                       ))}
-                    </ul>
+                    </div>
                   ) : (
                     <p className="text-xs text-text-secondary italic">Non crédité.</p>
                   )}
@@ -308,42 +303,16 @@ export function StoryDetail({ storycode, onBack, onSelectIssue, onSelectCharacte
               <CardContent className="p-4">
                 {story.characters && story.characters.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {story.characters.map((c: any) => {
-                      const avatarUrl = `/api/proxy-image?url=${encodeURIComponent(
-                        `https://inducks.org/characterthumb.php?c=${c.charactercode}`
-                      )}`
-                      return (
-                        <Tooltip key={c.charactercode} delayDuration={300}>
-                          <TooltipTrigger asChild>
-                            <div
-                              className="flex items-center gap-2 bg-surface-2 border border-border-subtle px-2.5 py-1 rounded-xl text-xs font-semibold text-text-body cursor-pointer hover:bg-surface-3 active:scale-98 transition-all"
-                              onClick={() => onSelectCharacter && onSelectCharacter(c.charactercode, c.charactername || c.charactercode)}
-                            >
-                              <img
-                                src={avatarUrl}
-                                alt=""
-                                className="w-5 h-5 rounded-full object-cover bg-surface-3 shrink-0"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = "none"
-                                }}
-                              />
-                              <span>{c.charactername || c.charactercode}</span>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-[300px] text-xs leading-relaxed">
-                            <div className="flex flex-col gap-0.5">
-                              <p className="font-bold text-foreground">{c.charactername || c.charactercode}</p>
-                              <p className="text-[10px] text-muted-foreground font-mono">{c.charactercode}</p>
-                              {c.charactercomment && (
-                                <p className="text-[10px] text-text-secondary mt-1 border-t border-border-subtle pt-1 italic">
-                                  {c.charactercomment}
-                                </p>
-                              )}
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      )
-                    })}
+                    {story.characters.map((c: any) => (
+                      <EntityBadge
+                        key={c.charactercode}
+                        type="character"
+                        code={c.charactercode}
+                        name={c.charactername || c.charactercode}
+                        charComment={c.charactercomment}
+                        onSelect={onSelectCharacter}
+                      />
+                    ))}
                   </div>
                 ) : (
                   <p className="text-xs text-text-secondary italic">Aucun personnage répertorié.</p>

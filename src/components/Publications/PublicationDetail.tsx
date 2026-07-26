@@ -30,6 +30,9 @@ export function PublicationDetail({ publicationcode, onBack, onSelectIssue, onSe
   const [publication, setPublication] = useState<PublicationDetailData | null>(null);
   const [issues, setIssues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  // Pagination par années : les grosses publications (Super Picsou Géant ~254 numéros)
+  // affichent d'abord 5 années, puis « afficher plus ». Porté du dépôt amont.
+  const [visibleYears, setVisibleYears] = useState(5);
 
   const groupedIssues = useMemo(() => {
     return Object.entries(
@@ -44,6 +47,9 @@ export function PublicationDetail({ publicationcode, onBack, onSelectIssue, onSe
       }, {})
     );
   }, [issues]);
+
+  const displayedYears = useMemo(() => groupedIssues.slice(0, visibleYears), [groupedIssues, visibleYears]);
+  useEffect(() => { setVisibleYears(5); }, [publicationcode]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -237,7 +243,7 @@ export function PublicationDetail({ publicationcode, onBack, onSelectIssue, onSe
                 </div>
               ) : (
                 <div className="space-y-8 pb-4 pr-2">
-                  {groupedIssues.map(([year, yearIssues]) => (
+                  {displayedYears.map(([year, yearIssues]) => (
                     <div key={year} className="space-y-3">
                       <div className="flex items-center gap-3">
                         <h3 className="font-bold text-foreground text-base tracking-tight">{year}</h3>
@@ -274,6 +280,17 @@ export function PublicationDetail({ publicationcode, onBack, onSelectIssue, onSe
                       </div>
                     </div>
                   ))}
+                  {groupedIssues.length > visibleYears && (
+                    <div className="flex justify-center pt-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setVisibleYears((n) => n + 5)}
+                        className="rounded-xl"
+                      >
+                        {t("publication.show_more_years", { defaultValue: "Afficher plus d'années" })}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>

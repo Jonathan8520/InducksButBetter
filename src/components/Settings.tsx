@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { loadFromIsvFiles, hasLocalDb, getLocalDbStats } from "@/lib/localDb"
 import { LegalModal } from "@/components/LegalModal"
+import { SUPPORTED_LANGUAGES, resolveLanguage } from "@/lib/languages"
 
 export function Settings() {
   const { t, i18n } = useTranslation()
@@ -170,15 +171,9 @@ export function Settings() {
     { value: "system", icon: Monitor, label: t("theme.system") || "Système" },
   ] as const
 
-  const languagesList = [
-    { code: "fr", name: "Français (FR)", flag: "https://flagcdn.com/w20/fr.png" },
-    { code: "en", name: "English (US)", flag: "https://flagcdn.com/w20/us.png" },
-    { code: "de", name: "Deutsch (DE)", flag: "https://flagcdn.com/w20/de.png" },
-    { code: "es", name: "Español (ES)", flag: "https://flagcdn.com/w20/es.png" },
-    { code: "it", name: "Italiano (IT)", flag: "https://flagcdn.com/w20/it.png" },
-    { code: "pt", name: "Português (PT)", flag: "https://flagcdn.com/w20/pt.png" },
-  ];
-  const currentLang = languagesList.find(l => l.code === i18n.language) || languagesList[1];
+  // Liste des langues centralisée dans @/lib/languages (source unique, partagée avec le
+  // sélecteur d'en-tête). resolveLanguage retire le sous-tag régional (en-US -> en).
+  const currentLang = resolveLanguage(i18n.resolvedLanguage || i18n.language);
 
   return (
     <div className="w-full max-w-4xl mx-auto p-4 lg:p-8 space-y-8 pb-20">
@@ -206,19 +201,19 @@ export function Settings() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label className="text-xs font-semibold">{t("settings.language") || "Langue"}</Label>
-              <Select value={i18n.language} onValueChange={(lang) => i18n.changeLanguage(lang)}>
+              <Select value={currentLang.code} onValueChange={(lang) => i18n.changeLanguage(lang)}>
                 <SelectTrigger className="w-full h-10 border-border-subtle bg-surface/50 rounded-xl hover:bg-surface-2">
                   <div className="flex items-center gap-2">
-                    <img 
-                      src={currentLang.flag} 
-                      className="w-4 h-3 rounded-xs shrink-0 object-cover" 
-                      alt="" 
+                    <img
+                      src={currentLang.flag}
+                      className="w-4 h-3 rounded-xs shrink-0 object-cover"
+                      alt=""
                     />
                     <span>{currentLang.name}</span>
                   </div>
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-border-subtle bg-surface">
-                  {languagesList.map((l) => (
+                  {SUPPORTED_LANGUAGES.map((l) => (
                     <SelectItem key={l.code} value={l.code} className="rounded-lg">
                       <div className="flex items-center gap-2">
                         <img src={l.flag} className="w-4 h-3 rounded-xs shrink-0 object-cover" alt="" />

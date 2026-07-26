@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { ThemeToggle } from "@/components/ThemeToggle"
+import { LanguageToggle } from "@/components/LanguageToggle"
 import { LocalDbUploader } from "@/components/LocalDbUploader"
 import { GoogleAnalytics } from "@/components/GoogleAnalytics"
 import { LegalModal } from "@/components/LegalModal"
@@ -262,6 +263,8 @@ function App() {
             </div>
 
             <div className="flex flex-row items-center gap-2">
+              <LanguageToggle />
+              <ThemeToggle />
               <Button
                 variant="ghost"
                 size="icon"

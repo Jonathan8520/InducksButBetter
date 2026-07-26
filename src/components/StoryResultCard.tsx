@@ -8,9 +8,9 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-  TooltipArrow,
 } from "@/components/ui/tooltip"
-import { CreatorBadge } from "@/components/CreatorBadge"
+import { KindBadge } from "@/components/KindBadge"
+import { EntityBadge } from "@/components/EntityBadge"
 import { FlagBadge } from "@/components/FlagBadge"
 
 interface StoryResultCardProps {
@@ -256,7 +256,7 @@ export function StoryResultCard({ row, onSelect, onSelectCharacter }: StoryResul
                     : (row.brokenpagenumerator && row.brokenpagedenominator)
                       ? `${row.brokenpagenumerator}/${row.brokenpagedenominator}`
                       : "?"
-                } {t('story.pages')} · <span className="text-primary/80 font-medium">{t(`kinds.${row.kind}`) || row.kind}</span>
+                } {t('story.pages')} · <KindBadge kind={row.kind} />
               </div>
               <div className="text-[11px] text-text-secondary">
                 <span className="font-bold text-text-body">{t('story.release_date')} :</span> {formatDate(row.firstpublicationdate)}
@@ -308,79 +308,32 @@ export function StoryResultCard({ row, onSelect, onSelectCharacter }: StoryResul
               <div className="text-[11px] flex items-center gap-1.5 flex-wrap">
                 <span className="font-bold text-text-secondary tracking-tighter mr-0.5">{t('story.script')} :</span>
                 {writers.length > 0 ? writers.map((w: any, i: number) => (
-                  <CreatorBadge key={i} code={w.code} name={w.name} />
+                  <EntityBadge key={i} type="creator" code={w.code} name={w.name} />
                 )) : <span className="text-text-hint">?</span>}
               </div>
               <div className="text-[11px] flex items-center gap-1.5 flex-wrap">
                 <span className="font-bold text-text-secondary tracking-tighter mr-0.5">{t('story.art')} :</span>
                 {artists.length > 0 ? artists.map((a: any, i: number) => (
-                  <CreatorBadge key={i} code={a.code} name={a.name} size="sm" />
+                  <EntityBadge key={i} type="creator" code={a.code} name={a.name} size="sm" />
                 )) : <span className="text-text-hint">?</span>}
               </div>
             </div>
 
-            {/* Characters section */}
-            <div className="flex flex-row flex-wrap gap-2 border-t border-border-subtle dark:border-border">
-              {characters.slice(0, 15).map((c: any, i: number) => {
-                const charImageUrl = c.url
-                  ? `/api/proxy-image?url=${encodeURIComponent(`https://inducks.org/hr.php?normalsize=1&image=https://outducks.org/webusers/${c.url.startsWith('/') ? c.url.substring(1) : c.url}`)}`
-                  : `/api/proxy-image?url=${encodeURIComponent(`https://inducks.org/characterthumb.php?c=${c.code}`)}`;
-
-                return (
-                  <div key={i} className="flex items-center gap-1.5 w-fit group/char">
-                    <Tooltip delayDuration={300}>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center gap-1.5 cursor-pointer">
-                          <div 
-                            className="w-4 h-4 rounded-full overflow-hidden border-border-subtle border bg-surface-2 shrink-0 shadow-sm relative flex items-center justify-center"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (onSelectCharacter) onSelectCharacter(c.code, c.name);
-                              else window.open(`https://inducks.org/character.php?c=${c.code}`, "_blank");
-                            }}
-                          >
-                            <span className="text-[6px] font-bold text-text-hint absolute inset-0 flex items-center justify-center uppercase leading-none tracking-tighter">
-                              {c.code}
-                            </span>
-                            <img 
-                              src={charImageUrl}
-                              alt={c.name}
-                              className="w-full h-full object-cover z-10 relative"
-                              onError={(e) => (e.currentTarget.style.display = 'none')}
-                            />
-                          </div>
-                          <span 
-                            className="text-[10px] text-primary hover:text-primary hover:underline font-medium whitespace-nowrap"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (onSelectCharacter) onSelectCharacter(c.code, c.name);
-                              else window.open(`https://inducks.org/character.php?c=${c.code}`, "_blank");
-                            }}
-                          >
-                            {c.name}
-                          </span>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-[300px] text-xs leading-relaxed">
-                        <div className="flex flex-col gap-0.5">
-                          <p className="font-bold">
-                            {c.name}
-                            <span className="ml-1 text-[10px] text-text-hint font-mono">({c.code})</span>
-                          </p>
-                          {c.charComment && <p className="text-text-secondary italic leading-snug">{c.charComment}</p>}
-                        </div>
-                        <TooltipArrow className="fill-popover" />
-                      </TooltipContent>
-                    </Tooltip>
-
-                    {c.appComment && (
-                      <span className="text-[9px] text-text-hint italic whitespace-nowrap">
-                        ({c.appComment})
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
+            {/* Characters section — via EntityBadge (avatar + tooltip + lien), porté du dépôt
+                amont. Les données restent les nôtres (character_list, séparateur ';'). */}
+            <div className="flex flex-row flex-wrap gap-2 border-t border-border-subtle dark:border-border pt-3">
+              {characters.slice(0, 15).map((c: any, i: number) => (
+                <EntityBadge
+                  key={i}
+                  type="character"
+                  code={c.code}
+                  name={c.name}
+                  url={c.url}
+                  appComment={c.appComment}
+                  charComment={c.charComment}
+                  onSelect={onSelectCharacter}
+                />
+              ))}
               {characters.length > 15 && (
                 <span className="text-[10px] text-text-hint font-medium pl-1 self-start">
                   +{characters.length - 15}
