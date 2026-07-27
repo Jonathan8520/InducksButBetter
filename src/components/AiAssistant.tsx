@@ -107,10 +107,11 @@ export function AiAssistant({ onCopyToEditor }: AiAssistantProps) {
     setIsGenerating(true)
 
     try {
-      // Prompt système enrichi et mesuré (cf. src/lib/aiSqlPrompt.ts) : schéma élargi,
-      // conventions impératives (perso vs auteur, codes pays en minuscules, dates, rôles) et
-      // ~15 exemples couvrant les motifs réels. Fait passer Qwen2.5-Coder-1.5B de ~20% à ~88%
-      // de SQL correct sur un banc de 32 requêtes rejouées contre la base.
+      // Prompt système mesuré (cf. src/lib/aiSqlPrompt.ts). Deux objectifs : SQL CORRECT et
+      // SQL LÉGER. La v3 fait viser au modèle les tables pré-calculées (story_count,
+      // person_stories, character_stories…) au lieu des tables brutes : mêmes réponses, mais
+      // une requête passe de ~66 Mo de tranches téléchargées à ~1,8 Mo (30-75× moins), ce qui
+      // évite de saturer le navigateur. Banc : 11/12 requêtes courantes correctes.
       const systemPrompt = SQL_SYSTEM_PROMPT;
 
       // Prepare an empty bubble for the assistant's response

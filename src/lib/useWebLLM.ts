@@ -65,11 +65,20 @@ export function useWebLLM() {
     if (onUpdate) {
       const asyncChunkGenerator = await engine.chat.completions.create({
         messages: fullMessages,
-        // Génération de SQL : température 0 (déterministe, plus fiable) et AUCUNE pénalité de
-        // fréquence — un frequency_penalty > 0 pénalise les mots-clés SQL forcément répétés
-        // (JOIN, ON, =…) et dégrade nettement la sortie. Mesuré sur banc de test.
-        temperature: 0,
+        // Génération de SQL : température BASSE mais non nulle. 0.1 reste quasi déterministe
+        // (bon pour du SQL) tout en évitant les boucles de répétition du décodage glouton
+        // (temp 0), qui peuvent figer la génération jusqu'au bout du contexte. AUCUNE pénalité
+        // de fréquence — un frequency_penalty > 0 pénalise les mots-clés SQL forcément répétés
+        // (JOIN, ON, =…) et dégrade la sortie. Réglages mesurés sur banc de test.
+        temperature: 0.1,
         frequency_penalty: 0,
+        // BORNE INDISPENSABLE. Sans elle, le modèle — dont le prompt est rempli d'exemples
+        // « Q: … ```sql … ``` » — peut ENCHAÎNER de faux exemples au lieu de s'arrêter, et
+        // générer jusqu'à saturer le contexte : plusieurs minutes de « ... » sur un GPU
+        // modeste. Une requête SQL tient en < 200 tokens ; on plafonne, et on coupe net si le
+        // modèle amorce une nouvelle question.
+        max_tokens: 400,
+        stop: ["\nQ:", "\nRequête utilisateur"],
         stream: true,
       });
 
@@ -84,7 +93,9 @@ export function useWebLLM() {
     } else {
       const reply = await engine.chat.completions.create({
         messages: fullMessages,
-        temperature: 0,
+        temperature: 0.1,
+        max_tokens: 400,
+        stop: ["\nQ:", "\nRequête utilisateur"],
       });
       return reply.choices[0].message.content as string;
     }
