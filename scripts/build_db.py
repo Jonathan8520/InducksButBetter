@@ -36,7 +36,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from schema_spec import (  # noqa: E402
     DROP_TABLES, STAGING_TABLES, DROP_COLUMNS, PRIMARY_KEYS,
-    DERIVED_COLUMNS, MATERIALIZED, INDEXES, FTS_TABLES, NORMALIZED_COLUMNS,
+    DERIVED_COLUMNS, MATERIALIZED, INDEXES, FTS_TABLES, NORMALIZED_COLUMNS, VIEWS,
 )
 
 try:
@@ -488,6 +488,21 @@ def main() -> int:
         size_fts = os.path.getsize(args.out_db)
         print(f"[build] {n} tables FTS5 en {time.time()-t:.1f}s — {human(size_fts)} "
               f"(+{human(max(size_fts - size_idx, 0))})")
+
+    # --- Vues aplaties (assistant SQL) -------------------------------------------------
+    # Elles réunissent nom + données pour que le petit modèle IA n'ait pas à joindre la
+    # dimension (cf. schema_spec §6). Aucune page de données ajoutée : c'est de la réécriture
+    # de requête. Créées en dernier : elles dépendent des tables regroupées et des dimensions.
+    if VIEWS:
+        print("\n[build] vues aplaties")
+        for name, ddl in VIEWS:
+            try:
+                db.execute(f'DROP VIEW IF EXISTS "{name}"')
+                db.execute(ddl)
+                print(f"  ok {name}")
+            except sqlite3.OperationalError as exc:
+                print(f"  [!] {name} : {exc}")
+        db.commit()
 
     # Récapitulatif des pertes. Une clé primaire mal choisie peut faire disparaître une
     # part énorme d'une table sans que rien n'échoue : mesuré, une clé

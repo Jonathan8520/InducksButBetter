@@ -740,3 +740,42 @@ FTS_TABLES: list[tuple[str, str, str, list[str], str]] = [
     ("fts_publication", "inducks_publication", "publicationcode",
      ["publicationcode", "title_norm"], "trigram"),
 ]
+
+
+# ======================================================================================
+# 6. VUES APLATIES (pour l'assistant SQL en langage naturel)
+# ======================================================================================
+# L'assistant IA (petit modèle 1.5B local) génère du SQL sur ce schéma. Sur les tables
+# regroupées, il devait joindre la dimension pour filtrer par nom (person_stories n'a pas
+# de fullname, character_stories pas de charactername) — et il « oubliait » la jointure une
+# fois sur cinq, produisant « no such column: fullname ». Ces vues APLATIES réunissent nom
+# et données : le modèle interroge une seule table, sans jointure, sans se tromper de
+# colonne. Mesuré : justesse 85 % -> 95 %.
+#
+# Une vue ne coûte aucune page de données (c'est une réécriture de requête). Le planificateur
+# attaque la petite table dimension par son nom, puis la table regroupée par clé : la
+# consommation reste basse (mesuré : liste d'un auteur = 1 tranche, personnage = ~16).
+#
+# La vue personnage réunit le nom PAR DÉFAUT (inducks_character, tous les personnages) et les
+# noms TRADUITS (inducks_charactername) : « Picsou » (fr) comme « Scrooge » (en) matchent.
+#
+# Format : (nom, DDL)
+VIEWS: list[tuple[str, str]] = [
+    ("v_author_stories", """
+        CREATE VIEW v_author_stories AS
+        SELECT p.personcode, p.fullname, p.nationalitycountrycode, p.story_count,
+               ps.storycode, ps.story_title, ps.firstpublicationdate
+        FROM person_stories ps
+        JOIN inducks_person p ON p.personcode = ps.personcode
+     """),
+    ("v_character_stories", """
+        CREATE VIEW v_character_stories AS
+        SELECT cs.charactercode, nm.charactername, c.appearancecount,
+               cs.storycode, cs.story_title, cs.firstpublicationdate
+        FROM character_stories cs
+        JOIN inducks_character c ON c.charactercode = cs.charactercode
+        JOIN (SELECT charactercode, charactername FROM inducks_character
+              UNION SELECT charactercode, charactername FROM inducks_charactername) nm
+          ON nm.charactercode = cs.charactercode
+     """),
+]
