@@ -463,6 +463,8 @@ const es: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     io: "{{req}} lecturas de red, {{size}}",
     hint: "Escribe una consulta y pulsa Ejecutar. Las columnas storycode, issuecode, personcode y charactercode se convierten en enlaces.",
     ex: {
+      thisWeek: "Novedades de la semana en el mundo",
+      debuts1950: "Personajes aparecidos en 1950",
       mostPrinted: "Historias más publicadas",
       barksNotInFrance: "Barks nunca publicado en Francia",
       titleSearch: "Títulos que contienen «treasure»",

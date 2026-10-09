@@ -463,6 +463,8 @@ const nl: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     io: "{{req}} netwerkverzoeken, {{size}}",
     hint: "Schrijf een query en klik op Uitvoeren. De kolommen storycode, issuecode, personcode en charactercode worden links.",
     ex: {
+      thisWeek: "Verschenen deze week wereldwijd",
+      debuts1950: "Personages met debuut in 1950",
       mostPrinted: "Vaakst gepubliceerde verhalen",
       barksNotInFrance: "Barks, nooit verschenen in Frankrijk",
       titleSearch: "Titels met ‘treasure’",

@@ -7,6 +7,8 @@ story(sid INTEGER PK, storycode TEXT UNIQUE, title, date "first publication AAAA
 story_title(sid, lang, title) PK(sid, lang) -- title of the first printing in each language (fr, en, de, it, nl, da, fi, no, sv, es, pt…)
 story_search(sid PK, date, kind, pages REAL, pubs, hero) -- narrow copy of story for fast filtering
 story_rank(rank INTEGER PK, sid) -- rank 1 = most printed story
+story_pick(n INTEGER PK, storycode) -- the 3000 most printed illustrated stories (story of the day)
+issue_latest(countrycode, date, issuecode, publicationcode, number, title, img, stories, ptitle, PK(countrycode, date, issuecode)) -- 80 latest issues per country, cheap for "recent releases"
 story_code(code, sid) -- lower-case storycodes without spaces, e.g. 'wos386-02'
 story_pub(sid, date, issuecode, pos, title, lang, part) PK(sid, date, issuecode, pos) -- every printing of a story
 story_country(countrycode, sid, first) PK(countrycode, sid) -- countries where a story was printed, with first date there
@@ -95,6 +97,22 @@ WHERE stories > 0 AND nationality IS NOT NULL
 GROUP BY nationality
 ORDER BY stories DESC
 LIMIT 20`,
+  },
+  {
+    label: "ex.thisWeek",
+    sql: `SELECT l.date, l.issuecode, l.ptitle AS publication, l.number, c.name AS country
+FROM issue_latest l JOIN country c ON c.code = l.countrycode
+WHERE l.date >= date('now', '-7 days')
+ORDER BY l.date DESC, l.countrycode
+LIMIT 100`,
+  },
+  {
+    label: "ex.debuts1950",
+    sql: `SELECT c.code AS charactercode, c.name, c.first, c.stories
+FROM character c
+WHERE c.first >= '1950' AND c.first < '1951'
+ORDER BY c.stories DESC
+LIMIT 25`,
   },
   {
     label: "ex.gyroDebut",

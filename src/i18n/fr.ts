@@ -459,6 +459,8 @@ const fr = {
     io: "{{req}} lectures réseau, {{size}}",
     hint: "Écrivez une requête puis Exécuter. Les colonnes storycode, issuecode, personcode et charactercode deviennent des liens.",
     ex: {
+      thisWeek: "Parutions de la semaine dans le monde",
+      debuts1950: "Personnages apparus en 1950",
       mostPrinted: "Les histoires les plus publiées",
       barksNotInFrance: "Barks jamais publié en France",
       titleSearch: "Titres contenant « trésor »",

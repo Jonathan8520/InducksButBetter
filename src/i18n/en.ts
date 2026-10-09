@@ -463,6 +463,8 @@ const en: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     io: "{{req}} network reads, {{size}}",
     hint: "Write a query, then Run. storycode, issuecode, personcode and charactercode columns become links.",
     ex: {
+      thisWeek: "This week's releases worldwide",
+      debuts1950: "Characters who debuted in 1950",
       mostPrinted: "Most printed stories",
       barksNotInFrance: "Barks never printed in France",
       titleSearch: "Titles containing “treasure”",
