@@ -115,6 +115,8 @@ export interface StoryDetail extends StoryCard {
   refs: { sid: number; storycode: string; title: string | null; kind: string | null; dir: "in" | "out"; reason: string | null }[];
   refCount: number;
   links: { site: string; name: string | null; url: string }[];
+  /** Numéro de première parution. */
+  firstIssue: { issuecode: string; publicationcode: string; title: string } | null;
 }
 
 interface StoryDoc {
@@ -133,6 +135,7 @@ interface StoryDoc {
   pubs: number | null;
   countries: number | null;
   header: [string, string] | null;
+  first: [string, string | null] | null;
   comment: string | null;
   plot: string | null;
   titles: Record<string, string> | null;
@@ -170,7 +173,8 @@ export async function storyDetail(code: string): Promise<StoryDetail | null> {
   const reasonIds = [...new Set((d.refs ?? []).map((r) => r[4]).filter((x): x is number => x !== null))];
   const seriesCodes = d.series ?? [];
 
-  const [names, charNames, series, reasons] = await Promise.all([
+  const firstPub = d.first ? (d.first[1] ?? d.first[0].split(/\s+/)[0]) : null;
+  const [names, charNames, series, reasons, pubTitles] = await Promise.all([
     personNames(personCodes),
     characterNames([...chars.map((c) => c[0]), ...(d.hero ? [d.hero] : [])]),
     seriesCodes.length
@@ -188,6 +192,7 @@ export async function storyDetail(code: string): Promise<StoryDetail | null> {
           [...reasonIds, lang],
         )
       : Promise.resolve([]),
+    firstPub ? publicationTitles([firstPub]) : Promise.resolve(new Map<string, { title: string; countrycode: string }>()),
   ]);
 
   const reasonText = (id: number | null) => {
@@ -255,6 +260,14 @@ export async function storyDetail(code: string): Promise<StoryDetail | null> {
     })),
     refCount: d.refCount ?? 0,
     links: (d.links ?? []).map(([site, name, url]) => ({ site, name, url })),
+    firstIssue:
+      d.first && firstPub
+        ? {
+            issuecode: d.first[0],
+            publicationcode: firstPub,
+            title: `${pubTitles.get(firstPub)?.title ?? firstPub} ${d.first[0].slice(firstPub.length).trim()}`,
+          }
+        : null,
   };
 }
 

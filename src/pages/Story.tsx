@@ -273,7 +273,19 @@ export default function Story() {
 
           <Facts
             items={[
-              [t("story.firstPublished"), formatDate(s.date)],
+              [
+                t("story.firstPublished"),
+                s.firstIssue ? (
+                  <span className="fact-stack">
+                    <span>{formatDate(s.date)}</span>
+                    <Link className="link" to={routes.issue(s.firstIssue.issuecode, s.firstIssue.publicationcode)}>
+                      {s.firstIssue.title}
+                    </Link>
+                  </span>
+                ) : (
+                  formatDate(s.date)
+                ),
+              ],
               [t("story.kind"), kindLabel(s.kind)],
               [t("story.pages"), s.pages ? t("story.pagesN", { n: s.pages }) : ""],
               [t("story.rows"), s.rows ? t("story.rowsN", { count: s.rows }) : ""],

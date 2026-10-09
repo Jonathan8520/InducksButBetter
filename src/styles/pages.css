@@ -1758,3 +1758,10 @@
   background: var(--marker-soft);
   color: var(--ink);
 }
+
+/* Valeur de fait sur deux lignes (date puis numéro, par exemple). */
+.fact-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

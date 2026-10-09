@@ -605,6 +605,10 @@ step("story_doc", """
       'pages', s.pages, 'num', s.num, 'den', s.den, 'rows', s.rows, 'hero', s.hero,
       'creators', s.creators, 'img', s.img, 'pubs', s.pubs, 'countries', s.countries,
       'header', (SELECT json_array(h.code, h.title) FROM storyheader h WHERE h.code = s.header),
+      -- Numéro de première parution (le plus petit code parmi ceux de la même date).
+      'first', json((SELECT json_array(e.issuecode, e.publicationcode) FROM _entry e
+                     WHERE e.storycode = s.storycode AND e.date = s.date
+                     ORDER BY e.issuecode LIMIT 1)),
       'comment', t.comment,
       'titles', json((SELECT json_group_object(lang, title) FROM story_title x WHERE x.sid = s.sid)),
       'desc', json((SELECT json_group_object(lang, text) FROM story_desc x WHERE x.sid = s.sid)),
