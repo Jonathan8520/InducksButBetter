@@ -184,11 +184,10 @@ export interface IssueTile {
 export async function latestIssues(country: string, limit = 18): Promise<IssueTile[]> {
   const today = new Date().toISOString().slice(0, 10);
   const r = await rows<IssueTile & { publicationTitle: string }>(
-    `SELECT i.issuecode, i.publicationcode, i.number, i.title, i.date, i.img, i.stories,
-            p.title AS publicationTitle
-     FROM issue i LEFT JOIN publication_label p ON p.code = i.publicationcode
-     WHERE i.countrycode = ? AND i.date <= ? AND i.date >= '1900'
-     ORDER BY i.date DESC LIMIT ?`,
+    // issue_latest : les 80 derniers numéros de chaque pays, précalculés chaque nuit.
+    `SELECT issuecode, publicationcode, number, title, date, img, stories, ptitle AS publicationTitle
+     FROM issue_latest WHERE countrycode = ? AND date <= ?
+     ORDER BY date DESC LIMIT ?`,
     [country, today, limit * 2],
   );
   // Une publication très prolifique (quotidiens) ne doit pas occuper toute l'étagère.

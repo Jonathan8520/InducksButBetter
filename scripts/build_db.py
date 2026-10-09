@@ -387,7 +387,8 @@ step("story_search", """
            COALESCE(pages, 0) + CASE WHEN den > 0 THEN 1.0 * num / den ELSE 0 END,
            pubs, hero
     FROM story""",
-    "CREATE INDEX story_search_date ON story_search(date, kind)",
+    # Index couvrant (sid est la clé) : « parues tel mois, les plus publiées » sans lire la table.
+    "CREATE INDEX story_search_date ON story_search(date, kind, pubs)",
     "CREATE INDEX story_search_pubs ON story_search(pubs)")
 
 # Rang de popularité : l'index plein texte des titres est numéroté dans cet ordre, si bien
@@ -1006,6 +1007,32 @@ step("issue_collecting", """
 # Noms seuls, sans commentaires ni compteurs : quelques centaines de Ko en tout, vite mis en
 # cache par le navigateur. Chaque page qui affiche des auteurs, des personnages ou des
 # publications y résout ses noms au lieu de descendre dans les grosses tables.
+
+# Histoire du jour : les 3 000 vraies histoires illustrées les plus publiées, numérotées.
+step("story_pick", """
+    CREATE TABLE story_pick (n INTEGER PRIMARY KEY, storycode TEXT)""", """
+    INSERT INTO story_pick (n, storycode)
+    SELECT ROW_NUMBER() OVER (ORDER BY pubs DESC, sid), storycode FROM story
+    WHERE kind = 'n' AND img IS NOT NULL AND pages >= 4
+    ORDER BY pubs DESC, sid LIMIT 3000""")
+
+# Derniers numéros parus de chaque pays (accueil, page pays) : 80 par pays, prêts à
+# afficher, au lieu de piocher dans la grande table des numéros.
+step("issue_latest", """
+    CREATE TABLE issue_latest (
+        countrycode TEXT, date TEXT, issuecode TEXT, publicationcode TEXT, number TEXT,
+        title TEXT, img TEXT, stories INTEGER, ptitle TEXT,
+        PRIMARY KEY (countrycode, date, issuecode)
+    ) WITHOUT ROWID""", """
+    INSERT INTO issue_latest
+    SELECT countrycode, date, issuecode, publicationcode, number, title, img, stories, ptitle FROM (
+        SELECT i.countrycode, i.date, i.issuecode, i.publicationcode, i.number, i.title, i.img,
+               i.stories, p.title AS ptitle,
+               ROW_NUMBER() OVER (PARTITION BY i.countrycode ORDER BY i.date DESC, i.issuecode) AS rn
+        FROM issue i LEFT JOIN publication p ON p.code = i.publicationcode
+        WHERE i.countrycode IS NOT NULL AND i.date GLOB '[12][0-9][0-9][0-9]*'
+          AND i.date <= date('now'))
+    WHERE rn <= 80""")
 
 UI_LANGS = "('fr', 'en', 'de', 'it', 'es', 'pt', 'nl')"
 

@@ -60,18 +60,14 @@ export function today(): string {
 
 /**
  * Histoire du jour : une vraie histoire (pas une couverture), illustrée, tirée chaque jour
- * parmi les 3 000 plus publiées. Le tirage dépend de la date seule : tout le monde voit la
+ * parmi les 3 000 plus publiées (table story_pick). Le tirage dépend de la date seule : tout le monde voit la
  * même le même jour.
  */
 export async function storyOfTheDay(day = today()): Promise<string | null> {
   let h = 2166136261;
   for (const ch of day) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
-  const start = (Math.abs(h) % 3000) + 1;
-  const r = await one<{ storycode: string }>(
-    `SELECT s.storycode FROM story_rank r JOIN story s ON s.sid = r.sid
-     WHERE r.rank >= ? AND s.kind = 'n' AND s.img IS NOT NULL AND s.pages >= 4
-     ORDER BY r.rank LIMIT 1`,
-    [start],
-  );
+  const n = (Math.abs(h) % 3000) + 1;
+  // story_pick : 3 000 histoires numérotées, une seule ligne à lire.
+  const r = await one<{ storycode: string }>("SELECT storycode FROM story_pick WHERE n = ?", [n]);
   return r?.storycode ?? null;
 }

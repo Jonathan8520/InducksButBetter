@@ -55,8 +55,12 @@ HOT = {
     "code d'histoire": (
         "SELECT sid FROM story_code WHERE code >= ? AND code < ? LIMIT 6", ["wos386", "wos386￿"]),
     "parutions récentes d'un pays": (
-        "SELECT * FROM issue WHERE countrycode = ? AND date <= ? ORDER BY date DESC LIMIT 36",
+        "SELECT * FROM issue_latest WHERE countrycode = ? AND date <= ? ORDER BY date DESC LIMIT 36",
         ["fr", "2100"]),
+    "parues tel mois, les plus publiées": (
+        "SELECT sid FROM story_search WHERE date >= ? AND date < ? AND kind IN ('n', 'k') "
+        "ORDER BY pubs DESC LIMIT 10", ["1950-10", "1950-10~"]),
+    "histoire du jour": ("SELECT storycode FROM story_pick WHERE n = ?", [42]),
     "recherche sans critère": (
         "SELECT s.sid FROM story_search s WHERE s.kind = 'n' AND s.date < ':' "
         "ORDER BY s.date DESC, s.sid LIMIT 30", []),
@@ -113,6 +117,8 @@ def main() -> int:
     n_issues = one("SELECT COUNT(DISTINCT issuecode) FROM story_pub WHERE sid = "
                    "(SELECT sid FROM story WHERE storycode = 'W OS  386-02')")[0]
     check("parutions = numéros distincts", bool(row) and row[0] == n_issues, f"{row[0] if row else None} / {n_issues}")
+    n = one("SELECT COUNT(*) FROM issue_latest WHERE countrycode = 'fr'")[0]
+    check("derniers numéros précalculés", n >= 40, str(n))
     imgs = one("SELECT COUNT(*) FROM issue WHERE img IS NOT NULL")[0]
     check("couvertures", imgs > 100_000, f"{imgs:,}")
 

@@ -21,6 +21,7 @@ import { routes } from "../lib/routes";
 import { formatDate, formatNumber } from "../lib/format";
 import { countryName, rolesLabel } from "../lib/inducks";
 import { useHomeCountry } from "../lib/homeCountry";
+import { useInView } from "../lib/useInView";
 import { settings } from "../lib/store";
 
 function Hero() {
@@ -251,10 +252,13 @@ function Latest() {
 function Anniversary() {
   const { t } = useTranslation();
   const [years, setYears] = useState<"25" | "50" | "75">("75");
+  // Section du bas de page : interrogée seulement quand on s'en approche.
+  const [ref, inView] = useInView<HTMLDivElement>();
   const data = useQuery({
     queryKey: ["anniversary", years],
     queryFn: () => anniversary(Number(years), 10),
     staleTime: Infinity,
+    enabled: inView,
   });
   const month = new Intl.DateTimeFormat(undefined, { month: "long" }).format(new Date());
   return (
@@ -274,11 +278,13 @@ function Anniversary() {
         />
       }
     >
-      {data.data && data.data.sids.length === 0 ? (
-        <p className="muted">{t("home.anniversaryNone")}</p>
-      ) : (
-        <StoryShelf sids={data.data?.sids ?? []} />
-      )}
+      <div ref={ref}>
+        {data.data && data.data.sids.length === 0 ? (
+          <p className="muted">{t("home.anniversaryNone")}</p>
+        ) : (
+          <StoryShelf sids={data.data?.sids ?? []} />
+        )}
+      </div>
     </Section>
   );
 }
