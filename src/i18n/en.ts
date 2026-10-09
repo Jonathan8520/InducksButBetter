@@ -157,7 +157,7 @@ const en: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     noCollection: "Import your collection to filter the stories you own.",
     sort: "Sort",
     sorts: {
-      relevance: "Most printed first",
+      relevance: "Relevance",
       date_desc: "Newest",
       date_asc: "Oldest",
       pubs: "Number of printings",
@@ -373,7 +373,8 @@ const en: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
   characters: {
     title: "Characters",
     lead: "From the lead hero to a one-panel extra, ranked by number of stories.",
-    search: "Find a character, in any language",
+    search: "Find a character",
+    searchHint: "Scrooge, Picsou, Paperone…",
   },
   character: {
     stories: "Stories",

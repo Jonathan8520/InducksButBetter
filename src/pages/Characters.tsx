@@ -51,7 +51,7 @@ export function Characters() {
         lead={t("characters.lead")}
         actions={<ButtonLink to={routes.universes()}>{t("nav.universes")}</ButtonLink>}
       >
-        <Input className="input--lg" placeholder={t("characters.search")} aria-label={t("characters.search")} value={q} onChange={(e) => setQ(e.target.value)} />
+        <Input className="input--lg" placeholder={t("characters.searchHint")} aria-label={t("characters.search")} value={q} onChange={(e) => setQ(e.target.value)} />
       </PageHead>
       {!top.data && !top.isError && <Skeleton w="100%" h={400} />}
       <ul className="people-list">

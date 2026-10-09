@@ -69,7 +69,8 @@ function build(f: SearchFilters) {
   });
 
   (f.creators ?? []).forEach((p, i) => {
-    let roleSql = "";
+    // « Tous rôles » exclut les simples mentions (rôle « r »), comme les compteurs des fiches.
+    let roleSql = " AND roles GLOB '*[pwai]*'";
     if (p.role === "write") roleSql = " AND (roles LIKE '%p%' OR roles LIKE '%w%')";
     if (p.role === "draw") roleSql = " AND (roles LIKE '%a%' OR roles LIKE '%i%')";
     ctes.push(`c_person${i} AS (SELECT sid FROM person_story WHERE code = ?${roleSql})`);

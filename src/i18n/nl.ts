@@ -157,7 +157,7 @@ const nl: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     noCollection: "Importeer je collectie om te filteren op verhalen die je hebt.",
     sort: "Sorteren",
     sorts: {
-      relevance: "Vaakst gepubliceerd eerst",
+      relevance: "Relevantie",
       date_desc: "Nieuwste",
       date_asc: "Oudste",
       pubs: "Aantal publicaties",
@@ -373,7 +373,8 @@ const nl: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
   characters: {
     title: "Figuren",
     lead: "Van de hoofdheld tot een figurant in één plaatje, gerangschikt op aantal verhalen.",
-    search: "Zoek een figuur, in elke taal",
+    search: "Personage zoeken",
+    searchHint: "Dagobert, Scrooge, Picsou…",
   },
   character: {
     stories: "Verhalen",

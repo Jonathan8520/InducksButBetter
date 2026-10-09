@@ -1880,3 +1880,24 @@
   align-items: center;
   gap: 6px 8px;
 }
+
+/* Filtre des numéros d'une publication : assez large pour son texte d'aide. */
+.pub-filter {
+  min-width: min(100%, 17rem);
+}
+
+/* Téléphone : filtres, tri et export tiennent sur une ligne, le tri prend la place libre. */
+@media (max-width: 719px) {
+  .results-bar__tools {
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+  .results-bar__tools .select {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .results-bar__tools .select select {
+    width: 100%;
+    text-overflow: ellipsis;
+  }
+}

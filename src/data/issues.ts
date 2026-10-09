@@ -220,3 +220,34 @@ export async function issueTiles(codes: string[]): Promise<IssueTile[]> {
   }
   return out;
 }
+
+/**
+ * Codes de numéros saisis à la main (« fr/PM 272 ») ramenés aux codes d'Inducks, qui
+ * alignent les numéros avec des espaces (« fr/PM  272 »). Un code introuvable est gardé tel
+ * quel : la collection le signale comme inconnu.
+ */
+export async function resolveIssueCodes(codes: string[]): Promise<string[]> {
+  const found = new Set<string>();
+  for (let i = 0; i < codes.length; i += 300) {
+    const part = codes.slice(i, i + 300);
+    const r = await rows<{ issuecode: string }>(
+      `SELECT issuecode FROM issue WHERE issuecode IN (${placeholders(part.length)})`,
+      part,
+    );
+    r.forEach((x) => found.add(x.issuecode));
+  }
+  const missing = codes.filter((c) => !found.has(c)).slice(0, 500);
+  const fixed = new Map<string, string>();
+  await Promise.all(
+    missing.map(async (code) => {
+      const m = code.match(/^([a-z]+\/\S+?)\s+(.+)$/i);
+      if (!m) return;
+      const r = await one<{ issuecode: string }>(
+        "SELECT issuecode FROM issue WHERE publicationcode = ? AND number = ?",
+        [m[1], m[2].replace(/\s+/g, " ").trim()],
+      );
+      if (r) fixed.set(code, r.issuecode);
+    }),
+  );
+  return [...new Set(codes.map((c) => fixed.get(c) ?? c))];
+}

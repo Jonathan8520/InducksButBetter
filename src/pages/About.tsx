@@ -65,6 +65,7 @@ export function NotFoundPage() {
   const { t } = useTranslation();
   return (
     <Page title={t("errors.pageNotFound")}>
+      <h1 className="sr-only">{t("errors.pageNotFound")}</h1>
       <Empty
         title={t("errors.pageNotFound")}
         action={

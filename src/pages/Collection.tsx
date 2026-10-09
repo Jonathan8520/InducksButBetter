@@ -11,7 +11,7 @@ import { Button, ButtonLink } from "../components/ui/Button";
 import { Dialog } from "../components/ui/Overlay";
 import { Empty, ErrorState, Skeleton } from "../components/ui/States";
 import { collection, parseCollection } from "../lib/collection";
-import { issueTiles, type IssueTile } from "../data/issues";
+import { issueTiles, resolveIssueCodes, type IssueTile } from "../data/issues";
 import { fanOut, placeholders } from "../db/client";
 import { routes } from "../lib/routes";
 import { formatNumber, formatDate } from "../lib/format";
@@ -50,12 +50,20 @@ function Import({ onDone }: { onDone: () => void }) {
   const [text, setText] = useState("");
   const file = useRef<HTMLInputElement>(null);
   const parsed = useMemo(() => parseCollection(text), [text]);
-  const save = (mode: "replace" | "merge") => {
-    const current = collection.get().issues;
-    const issues = mode === "merge" ? [...new Set([...current, ...parsed])] : parsed;
-    collection.set({ issues, stories: [], analyzed: null, updated: new Date().toISOString() });
-    ui.toast(t("collection.imported", { count: issues.length, n: formatNumber(issues.length) }), "ok");
-    onDone();
+  const [busy, setBusy] = useState(false);
+  const save = async (mode: "replace" | "merge") => {
+    setBusy(true);
+    try {
+      // Codes tapés à la main (« fr/PM 272 ») : on retrouve leur forme exacte dans la base.
+      const resolved = await resolveIssueCodes(parsed).catch(() => parsed);
+      const current = collection.get().issues;
+      const issues = mode === "merge" ? [...new Set([...current, ...resolved])] : resolved;
+      collection.set({ issues, stories: [], analyzed: null, updated: new Date().toISOString() });
+      ui.toast(t("collection.imported", { count: issues.length, n: formatNumber(issues.length) }), "ok");
+      onDone();
+    } finally {
+      setBusy(false);
+    }
   };
   return (
     <div className="import">
@@ -86,11 +94,11 @@ function Import({ onDone }: { onDone: () => void }) {
         <span className="muted num">{parsed.length ? t("collection.detected", { count: parsed.length, n: formatNumber(parsed.length) }) : ""}</span>
         <span className="spacer" />
         {collection.get().issues.length > 0 && (
-          <Button disabled={!parsed.length} onClick={() => save("merge")}>
+          <Button disabled={!parsed.length || busy} onClick={() => void save("merge")}>
             {t("collection.merge")}
           </Button>
         )}
-        <Button variant="primary" icon={<Upload size={16} />} disabled={!parsed.length} onClick={() => save("replace")}>
+        <Button variant="primary" icon={<Upload size={16} />} disabled={!parsed.length || busy} onClick={() => void save("replace")}>
           {collection.get().issues.length > 0 ? t("collection.replace") : t("collection.import")}
         </Button>
       </div>
@@ -162,6 +170,7 @@ export default function Collection() {
   };
 
   const missing = state.issues.length - (tiles.data?.length ?? state.issues.length);
+  const known = tiles.data?.length ?? state.issues.length;
 
   if (!state.issues.length) {
     return (
@@ -177,7 +186,7 @@ export default function Collection() {
       <PageHead
         title={t("collection.title")}
         lead={t("collection.summary", {
-          issues: t("counts.issues", { count: state.issues.length, n: formatNumber(state.issues.length) }),
+          issues: t("counts.issues", { count: known, n: formatNumber(known) }),
           pubs: t("counts.publications", { count: groups.length, n: formatNumber(groups.length) }),
           stories: t("counts.stories", { count: state.stories.length, n: formatNumber(state.stories.length) }),
         })}

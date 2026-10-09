@@ -53,6 +53,9 @@ void i18n
       caches: ["localStorage"],
     },
     returnNull: false,
+    // Les langues autres que fr et en arrivent après le premier rendu : les composants déjà
+    // affichés (menu, barre du haut, pied de page) doivent se redessiner à leur arrivée.
+    react: { bindI18n: "languageChanged loaded", bindI18nStore: "added" },
   })
   .then(() => {
     const lng = i18n.language;

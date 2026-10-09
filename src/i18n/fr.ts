@@ -153,7 +153,7 @@ const fr = {
     noCollection: "Importez votre collection pour filtrer les histoires que vous possédez.",
     sort: "Trier",
     sorts: {
-      relevance: "Les plus publiées d'abord",
+      relevance: "Pertinence",
       date_desc: "Les plus récentes",
       date_asc: "Les plus anciennes",
       pubs: "Nombre de parutions",
@@ -369,7 +369,8 @@ const fr = {
   characters: {
     title: "Personnages",
     lead: "Du héros principal au figurant d'une seule case, classés par nombre d'histoires.",
-    search: "Chercher un personnage, dans n'importe quelle langue",
+    search: "Chercher un personnage",
+    searchHint: "Picsou, Scrooge, Paperone…",
   },
   character: {
     stories: "Histoires",

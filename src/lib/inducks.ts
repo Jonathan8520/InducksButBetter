@@ -135,9 +135,19 @@ function displayNames(cache: Map<string, Intl.DisplayNames | null>, type: "regio
 /** Codes pays Inducks qui ne sont pas des régions ISO. */
 const SPECIAL_COUNTRIES: Record<string, string> = { zz: "—" };
 
+/**
+ * Codes historiques d'Inducks que les noms ISO actuels traduisent mal : « YU » donnerait
+ * « Serbie », déjà porté par « RS ».
+ */
+const HISTORIC_COUNTRIES: Record<string, Record<string, string>> = {
+  yu: { fr: "Yougoslavie", en: "Yugoslavia", de: "Jugoslawien", it: "Jugoslavia", es: "Yugoslavia", pt: "Jugoslávia", nl: "Joegoslavië" },
+};
+
 export function countryName(code: unknown, fallback?: unknown): string {
   if (typeof code !== "string" || !code) return "";
   if (SPECIAL_COUNTRIES[code]) return typeof fallback === "string" ? fallback : code;
+  const historic = HISTORIC_COUNTRIES[code.toLowerCase()];
+  if (historic) return historic[(i18n.resolvedLanguage || "en").split("-")[0]] ?? historic.en;
   const dn = displayNames(regionNames, "region");
   try {
     const name = dn?.of(code.toUpperCase());

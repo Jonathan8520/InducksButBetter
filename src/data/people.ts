@@ -96,6 +96,9 @@ export async function personStories(
     where.push("roles LIKE ?");
     params.push(`%${opts.role}%`);
   }
+  // « Tous rôles » : ce qu'il a écrit ou dessiné, pas les histoires qui le citent seulement
+  // (rôle « r ») ; c'est aussi ce que comptent la fiche et le graphique par année.
+  else where.push("roles GLOB '*[pwai]*'");
   const order = opts.order === "desc" ? "DESC" : "ASC";
   const [list, total] = await Promise.all([
     rows<{ sid: number }>(

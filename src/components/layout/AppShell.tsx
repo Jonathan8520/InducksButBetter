@@ -285,8 +285,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             {t("footer.data")}{" "}
             <a className="link" href="https://inducks.org" target="_blank" rel="noreferrer">
               I.N.D.U.C.K.S.
-            </a>
-            . {t("footer.disclaimer")}
+            </a>{" "}
+            {t("footer.disclaimer")}
           </p>
           <p className="muted">
             <Link className="link" to={routes.about()}>

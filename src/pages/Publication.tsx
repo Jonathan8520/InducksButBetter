@@ -147,7 +147,7 @@ export default function Publication() {
               aria-label={t("publication.filter")}
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="input--sm"
+              className="input--sm pub-filter"
             />
             {ownedCount > 0 && (
               <Segmented
