@@ -94,6 +94,8 @@ const fr = {
     },
   },
   home: {
+    daily: "L'histoire du jour",
+    dailyOpen: "Lire la fiche",
     title: "Toutes les BD Disney du monde, à portée de recherche.",
     lead: "{{stories}} histoires, {{issues}} numéros et {{creators}} auteurs indexés par Inducks. Tout se consulte ici, sans rien télécharger ni installer.",
     leadLoading: "Les histoires, numéros et auteurs indexés par Inducks, consultables sans rien télécharger ni installer.",

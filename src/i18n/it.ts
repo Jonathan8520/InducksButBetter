@@ -98,6 +98,8 @@ const it: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     },
   },
   home: {
+    daily: "La storia del giorno",
+    dailyOpen: "Apri la scheda",
     title: "Tutti i fumetti Disney del mondo, a portata di ricerca.",
     lead: "{{stories}} storie, {{issues}} numeri e {{creators}} autori catalogati da Inducks. Puoi consultare tutto qui, senza scaricare né installare nulla.",
     leadLoading: "Le storie, i numeri e gli autori catalogati da Inducks, consultabili senza scaricare né installare nulla.",

@@ -98,6 +98,8 @@ const de: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     },
   },
   home: {
+    daily: "Geschichte des Tages",
+    dailyOpen: "Zur Geschichte",
     title: "Alle Disney-Comics der Welt, nur eine Suche entfernt.",
     lead: "{{stories}} Geschichten, {{issues}} Ausgaben und {{creators}} Künstler, erfasst von Inducks. Hier kannst du alles durchstöbern, ohne Download oder Installation.",
     leadLoading: "Die von Inducks erfassten Geschichten, Ausgaben und Künstler, ganz ohne Download oder Installation.",

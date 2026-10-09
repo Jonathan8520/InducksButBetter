@@ -51,3 +51,27 @@ export async function storyCount(): Promise<number> {
   const r = await one<{ n: number }>("SELECT MAX(sid) AS n FROM story_search");
   return r?.n ?? 0;
 }
+
+/** Jour local au format AAAA-MM-JJ : l'histoire du jour change à minuit chez le visiteur. */
+export function today(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Histoire du jour : une vraie histoire (pas une couverture), illustrée, tirée chaque jour
+ * parmi les 3 000 plus publiées. Le tirage dépend de la date seule : tout le monde voit la
+ * même le même jour.
+ */
+export async function storyOfTheDay(day = today()): Promise<string | null> {
+  let h = 2166136261;
+  for (const ch of day) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  const start = (Math.abs(h) % 3000) + 1;
+  const r = await one<{ storycode: string }>(
+    `SELECT s.storycode FROM story_rank r JOIN story s ON s.sid = r.sid
+     WHERE r.rank >= ? AND s.kind = 'n' AND s.img IS NOT NULL AND s.pages >= 4
+     ORDER BY r.rank LIMIT 1`,
+    [start],
+  );
+  return r?.storycode ?? null;
+}

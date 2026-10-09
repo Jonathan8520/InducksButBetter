@@ -98,6 +98,8 @@ const nl: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     },
   },
   home: {
+    daily: "Verhaal van de dag",
+    dailyOpen: "Naar het verhaal",
     title: "Alle Disney-strips ter wereld, één zoekopdracht verwijderd.",
     lead: "{{stories}} verhalen, {{issues}} nummers en {{creators}} makers, geïndexeerd door Inducks. Blader hier door alles, zonder iets te downloaden of te installeren.",
     leadLoading: "De verhalen, nummers en makers die Inducks heeft geïndexeerd, zonder iets te downloaden of te installeren.",

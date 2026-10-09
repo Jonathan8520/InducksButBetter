@@ -98,6 +98,8 @@ const en: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     },
   },
   home: {
+    daily: "Story of the day",
+    dailyOpen: "Open the story",
     title: "Every Disney comic in the world, one search away.",
     lead: "{{stories}} stories, {{issues}} issues and {{creators}} creators indexed by Inducks. Browse it all here, with nothing to download or install.",
     leadLoading: "The stories, issues and creators indexed by Inducks, with nothing to download or install.",

@@ -98,6 +98,8 @@ const pt: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     },
   },
   home: {
+    daily: "A história do dia",
+    dailyOpen: "Ver a ficha",
     title: "Todas as histórias Disney do mundo, à distância de uma pesquisa.",
     lead: "{{stories}} histórias, {{issues}} números e {{creators}} autores catalogados pelo Inducks. Consulte tudo aqui, sem nada para instalar.",
     leadLoading: "As histórias, números e autores catalogados pelo Inducks, sem nada para instalar.",

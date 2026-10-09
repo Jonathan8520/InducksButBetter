@@ -9,15 +9,17 @@ import { StoryShelf } from "../components/stories";
 import { Cover } from "../components/ui/Media";
 import { Segmented, Select } from "../components/ui/Controls";
 import { Skeleton, ErrorState } from "../components/ui/States";
-import { Button } from "../components/ui/Button";
-import { anniversary, dbInfo } from "../data/home";
+import { Button, ButtonLink } from "../components/ui/Button";
+import { anniversary, dbInfo, storyOfTheDay, today } from "../data/home";
 import { latestIssues } from "../data/issues";
 import { countries } from "../data/publications";
-import { randomStory } from "../data/stories";
+import { randomStory, storyDetail } from "../data/stories";
+import { InducksText } from "../components/InducksText";
+import { Code } from "../components/ui/Badges";
 import { ui } from "../lib/ui";
 import { routes } from "../lib/routes";
 import { formatDate, formatNumber } from "../lib/format";
-import { countryName } from "../lib/inducks";
+import { countryName, rolesLabel } from "../lib/inducks";
 import { settings } from "../lib/store";
 
 const LANG_COUNTRY: Record<string, string> = {
@@ -128,6 +130,73 @@ function Hero() {
         )}
       </div>
     </section>
+  );
+}
+
+/** L'histoire du jour : une grande histoire tirée chaque jour, avec sa première page. */
+function Daily() {
+  const { t, i18n } = useTranslation();
+  const day = today();
+  const code = useQuery({ queryKey: ["daily", day], queryFn: () => storyOfTheDay(day), staleTime: Infinity });
+  const story = useQuery({
+    queryKey: ["story", code.data, i18n.resolvedLanguage],
+    queryFn: () => storyDetail(code.data as string),
+    enabled: !!code.data,
+    staleTime: Infinity,
+  });
+  const s = story.data;
+  if (code.isError || story.isError || code.data === null) return null;
+  const lang = (i18n.resolvedLanguage || "en").split("-")[0];
+  const desc = s ? (s.descriptions.find((d) => d.lang === lang) ?? s.descriptions.find((d) => d.lang === "en")) : undefined;
+  return (
+    <Section id="daily" title={t("home.daily")} aside={<span className="muted">{formatDate(day)}</span>}>
+      {!s ? (
+        <div className="daily">
+          <Skeleton w="100%" h={240} />
+          <div className="daily__text">
+            <Skeleton w="60%" h={28} />
+            <Skeleton w="40%" h={16} />
+            <Skeleton w="100%" h={90} />
+          </div>
+        </div>
+      ) : (
+        <article className="daily">
+          <Link to={routes.story(s.storycode)} className="daily__cover" tabIndex={-1} aria-hidden>
+            <Cover img={s.img} alt="" quality="medium" seed={s.storycode} />
+          </Link>
+          <div className="daily__text">
+            <p className="daily__meta">
+              <Code>{s.storycode}</Code>
+              {s.date && <span>{s.date.slice(0, 4)}</span>}
+              {s.pages && <span>{t("story.pagesN", { n: s.pages })}</span>}
+            </p>
+            <h3 className="daily__title">
+              <Link to={routes.story(s.storycode)}>{s.title || s.storycode}</Link>
+            </h3>
+            {s.original && <p className="daily__original">{s.original}</p>}
+            {s.people.length > 0 && (
+              <p className="daily__credits">
+                {s.people.slice(0, 3).map((p, i) => (
+                  <span key={p.code}>
+                    {i > 0 && ", "}
+                    <Link className="person-link" to={routes.creator(p.code)}>
+                      {p.name}
+                    </Link>
+                    <span className="muted"> ({rolesLabel(p.roles).toLowerCase()})</span>
+                  </span>
+                ))}
+              </p>
+            )}
+            {desc && <InducksText text={desc.text} className="daily__desc" />}
+            <div>
+              <ButtonLink to={routes.story(s.storycode)} variant="secondary">
+                {t("home.dailyOpen")}
+              </ButtonLink>
+            </div>
+          </div>
+        </article>
+      )}
+    </Section>
   );
 }
 
@@ -265,6 +334,7 @@ export default function Home() {
   return (
     <Page>
       <Hero />
+      <Daily />
       <Latest />
       <Anniversary />
       <ExploreList />
