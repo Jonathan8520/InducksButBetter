@@ -10,6 +10,9 @@ lisant ces fichiers.
 Chaque famille (histoires, numéros, publications, auteurs, personnages) est répartie en
 paquets par empreinte du code, pour que la fonction n'ait qu'un petit fichier à lire.
 
+Le même passage écrit aussi sitemap.xml à côté (histoires les plus publiées, auteurs,
+personnages, publications), pour que les moteurs de recherche trouvent les fiches.
+
 Usage :
     python scripts/og_index.py data/inducks.sqlite dist/og
 """
@@ -19,6 +22,8 @@ import json
 import os
 import sqlite3
 import sys
+from urllib.parse import quote
+from xml.sax.saxutils import escape
 
 #: Nombre de paquets par famille (≈ 10 à 20 Ko chacun).
 SHARDS = {"s": 2048, "p": 32, "a": 64, "h": 64}
@@ -46,6 +51,35 @@ def write(out: str, kind: str, rows: dict[str, list]) -> int:
         with open(os.path.join(out, kind, f"{i}.json"), "w", encoding="utf-8") as f:
             f.write(data)
     return size
+
+
+SITE = os.environ.get("SITE_URL", "https://inducksbutbetter-demo.pages.dev").rstrip("/")
+
+
+def enc(code: str) -> str:
+    """Comme enc() de src/lib/routes.ts : encodeURIComponent, espaces en « + »."""
+    return quote(code, safe="-_.!~*'()").replace("%20", "+")
+
+
+def sitemap(db: sqlite3.Connection, path: str) -> int:
+    urls = [f"{SITE}/", f"{SITE}/search", f"{SITE}/countries", f"{SITE}/creators", f"{SITE}/characters"]
+    urls += [f"{SITE}/stories/{enc(c)}" for (c,) in db.execute(
+        "SELECT storycode FROM story WHERE kind = 'n' AND pubs >= 10 ORDER BY pubs DESC")]
+    urls += [f"{SITE}/creators/{enc(c)}" for (c,) in db.execute(
+        "SELECT code FROM person WHERE stories >= 5 AND code NOT IN ('?', '-') ORDER BY stories DESC")]
+    urls += [f"{SITE}/characters/{enc(c)}" for (c,) in db.execute(
+        "SELECT code FROM character WHERE stories >= 20 AND code <> '--' ORDER BY stories DESC")]
+    for (code,) in db.execute("SELECT code FROM publication ORDER BY issues DESC"):
+        country, _, pub = code.partition("/")
+        urls.append(f"{SITE}/publications/{enc(country)}/{enc(pub)}")
+    urls = urls[:50_000]
+    with open(path, "w", encoding="utf-8") as f:
+        f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+        f.write('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n')
+        for u in urls:
+            f.write(f"<url><loc>{escape(u)}</loc></url>\n")
+        f.write("</urlset>\n")
+    return len(urls)
 
 
 def main() -> int:
@@ -80,6 +114,8 @@ def main() -> int:
         chars.setdefault(code, [name])
 
     total = write(out, "s", stories) + write(out, "p", pubs) + write(out, "a", creators) + write(out, "h", chars)
+    n = sitemap(db, os.path.join(os.path.dirname(os.path.abspath(out)), "sitemap.xml"))
+    print(f"[og] sitemap.xml : {n:,} adresses")
     print(f"[og] {len(stories):,} histoires, {len(pubs):,} publications, {len(creators):,} auteurs, "
           f"{len(chars):,} personnages, {total / 1e6:.1f} Mo en {sum(SHARDS.values())} fichiers")
     return 0
