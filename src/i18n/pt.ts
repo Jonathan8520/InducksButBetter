@@ -276,6 +276,13 @@ const pt: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     },
   },
   publication: {
+    show: "Mostrar",
+    showAll: "Todos",
+    showOwned: "Tenho",
+    showMissing: "Em falta",
+    copyMissing: "Copiar os em falta",
+    wantCopied_one: "{{n}} número em falta copiado",
+    wantCopied_other: "{{n}} números em falta copiados",
     years: "Anos",
     issues: "Números",
     language: "Idioma",

@@ -272,6 +272,13 @@ const fr = {
     },
   },
   publication: {
+    show: "Afficher",
+    showAll: "Tous",
+    showOwned: "Possédés",
+    showMissing: "Manquants",
+    copyMissing: "Copier les manquants",
+    wantCopied_one: "{{n}} numéro manquant copié",
+    wantCopied_other: "{{n}} numéros manquants copiés",
     years: "Années",
     issues: "Numéros",
     language: "Langue",

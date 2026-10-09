@@ -40,12 +40,15 @@ export async function publicationDetail(code: string): Promise<PublicationDetail
 }
 
 /** Tous les numéros d'une publication, dans l'ordre du code (donc de numérotation). */
-export function publicationIssues(code: string): Promise<IssueTile[]> {
-  return rows<IssueTile>(
+export async function publicationIssues(code: string): Promise<IssueTile[]> {
+  const list = await rows<IssueTile>(
     `SELECT issuecode, publicationcode, number, title, date, img, stories FROM issue
      WHERE issuecode >= ? AND issuecode < ? AND publicationcode = ?`,
     [code + " ", code + "!", code],
   );
+  // Les codes sont complétés par des espaces (« fr/PM    9 » < « fr/PM   10 ») : l'ordre
+  // binaire des codes est l'ordre de parution.
+  return list.sort((a, b) => (a.issuecode < b.issuecode ? -1 : a.issuecode > b.issuecode ? 1 : 0));
 }
 
 export function countryPublications(country: string): Promise<PublicationRow[]> {

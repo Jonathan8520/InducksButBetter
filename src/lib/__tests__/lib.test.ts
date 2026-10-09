@@ -69,3 +69,11 @@ describe("graphique par année", () => {
     expect(parseYears(null)).toEqual([]);
   });
 });
+
+describe("liste de manques", () => {
+  it("regroupe les numéros qui se suivent", async () => {
+    const { compactNumbers } = await import("../collection");
+    expect(compactNumbers(["1", "2", "3", "5", "7", "8", "HS 1", "9"])).toBe("1-3, 5, 7-8, HS 1, 9");
+    expect(compactNumbers([])).toBe("");
+  });
+});

@@ -131,7 +131,7 @@ export default function Collection() {
       g.list.push(it);
       by.set(it.publicationcode, g);
     }
-    for (const g of by.values()) g.list.sort((a, b) => a.issuecode.localeCompare(b.issuecode));
+    for (const g of by.values()) g.list.sort((a, b) => (a.issuecode < b.issuecode ? -1 : a.issuecode > b.issuecode ? 1 : 0));
     const f = filter.toLowerCase();
     return [...by.entries()]
       .filter(([code, g]) => !f || g.title.toLowerCase().includes(f) || code.toLowerCase().includes(f))

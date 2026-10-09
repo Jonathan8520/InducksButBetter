@@ -2,20 +2,21 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ExternalLink, Grid3x3, List } from "lucide-react";
+import { ClipboardList, ExternalLink, Grid3x3, List } from "lucide-react";
 import { Breadcrumbs, Facts, Page, Section } from "../components/page";
 import { InducksText } from "../components/InducksText";
 import { Cover } from "../components/ui/Media";
 import { Code, CountryTag } from "../components/ui/Badges";
 import { Input, Segmented } from "../components/ui/Controls";
+import { Button } from "../components/ui/Button";
 import { ErrorState, NotFound, Skeleton } from "../components/ui/States";
 import { publicationDetail, publicationIssues } from "../data/publications";
 import type { IssueTile } from "../data/issues";
 import { decodeSegment, inducksUrl, routes } from "../lib/routes";
 import { formatDate, formatNumber, year, yearSpan } from "../lib/format";
 import { countryName, languageName } from "../lib/inducks";
-import { collection } from "../lib/collection";
-import { recordVisit } from "../lib/ui";
+import { collection, compactNumbers } from "../lib/collection";
+import { recordVisit, ui } from "../lib/ui";
 
 function groupByYear(list: IssueTile[]) {
   const map = new Map<string, IssueTile[]>();
@@ -36,6 +37,7 @@ export default function Publication() {
   const code = `${decodeSegment(params.country ?? "")}/${decodeSegment(params.pub ?? "")}`;
   const [view, setView] = useState<"grid" | "list">("grid");
   const [filter, setFilter] = useState("");
+  const [show, setShow] = useState<"all" | "owned" | "missing">("all");
   const owned = collection.use((c) => c.issues);
   const ownedSet = useMemo(() => new Set(owned), [owned]);
 
@@ -48,11 +50,12 @@ export default function Publication() {
   }, [p]);
 
   const filtered = useMemo(() => {
-    const list = issues.data ?? [];
+    let list = issues.data ?? [];
+    if (show !== "all") list = list.filter((i) => ownedSet.has(i.issuecode) === (show === "owned"));
     const f = filter.trim().toLowerCase();
     if (!f) return list;
     return list.filter((i) => i.number.toLowerCase().includes(f) || (i.title ?? "").toLowerCase().includes(f) || (i.date ?? "").startsWith(f));
-  }, [issues.data, filter]);
+  }, [issues.data, filter, show, ownedSet]);
   const groups = useMemo(() => groupByYear(filtered), [filtered]);
   const ownedCount = useMemo(() => (issues.data ?? []).filter((i) => ownedSet.has(i.issuecode)).length, [issues.data, ownedSet]);
 
@@ -105,6 +108,26 @@ export default function Publication() {
           />
           {p.comment && <InducksText text={p.comment} className="detail__comment" />}
           <div className="detail__actions">
+            {ownedCount > 0 && ownedCount < (issues.data?.length ?? 0) && (
+              <Button
+                icon={<ClipboardList size={16} />}
+                onClick={async () => {
+                  const missing = (issues.data ?? [])
+                    .filter((i) => !ownedSet.has(i.issuecode))
+                    .map((i) => i.number)
+                    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+                  const text = `${p.title} : ${compactNumbers(missing)}`;
+                  try {
+                    await navigator.clipboard.writeText(text);
+                    ui.toast(t("publication.wantCopied", { count: missing.length, n: formatNumber(missing.length) }), "ok");
+                  } catch {
+                    ui.toast(text);
+                  }
+                }}
+              >
+                {t("publication.copyMissing")}
+              </Button>
+            )}
             <a className="btn btn--ghost btn--md" href={inducksUrl.publication(p.code)} target="_blank" rel="noreferrer">
               <span>{t("common.onInducks")}</span>
               <ExternalLink size={15} />
@@ -124,6 +147,18 @@ export default function Publication() {
               onChange={(e) => setFilter(e.target.value)}
               className="input--sm"
             />
+            {ownedCount > 0 && (
+              <Segmented
+                label={t("publication.show")}
+                value={show}
+                onChange={setShow}
+                items={[
+                  { value: "all", label: t("publication.showAll") },
+                  { value: "owned", label: t("publication.showOwned") },
+                  { value: "missing", label: t("publication.showMissing") },
+                ]}
+              />
+            )}
             <Segmented
               label={t("common.view")}
               value={view}

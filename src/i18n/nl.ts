@@ -276,6 +276,13 @@ const nl: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     },
   },
   publication: {
+    show: "Tonen",
+    showAll: "Alle",
+    showOwned: "In bezit",
+    showMissing: "Ontbrekend",
+    copyMissing: "Ontbrekende kopiëren",
+    wantCopied_one: "{{n}} ontbrekend nummer gekopieerd",
+    wantCopied_other: "{{n}} ontbrekende nummers gekopieerd",
     years: "Jaren",
     issues: "Nummers",
     language: "Taal",

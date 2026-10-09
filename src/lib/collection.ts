@@ -58,3 +58,30 @@ export function ownsIssue(issuecode: string): boolean {
   }
   return ownedSet!.has(issuecode);
 }
+
+/**
+ * Liste de numéros compactée pour une liste de recherche : « 1-3, 5, 7-8, HS 1 ».
+ * Seuls les numéros entiers qui se suivent sont regroupés ; l'ordre d'entrée est gardé.
+ */
+export function compactNumbers(numbers: string[]): string {
+  const out: string[] = [];
+  let start: number | null = null;
+  let prev: number | null = null;
+  const flush = () => {
+    if (start === null || prev === null) return;
+    out.push(start === prev ? String(start) : `${start}-${prev}`);
+    start = prev = null;
+  };
+  for (const raw of numbers) {
+    const n = /^\d+$/.test(raw.trim()) ? Number(raw.trim()) : null;
+    if (n !== null && prev !== null && n === prev + 1) {
+      prev = n;
+      continue;
+    }
+    flush();
+    if (n !== null) start = prev = n;
+    else out.push(raw.trim());
+  }
+  flush();
+  return out.join(", ");
+}
