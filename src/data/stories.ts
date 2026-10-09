@@ -259,12 +259,14 @@ export async function storyDetail(code: string): Promise<StoryDetail | null> {
 }
 
 export interface Publication {
+  /** Date de parution, vide si inconnue. */
   date: string;
   issuecode: string;
   pos: string;
   title: string | null;
   lang: string | null;
-  part: string | null;
+  /** Parties de l'histoire dans ce numéro (vide si elle y paraît d'un bloc). */
+  parts: string[];
   publicationcode: string;
   publicationTitle: string;
   countrycode: string;
@@ -277,13 +279,30 @@ export async function storyPublications(sid: number): Promise<Publication[]> {
      FROM story_pub p WHERE p.sid = ?`,
     [sid],
   );
-  const pubCodes = list.map((r) => r.publicationcode ?? r.issuecode.split(/\s+/)[0]);
+  // Une histoire découpée en parties dans un même numéro n'y fait qu'une parution.
+  const byIssue = new Map<string, (typeof list)[number] & { parts: string[] }>();
+  for (const r of [...list].sort((a, b) => a.pos.localeCompare(b.pos))) {
+    const cur = byIssue.get(r.issuecode);
+    if (cur) {
+      if (r.part && !cur.parts.includes(r.part)) cur.parts.push(r.part);
+      cur.title ??= r.title;
+    } else {
+      byIssue.set(r.issuecode, { ...r, parts: r.part ? [r.part] : [] });
+    }
+  }
+  const merged = [...byIssue.values()];
+  const pubCodes = merged.map((r) => r.publicationcode ?? r.issuecode.split(/\s+/)[0]);
   const titles = await publicationTitles(pubCodes);
-  return list.map((r, i) => {
+  return merged.map((r, i) => {
     const pc = pubCodes[i];
     const info = titles.get(pc);
     return {
-      ...r,
+      date: /^\d{4}/.test(r.date ?? "") ? r.date : "",
+      issuecode: r.issuecode,
+      pos: r.pos,
+      title: r.title,
+      lang: r.lang,
+      parts: r.parts.sort((a, b) => Number(a) - Number(b) || a.localeCompare(b)),
       publicationcode: pc,
       publicationTitle: info?.title ?? pc,
       countrycode: info?.countrycode ?? pc.split("/")[0],

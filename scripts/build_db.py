@@ -309,11 +309,13 @@ step("story", """
     "WHERE v.storycode = story.storycode LIMIT 1) WHERE creators IS NULL",
 )
 
+# Parutions = numéros distincts : une histoire publiée en douze morceaux dans un même
+# album n'y compte qu'une fois.
 step("_pubcount", """
     CREATE TABLE _pubcount (storycode TEXT PRIMARY KEY, pubs INTEGER, countries INTEGER)
     WITHOUT ROWID""", """
     INSERT INTO _pubcount
-    SELECT storycode, COUNT(*), COUNT(DISTINCT countrycode) FROM _entry
+    SELECT storycode, COUNT(DISTINCT issuecode), COUNT(DISTINCT countrycode) FROM _entry
     WHERE storycode IS NOT NULL GROUP BY storycode""",
     """UPDATE story SET pubs = COALESCE((SELECT pubs FROM _pubcount p
        WHERE p.storycode = story.storycode), 0),

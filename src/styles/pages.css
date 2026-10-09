@@ -1633,3 +1633,13 @@
     gap: 18px 12px;
   }
 }
+
+/* Fiche histoire : ce que la collection en contient. */
+.mine {
+  margin: 0 0 var(--s-4);
+  font-size: var(--t-sm);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}

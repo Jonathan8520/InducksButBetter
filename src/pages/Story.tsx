@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { BookMarked, Copy, ExternalLink, Maximize2 } from "lucide-react";
 import { Facts, Page, Section } from "../components/page";
 import { Breadcrumbs } from "../components/page";
@@ -16,7 +17,7 @@ import { storyDetail, storyPublications, type Publication } from "../data/storie
 import { decodeSegment, inducksUrl, routes } from "../lib/routes";
 import { formatDate, formatNumber } from "../lib/format";
 import { countryName, fullUrl, kindLabel, languageName, rolesLabel } from "../lib/inducks";
-import { ownsIssue } from "../lib/collection";
+import { collection, ownsIssue } from "../lib/collection";
 import { recordVisit, ui } from "../lib/ui";
 
 function StorySkeleton() {
@@ -33,6 +34,11 @@ function StorySkeleton() {
       </div>
     </div>
   );
+}
+
+/** « partie 2 », ou « 12 parties » quand le numéro la publie en entier par morceaux. */
+function partsLabel(parts: string[], t: TFunction): string {
+  return parts.length === 1 ? t("story.part", { n: parts[0] }) : t("story.parts", { count: parts.length });
 }
 
 /** Longue liste tronquée, dépliable d'un clic. */
@@ -71,6 +77,14 @@ function Publications({ sid, total }: { sid: number; total: number }) {
     () => [...(pubs.data ?? [])].sort((a, b) => (a.date || "9").localeCompare(b.date || "9")),
     [pubs.data],
   );
+  // Numéros de la collection qui contiennent cette histoire (un même numéro peut la
+  // contenir en plusieurs parties : on ne le compte qu'une fois).
+  const myIssues = collection.use((c) => c.issues);
+  const mine = useMemo(() => {
+    if (!myIssues.length || !pubs.data) return null;
+    const seen = new Set<string>();
+    return chrono.filter((p) => ownsIssue(p.issuecode) && !seen.has(p.issuecode) && seen.add(p.issuecode));
+  }, [myIssues, pubs.data, chrono]);
 
   if (!total) return null;
   const Row = ({ p }: { p: Publication }) => (
@@ -83,7 +97,7 @@ function Publications({ sid, total }: { sid: number; total: number }) {
         {p.title && <span className="pub-row__title">{p.title}</span>}
       </span>
       <span className="pub-row__side">
-        {p.part && <span className="muted">{t("story.part", { n: p.part })}</span>}
+        {p.parts.length > 0 && <span className="muted">{partsLabel(p.parts, t)}</span>}
         {ownsIssue(p.issuecode) && <span className="owned-dot">{t("collection.owned")}</span>}
       </span>
     </li>
@@ -107,6 +121,25 @@ function Publications({ sid, total }: { sid: number; total: number }) {
     >
       {pubs.isError && <ErrorState error={pubs.error} retry={() => pubs.refetch()} />}
       {!pubs.data && !pubs.isError && <Skeleton w="100%" h={160} />}
+      {mine && (
+        <p className={`mine${mine.length ? " mine--yes" : ""}`}>
+          {mine.length ? (
+            <>
+              <span className="owned-dot">{t("story.mineN", { count: mine.length })}</span>{" "}
+              <span className="inline-list">
+                {mine.slice(0, 6).map((p) => (
+                  <Link key={p.issuecode} className="link" to={routes.issue(p.issuecode, p.publicationcode)}>
+                    {p.publicationTitle} {p.issuecode.slice(p.publicationcode.length).trim()}
+                  </Link>
+                ))}
+                {mine.length > 6 && <span className="muted">+{formatNumber(mine.length - 6)}</span>}
+              </span>
+            </>
+          ) : (
+            <span className="muted">{t("story.mineNone")}</span>
+          )}
+        </p>
+      )}
       {pubs.data && view === "country" && (
         <div className="pub-groups">
           {groups.map(([cc, list], i) => (
@@ -122,7 +155,7 @@ function Publications({ sid, total }: { sid: number; total: number }) {
               meta={
                 <span className="num">
                   {formatNumber(list.length)}
-                  {list[0]?.date ? `, ${t("story.since", { year: list[0].date.slice(0, 4) })}` : ""}
+                  {list.find((x) => x.date) ? `, ${t("story.since", { year: list.find((x) => x.date)!.date.slice(0, 4) })}` : ""}
                 </span>
               }
             >
@@ -148,6 +181,7 @@ function Publications({ sid, total }: { sid: number; total: number }) {
                 {p.title && <span className="pub-row__title">{p.title}</span>}
               </span>
               <span className="pub-row__side">
+                {p.parts.length > 0 && <span className="muted">{partsLabel(p.parts, t)}</span>}
                 {ownsIssue(p.issuecode) && <span className="owned-dot">{t("collection.owned")}</span>}
               </span>
             </li>
