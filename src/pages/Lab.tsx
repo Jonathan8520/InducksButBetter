@@ -191,7 +191,14 @@ export default function Lab() {
           placeholder={t("lab.askPlaceholder")}
           aria-label={t("lab.askPlaceholder")}
         />
-        <Button type="submit" variant="primary" icon={thinking ? <Spinner size={14} /> : <Wand2 size={16} />} disabled={thinking || !question.trim()}>
+        <Button
+          type="submit"
+          variant="primary"
+          className="ask__go"
+          aria-label={thinking ? t("lab.thinking") : t("lab.ask")}
+          icon={thinking ? <Spinner size={14} /> : <Wand2 size={16} />}
+          disabled={thinking || !question.trim()}
+        >
           {thinking ? t("lab.thinking") : t("lab.ask")}
         </Button>
       </form>

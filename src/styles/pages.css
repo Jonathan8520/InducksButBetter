@@ -1508,6 +1508,18 @@
   outline: none;
   height: 40px;
 }
+/* Sur téléphone, la question garde toute la largeur : le bouton se réduit à son icône. */
+@media (max-width: 480px) {
+  .ask {
+    padding-left: 12px;
+  }
+  .ask input {
+    font-size: var(--t-md);
+  }
+  .ask__go > span {
+    display: none;
+  }
+}
 .ask__note {
   font-size: var(--t-sm);
   margin-top: calc(var(--s-6) * -1 + 10px);

@@ -103,7 +103,7 @@ export default function Settings() {
           <Facts
             items={[
               [t("settings.dump"), formatDate(info.data.dump)],
-              [t("settings.built"), new Date(info.data.built ?? "").toLocaleString(i18n.resolvedLanguage)],
+              [t("settings.built"), new Date(info.data.built ?? "").toLocaleString(i18n.resolvedLanguage, { dateStyle: "long", timeStyle: "short" })],
               [t("settings.size"), formatBytes(info.data.totalBytes)],
               [t("settings.version"), <span className="code" key="v">{info.data.version}</span>],
               [t("settings.stories"), formatNumber(info.data.stats.stories)],
