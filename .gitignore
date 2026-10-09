@@ -8,7 +8,7 @@ dist-ssr
 .wrangler
 
 # Export Inducks et bases construites : jamais dans git.
-data/
+/data/
 *.sqlite
 *.sqlite-journal
 
