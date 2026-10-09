@@ -176,6 +176,14 @@ const nl: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     showResults_one: "{{n}} verhaal tonen",
     showResults_other: "{{n}} verhalen tonen",
   },
+  chart: {
+    title: "Verhalen per jaar",
+    year_one: "{{year}}: {{n}} verhaal",
+    year_other: "{{year}}: {{n}} verhalen",
+    peak_one: "Piek in {{year}}: {{n}} verhaal",
+    peak_other: "Piek in {{year}}: {{n}} verhalen",
+    aria: "{{label}}, van {{from}} tot {{to}}. Pijltjestoetsen om te bladeren, Enter voor de verhalen van dat jaar.",
+  },
   story: {
     untitled: "Zonder titel",
     originalTitle: "Oorspronkelijke titel:",

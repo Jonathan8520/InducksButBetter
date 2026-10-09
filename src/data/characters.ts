@@ -14,6 +14,8 @@ export interface CharacterRow {
   first: string | null;
   last: string | null;
   first_sid: number | null;
+  /** Histoires par année, « 1947:3,1948:12 ». */
+  years: string | null;
 }
 
 export interface CharacterDetail extends CharacterRow {
@@ -27,7 +29,7 @@ export interface CharacterDetail extends CharacterRow {
 
 export async function characterDetail(code: string): Promise<CharacterDetail | null> {
   const c = await one<CharacterRow>(
-    `SELECT code, name, official, onetime, heroonly, comment, stories, first, last, first_sid
+    `SELECT code, name, official, onetime, heroonly, comment, stories, first, last, first_sid, years
      FROM character WHERE code = ?`,
     [code],
   );

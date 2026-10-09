@@ -631,13 +631,20 @@ step("story_doc", """
     ))
     FROM story s LEFT JOIN story_text t ON t.sid = s.sid""")
 
+#: Nombre d'histoires par année de première parution, en texte « 1947:3,1948:12 ».
+YEARS_SQL = """UPDATE {table} SET years = (
+    SELECT GROUP_CONCAT(y || ':' || n, ',') FROM (
+        SELECT substr(x.date, 1, 4) AS y, COUNT(*) AS n FROM {rel} x
+        WHERE x.code = {table}.code AND x.date GLOB '[0-9][0-9][0-9][0-9]*' {extra}
+        GROUP BY y ORDER BY y))"""
+
 # --- Personnages et univers -----------------------------------------------------------
 
 step("character", """
     CREATE TABLE character (
         code TEXT PRIMARY KEY, name TEXT, official INTEGER, onetime INTEGER,
         heroonly INTEGER, comment TEXT, stories INTEGER, first TEXT, last TEXT,
-        first_sid INTEGER, img TEXT
+        first_sid INTEGER, img TEXT, years TEXT
     ) WITHOUT ROWID""", """
     INSERT OR IGNORE INTO character (code, name, official, onetime, heroonly, comment)
     SELECT charactercode, charactername, official = 'Y', onetime = 'Y', heroonly = 'Y',
@@ -655,6 +662,7 @@ step("character_story", """
          stories = (SELECT COUNT(*) FROM character_story x WHERE x.code = character.code),
          first = (SELECT MIN(CASE WHEN date GLOB '[0-9][0-9][0-9][0-9]*' THEN date END) FROM character_story x WHERE x.code = character.code),
          last = (SELECT MAX(CASE WHEN date GLOB '[0-9][0-9][0-9][0-9]*' THEN date END) FROM character_story x WHERE x.code = character.code)""",
+    YEARS_SQL.format(table="character", rel="character_story", extra=""),
     # Première apparition : la plus ancienne vraie histoire, pas une couverture ou une
     # illustration datée d'avant (sinon, la plus ancienne entrée tout court).
     """UPDATE character SET first_sid = COALESCE(
@@ -735,7 +743,7 @@ step("person", """
         code TEXT PRIMARY KEY, name TEXT, nationality TEXT, official INTEGER,
         birthname TEXT, born TEXT, bornplace TEXT, died TEXT, diedplace TEXT,
         comment TEXT, fake INTEGER, stories INTEGER, first TEXT, last TEXT,
-        roles TEXT, indexed INTEGER, img TEXT
+        roles TEXT, indexed INTEGER, img TEXT, years TEXT
     ) WITHOUT ROWID""", """
     INSERT OR IGNORE INTO person (code, name, nationality, official, birthname, born,
         bornplace, died, diedplace, comment, fake)
@@ -765,7 +773,9 @@ step("person_story", """
          first = (SELECT MIN(CASE WHEN date GLOB '[0-9][0-9][0-9][0-9]*' THEN date END)
                   FROM person_story x WHERE x.code = person.code AND x.roles GLOB '*[pwai]*'),
          last = (SELECT MAX(CASE WHEN date GLOB '[0-9][0-9][0-9][0-9]*' THEN date END)
-                 FROM person_story x WHERE x.code = person.code AND x.roles GLOB '*[pwai]*')""")
+                 FROM person_story x WHERE x.code = person.code AND x.roles GLOB '*[pwai]*')"",
+    # Histogramme compact « année:nombre,… » pour le graphique de la fiche auteur.
+    YEARS_SQL.format(table="person", rel="person_story", extra="AND x.roles GLOB '*[pwai]*'"))
 
 step("_roles", """
     CREATE TABLE _roles (code TEXT PRIMARY KEY, roles TEXT) WITHOUT ROWID""", """

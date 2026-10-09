@@ -18,6 +18,8 @@ export interface PersonRow {
   last: string | null;
   roles: string | null;
   indexed: number | null;
+  /** Histoires par année, « 1947:3,1948:12 ». */
+  years: string | null;
 }
 
 export interface PersonDetail extends PersonRow {
@@ -32,7 +34,7 @@ export interface PersonDetail extends PersonRow {
 export async function personDetail(code: string): Promise<PersonDetail | null> {
   const p = await one<PersonRow>(
     `SELECT code, name, nationality, official, birthname, born, bornplace, died, diedplace,
-            comment, fake, stories, first, last, roles, indexed FROM person WHERE code = ?`,
+            comment, fake, stories, first, last, roles, indexed, years FROM person WHERE code = ?`,
     [code],
   );
   if (!p) return null;

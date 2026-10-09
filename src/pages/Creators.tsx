@@ -4,6 +4,7 @@ import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-qu
 import { useTranslation } from "react-i18next";
 import { ExternalLink } from "lucide-react";
 import { Facts, Page, PageHead, Section } from "../components/page";
+import { YearChart } from "../components/YearChart";
 import { InducksText } from "../components/InducksText";
 import { StoryList } from "../components/stories";
 import { Avatar, Cover } from "../components/ui/Media";
@@ -285,6 +286,12 @@ export function Creator() {
           </div>
         )}
       </div>
+
+      <YearChart
+        years={p.years}
+        label={t("chart.title")}
+        hrefFor={(y) => routes.search({ by: p.code, from: String(y), to: String(y), sort: "date_asc" })}
+      />
 
       {(p.topCharacters.length > 0 || p.collaborators.length > 0) && (
         <div className="two-col">

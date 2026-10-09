@@ -172,6 +172,14 @@ const fr = {
     showResults_one: "Voir {{n}} histoire",
     showResults_other: "Voir {{n}} histoires",
   },
+  chart: {
+    title: "Histoires par année",
+    year_one: "{{year}} : {{n}} histoire",
+    year_other: "{{year}} : {{n}} histoires",
+    peak_one: "Record en {{year}} : {{n}} histoire",
+    peak_other: "Record en {{year}} : {{n}} histoires",
+    aria: "{{label}}, de {{from}} à {{to}}. Flèches pour parcourir, Entrée pour voir les histoires de l'année.",
+  },
   story: {
     untitled: "Sans titre",
     originalTitle: "Titre original :",

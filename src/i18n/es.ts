@@ -176,6 +176,14 @@ const es: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     showResults_one: "Ver {{n}} historia",
     showResults_other: "Ver {{n}} historias",
   },
+  chart: {
+    title: "Historias por año",
+    year_one: "{{year}}: {{n}} historia",
+    year_other: "{{year}}: {{n}} historias",
+    peak_one: "Récord en {{year}}: {{n}} historia",
+    peak_other: "Récord en {{year}}: {{n}} historias",
+    aria: "{{label}}, de {{from}} a {{to}}. Flechas para recorrer, Intro para ver las historias del año.",
+  },
   story: {
     untitled: "Sin título",
     originalTitle: "Título original:",

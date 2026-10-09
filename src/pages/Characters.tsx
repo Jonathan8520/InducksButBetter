@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { ExternalLink, Search } from "lucide-react";
 import { Facts, Page, PageHead, Section } from "../components/page";
 import { InducksText } from "../components/InducksText";
+import { YearChart } from "../components/YearChart";
 import { StoryList } from "../components/stories";
 import { Avatar } from "../components/ui/Media";
 import { Button, ButtonLink } from "../components/ui/Button";
@@ -192,6 +193,11 @@ export function Character() {
               </dl>
             </Disclosure>
           )}
+          <YearChart
+            years={c.years}
+            label={t("chart.title")}
+            hrefFor={(y) => routes.search({ char: c.code, from: String(y), to: String(y), sort: "date_asc" })}
+          />
         </div>
         <div className="profile__side">
           {c.creators.length > 0 && (
