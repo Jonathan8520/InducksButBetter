@@ -447,7 +447,7 @@ const fr = {
   lab: {
     title: "Labo SQL",
     lead: "Interrogez directement la base, ou décrivez ce que vous cherchez et l'assistant écrit la requête.",
-    askPlaceholder: "Ex. : les histoires de Don Rosa jamais publiées en France",
+    askPlaceholder: "Ex. : Don Rosa jamais publié en France",
     ask: "Générer",
     thinking: "Rédaction…",
     aiBy: "Requête rédigée par l'assistant ({{provider}}). Vérifiez-la avant de vous y fier.",

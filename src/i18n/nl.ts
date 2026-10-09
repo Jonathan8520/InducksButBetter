@@ -451,7 +451,7 @@ const nl: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
   lab: {
     title: "SQL-lab",
     lead: "Bevraag de database rechtstreeks, of beschrijf wat je zoekt en de assistent schrijft de query.",
-    askPlaceholder: "bijv. verhalen van Don Rosa die nooit in Nederland zijn verschenen",
+    askPlaceholder: "bv. Don Rosa nooit verschenen in Nederland",
     ask: "Genereren",
     thinking: "Bezig met schrijven…",
     aiBy: "Query geschreven door de assistent ({{provider}}). Controleer hem voordat je erop vertrouwt.",

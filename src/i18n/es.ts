@@ -451,7 +451,7 @@ const es: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
   lab: {
     title: "Laboratorio SQL",
     lead: "Consulta directamente la base de datos, o describe lo que buscas y el asistente escribe la consulta.",
-    askPlaceholder: "p. ej., historias de Don Rosa nunca publicadas en España",
+    askPlaceholder: "p. ej., Don Rosa nunca publicado en España",
     ask: "Generar",
     thinking: "Escribiendo…",
     aiBy: "Consulta escrita por el asistente ({{provider}}). Revísala antes de fiarte de ella.",

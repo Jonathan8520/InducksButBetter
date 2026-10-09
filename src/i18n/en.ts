@@ -451,7 +451,7 @@ const en: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
   lab: {
     title: "SQL lab",
     lead: "Query the database directly, or describe what you're looking for and the assistant writes the query.",
-    askPlaceholder: "e.g. Don Rosa stories never printed in France",
+    askPlaceholder: "e.g. Don Rosa never printed in France",
     ask: "Generate",
     thinking: "Writing…",
     aiBy: "Query written by the assistant ({{provider}}). Check it before relying on it.",
