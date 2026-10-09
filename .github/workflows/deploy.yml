@@ -134,6 +134,8 @@ jobs:
       - name: Découper la base dans le site
         run: |
           python scripts/split_db.py data/inducks.sqlite dist/db --chunk-kib "$CHUNK_KIB"
+          # Titres et images des fiches pour les aperçus de liens (functions/_lib/og.ts).
+          python scripts/og_index.py data/inducks.sqlite dist/og
           du -sh dist dist/db
           echo "$(find dist -type f | wc -l) fichiers"
 
