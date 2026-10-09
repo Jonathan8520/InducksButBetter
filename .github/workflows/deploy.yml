@@ -1,78 +1,244 @@
-name: Deploy to GitHub Pages (hérité — Turso, ne plus utiliser)
+name: Build & deploy
 
-# DÉCLENCHEMENT AUTOMATIQUE RETIRÉ VOLONTAIREMENT.
+# Chaque nuit : télécharge l'export public d'Inducks, reconstruit la base, la découpe en
+# tranches et publie le site avec ses données sur Cloudflare Pages
+# (https://inducksbutbetter-demo.pages.dev). À chaque poussée sur main : même chose, en
+# réutilisant la base du jour si elle est déjà construite.
 #
-# Ce workflow est celui d'origine : il construit avec VITE_STATIC_DB_URL="off", c'est-à-dire
-# l'application branchée sur TURSO — la base payante dont le quota est épuisé — puis la publie
-# sur GitHub Pages. Tant qu'il se déclenchait sur `push: main`, le premier merge de la
-# migration statique dans `main` aurait donc écrasé le site par la version à quota.
-#
-# Il ne peut plus partir que manuellement, et n'est conservé que comme filet de repli le temps
-# que le déploiement Cloudflare soit éprouvé.
-#
-# Le chemin actuel est .github/workflows/build-db.yml : base SQLite statique découpée,
-# déployée sur Cloudflare Pages, sans serveur de base ni facture possible.
-#
-# À noter : GitHub Pages plafonne à 1 Go par site, alors que la base découpée pèse ~2,1 Go —
-# ce déploiement ne pourra donc JAMAIS servir l'architecture statique.
+# Garde-fous :
+#   - une base qui échoue aux contrôles (scripts/check_db.py) n'est jamais publiée ;
+#   - si inducks.org ne répond pas, la dernière base valide (cache) est republiée telle
+#     quelle : le site ne tombe jamais à cause d'une panne en amont ;
+#   - GitHub désactive les tâches planifiées d'un dépôt sans activité depuis 60 jours ; la
+#     dernière étape réactive ce workflow à chaque exécution.
 
 on:
+  schedule:
+    # Inducks régénère son export vers 04 h UTC.
+    - cron: "35 5 * * *"
+  push:
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      rebuild:
+        description: "Forcer la reconstruction de la base"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+  actions: write
   pages: write
   id-token: write
 
 concurrency:
-  group: "pages"
-  cancel-in-progress: true
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  ISV_URL: https://inducks.org/inducks/isv.tgz
+  CHUNK_KIB: "256"
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      dump: ${{ steps.isv.outputs.dump }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v4
         with:
-          node-version: 20
+          version: 10
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
+      - uses: actions/setup-node@v4
         with:
-          version: 9
+          node-version: 22
+          cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-      - name: Build
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+
+      - name: Vérifier types et tests
+        run: |
+          pnpm exec tsc --noEmit
+          pnpm test
+
+      - name: Compiler le site
         run: pnpm run build
-        env:
-          # Déploiement historique, conservé tel quel tant que le chemin statique n'a pas
-          # été validé dans un navigateur. `off` est OBLIGATOIRE ici : sans cette valeur,
-          # l'application chercherait les tranches de base sous <base>/db/, qui n'existent
-          # pas sur ce déploiement — le site en ligne cesserait de fonctionner.
-          # Le nouveau chemin est .github/workflows/build-db.yml (Cloudflare Pages).
-          VITE_STATIC_DB_URL: "off"
-          VITE_TURSO_DATABASE_URL: ${{ secrets.VITE_TURSO_DATABASE_URL }}
-          VITE_TURSO_AUTH_TOKEN: ${{ secrets.VITE_TURSO_AUTH_TOKEN }}
-          VITE_GA_MEASUREMENT_ID: "G-YDE0FS0VYY"
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      # --- Données -------------------------------------------------------------------
+      - name: Date du jour
+        id: day
+        run: echo "day=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      # La base du jour est réutilisée si le script de construction n'a pas changé.
+      - name: Base en cache
+        id: cache
+        uses: actions/cache/restore@v4
         with:
-          path: ./dist
+          path: data/inducks.sqlite
+          key: db-${{ hashFiles('scripts/build_db.py') }}-${{ steps.day.outputs.day }}
+          restore-keys: |
+            db-${{ hashFiles('scripts/build_db.py') }}-
+            db-
 
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      - name: Télécharger l'export Inducks
+        id: isv
+        if: steps.cache.outputs.cache-hit != 'true' || inputs.rebuild
+        continue-on-error: true
+        run: |
+          mkdir -p data/isv
+          curl --fail --silent --show-error --location --retry 4 --retry-delay 20 \
+            --user-agent "InducksButBetter-builder (+https://github.com/${{ github.repository }})" \
+            --dump-header data/headers.txt --output data/isv.tgz "$ISV_URL"
+          # Anubis peut répondre 200 avec une page HTML : on vérifie que c'est bien une archive.
+          gzip -t data/isv.tgz
+          tar -xzf data/isv.tgz -C data/isv --strip-components=1
+          COUNT=$(ls data/isv/*.isv | wc -l)
+          echo "$COUNT fichiers ISV, $(du -sh data/isv | cut -f1)"
+          test "$COUNT" -ge 60
+          DUMP=$(grep -i '^last-modified:' data/headers.txt | tail -1 | cut -d' ' -f2- | tr -d '\r')
+          DUMP=$(date -u -d "$DUMP" +%Y-%m-%d 2>/dev/null || date -u +%Y-%m-%d)
+          echo "dump=$DUMP" >> "$GITHUB_OUTPUT"
+
+      - name: Construire la base
+        id: build
+        if: steps.isv.outcome == 'success'
+        run: |
+          python scripts/build_db.py data/isv data/new.sqlite --staging data/staging.sqlite \
+            --dump-date "${{ steps.isv.outputs.dump }}"
+          python scripts/check_db.py data/new.sqlite
+          mv data/new.sqlite data/inducks.sqlite
+
+      - name: Mettre la base en cache
+        if: steps.build.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: data/inducks.sqlite
+          key: db-${{ hashFiles('scripts/build_db.py') }}-${{ steps.day.outputs.day }}-${{ github.run_id }}
+
+      - name: Vérifier la base publiée
+        run: |
+          test -f data/inducks.sqlite || { echo "::error::Aucune base disponible (ni neuve, ni en cache)"; exit 1; }
+          if [ "${{ steps.isv.outcome }}" = "failure" ]; then
+            echo "::warning::inducks.org injoignable : la dernière base valide est republiée."
+          fi
+          python scripts/check_db.py data/inducks.sqlite
+
+      - name: Découper la base dans le site
+        run: |
+          python scripts/split_db.py data/inducks.sqlite dist/db --chunk-kib "$CHUNK_KIB"
+          du -sh dist dist/db
+          echo "$(find dist -type f | wc -l) fichiers"
+
+      - name: Conserver le site construit
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: |
+            dist
+            functions
+            wrangler.toml
+          retention-days: 3
+          include-hidden-files: true
+
+  cloudflare:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Le projet peut ne pas exister encore : la création échoue sans dommage s'il existe.
+      - name: Créer le projet Cloudflare Pages
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 pages project create inducksbutbetter-demo --production-branch=main
+
+      # Avec la liaison Workers AI (assistant SQL sans clé). Si le jeton n'a pas les droits
+      # nécessaires, on republie sans elle : le site reste en ligne et l'assistant se rabat
+      # sur un service public.
+      - name: Publier sur Cloudflare Pages
+        id: deploy
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 pages deploy dist --project-name=inducksbutbetter-demo --branch=main --commit-dirty=true
+
+      - name: Publier sans la liaison IA
+        if: steps.deploy.outcome == 'failure'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          mv wrangler.toml wrangler.toml.off
+          npx --yes wrangler@4 pages deploy dist --project-name=inducksbutbetter-demo --branch=main --commit-dirty=true
+
+  # Miroir GitHub Pages, actif dès que Pages est activé dans les réglages du dépôt
+  # (Settings > Pages > Source : GitHub Actions). Sans activation, cette étape échoue seule.
+  github-pages:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: site
+
+      # Le site est servi sous /<dépôt>/ : on le recompile avec ce préfixe et on reprend les
+      # tranches de base déjà découpées.
+      - name: Compiler pour GitHub Pages
+        run: |
+          pnpm install --frozen-lockfile
+          VITE_BASE="/${{ github.event.repository.name }}/" pnpm exec vite build
+          rm -rf dist/db && mv site/dist/db dist/db
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - id: pages
         uses: actions/deploy-pages@v4
+
+  keepalive:
+    needs: [cloudflare]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Garder la tâche planifiée active
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/deploy.yml/enable" || true

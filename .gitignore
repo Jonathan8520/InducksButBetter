@@ -1,29 +1,23 @@
 node_modules
-temp
 dist
 dist-ssr
 *.local
 .env
 .env.*
 !.env.example
-.agents
-brain
-scratch
-.system_generated
+.wrangler
 
-# Dumps Inducks (.isv) et bases construites — jamais dans git
+# Export Inducks et bases construites : jamais dans git.
 data/
 *.sqlite
 *.sqlite-journal
 
-# Tranches de base générées par scripts/split_db.py (~1,1 Go).
-# Produites par la CI et déployées directement, jamais versionnées.
-public/db/
-dist/
+# Tranches de base (scripts/split_db.py) : produites par la CI, ou lien local en dev.
+public/db
 
 # Python
 __pycache__/
 *.pyc
 
-# Le projet utilise pnpm ; ne pas versionner un lockfile npm concurrent.
+# Le projet utilise pnpm.
 package-lock.json

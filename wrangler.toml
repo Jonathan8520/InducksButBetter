@@ -1,0 +1,8 @@
+# Configuration Cloudflare Pages (lue par `wrangler pages deploy`).
+# La liaison AI donne à functions/api/ask.ts l'accès à Workers AI, sans clé côté client.
+name = "inducksbutbetter-demo"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-10-01"
+
+[ai]
+binding = "AI"

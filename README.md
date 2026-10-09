@@ -1,139 +1,84 @@
-<div align="center">
-  <h1>InducksButBetter</h1>
-  <p><strong>A lightning-fast, modern, and serverless frontend for exploring the Disney Comics Database (I.N.D.U.C.K.S.)</strong></p>
+# InducksButBetter
 
-  [![React](https://img.shields.io/badge/React_18.2-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
-  [![Vite](https://img.shields.io/badge/Vite_5.2-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E)](https://vitejs.dev/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript_5.2-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-  [![Tailwind CSS](https://img.shields.io/badge/Tailwind_3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-  [![Turso](https://img.shields.io/badge/Turso_0.14-4FF8D2?style=for-the-badge&logo=sqlite&logoColor=black)](https://turso.tech/)
-</div>
+Toutes les bandes dessinées Disney indexées par [I.N.D.U.C.K.S.](https://inducks.org), consultables
+dans le navigateur **sans rien télécharger ni importer** : histoires, numéros, publications,
+auteurs, personnages, univers et séries, avec une recherche multicritère, votre collection, et un
+labo SQL assisté par IA.
 
-<br />
+**En ligne : https://inducksbutbetter-demo.pages.dev**
 
-Welcome to **InducksButBetter**! This project is a complete reimagining of the classic Inducks search experience. Built with modern web technologies and a cutting-edge serverless database architecture, it offers instant searches, an elegant dark-mode UI, and powerful SQL exploration tools.
+## Ce qui change par rapport à la version d'origine
 
----
+| | Avant | Maintenant |
+|---|---|---|
+| Données | l'utilisateur télécharge une base de ~320 Mo, ou importe lui-même les fichiers ISV | rien à faire : le navigateur lit à distance les seules pages utiles (quelques centaines de Ko par fiche) |
+| Fraîcheur | base figée, reconstruite à la main | reconstruite **chaque nuit** depuis l'export public d'Inducks |
+| Assistant SQL | modèle IA téléchargé dans le navigateur (WebGPU, plusieurs centaines de Mo) | modèle hébergé (Workers AI), sans clé ; clé personnelle optionnelle (Groq, OpenRouter, Mistral, Gemini) |
+| Interface | thème par défaut de la bibliothèque de composants | identité propre, responsive, animations, palette de recherche (Ctrl K) |
 
-## Features
+## Architecture
 
-- **Instant search experience:** Autocomplete for characters, authors, and publishers in milliseconds.
-- **"My collection" filter:** Paste your raw Inducks collection export and instantly filter stories to only show issues you actually own!
-- **Smart SQL editor:** A built-in code editor with syntax highlighting, database schema-aware autocomplete, and auto-suggested tables for power users.
-- **AI-powered SQL assistant:** Don't know SQL? Just ask the AI in plain English/French, and it will translate your request into a complex Inducks query!
-- **Fully internationalized:** Seamless switching between French and English.
-- **100% Serverless:** Direct connection to a remote [Turso](https://turso.tech/) (SQLite) edge database. No heavy backend required!
-
-## Architecture: a static database, queried over HTTP Range
-
-The app no longer talks to a remote database server. It ships a **prebuilt SQLite file**,
-published as static chunks, and the browser fetches only the pages a query actually needs
-via HTTP Range requests.
-
-Why: a hosted database billed per row read cannot serve a public site for free. Every
-`LIKE '%word%'` search was a full table scan, and the free-form SQL tab let any visitor
-scan the whole database. Static bytes on a CDN have no such meter.
-
-**What a visitor actually downloads** (measured with an instrumented VFS,
-`scripts/measure_io.py`): a session of eight varied queries transfers about **3 MB — roughly
-0.3 % of the database**. A story detail page costs ~50 KB, an autocomplete ~30 KB.
-
-The single most effective technique is counter-intuitive: **physical clustering beats adding
-indexes**. Fetching the publications of a story through live joins cost 561 pages and 415
-HTTP requests; the same data in a purpose-built `WITHOUT ROWID` table clustered by
-`storycode` costs 9 pages and 9 requests. On this backend you trade server-side storage —
-free and unmetered on a CDN — for client requests, which are the scarce resource.
-
-## Quick start
-
-### Prerequisites
-- [Node.js](https://nodejs.org/) 18+ and [pnpm](https://pnpm.io/) 9+
-- [Python](https://www.python.org/) 3.12+ (only to build the database)
-
-### 1. Get the Inducks data
-
-```bash
-# Official source, regenerated daily
-python scripts/fetch_isv.py data/isv --base https://inducks.org/inducks/isv
-
-# Fallback while inducks.org is down: a public backup of the same files
-python scripts/fetch_isv.py data/isv --mega     # needs: pip install pycryptodome
+```
+inducks.org/isv.tgz ──► scripts/build_db.py ──► inducks.sqlite (~650 Mo)
+   (export quotidien)    tables regroupées,        │
+                         FTS5, index ciblés         ▼
+                                            scripts/split_db.py
+                                            tranches de 256 Kio compressées (~210 Mo)
+                                                    │
+                                                    ▼
+                               Cloudflare Pages (site + tranches + /api/ask)
+                                                    │
+navigateur : React ─► pool de Web Workers SQLite (WASM) ─► VFS HTTP ─► tranches utiles seulement
 ```
 
-### 2. Build and split the database
+- **Une base pensée pour être lue à distance.** Chaque écran lit des tables regroupées sur sa clé
+  d'accès (`WITHOUT ROWID`) : les histoires d'un auteur, le sommaire d'un numéro ou les parutions
+  d'une histoire sont contiguës, donc lues en une ou deux requêtes réseau. Les histoires ont un
+  identifiant entier ; l'index plein texte des titres est numéroté par popularité, si bien que les
+  premiers résultats d'une recherche sont lus sans parcourir les autres.
+- **Des tranches immuables.** Chaque reconstruction publie un nouveau dossier de tranches
+  (`/db/<empreinte>/`), mises en cache un an par le navigateur. Seul `manifest.json` est revalidé.
+- **Plusieurs workers.** SQLite est synchrone : les requêtes indépendantes d'une page (une fiche
+  lance une dizaine de requêtes) avancent en parallèle sur 2 à 4 workers.
+- **Garde-fous de construction.** `scripts/check_db.py` vérifie le contenu (entités connues) et
+  que les requêtes chaudes passent par un index. Une base qui échoue n'est jamais publiée ; si
+  inducks.org ne répond pas, la dernière base valide est republiée.
 
-```bash
-python scripts/build_db.py data/isv data/inducks.sqlite
-python scripts/check_queries.py data/inducks.sqlite   # no query may fall back to a scan
-python scripts/split_db.py data/inducks.sqlite public/db
-```
+## Développer
 
-### 3. Install & run
+Prérequis : Node 22, pnpm 10, Python 3.12.
 
 ```bash
 pnpm install
-pnpm dev
+
+# Construire la base localement (5 minutes environ)
+mkdir -p data/isv
+curl -L -o data/isv.tgz https://inducks.org/inducks/isv.tgz
+tar -xzf data/isv.tgz -C data/isv --strip-components=1
+python scripts/build_db.py data/isv data/inducks.sqlite
+python scripts/check_db.py data/inducks.sqlite
+python scripts/split_db.py data/inducks.sqlite data/db
+ln -s ../data/db public/db
+
+pnpm dev        # http://localhost:5173
+pnpm test       # tests unitaires
+pnpm build      # site statique dans dist/
 ```
 
-The app is served at `http://localhost:5173` and reads the chunks from `public/db/`.
+## Déploiement
 
-Set `VITE_STATIC_DB_URL` to serve the chunks from elsewhere, or to `off` to fall back to the
-legacy Turso path (which still requires `VITE_TURSO_DATABASE_URL` and
-`VITE_TURSO_AUTH_TOKEN`).
+`.github/workflows/deploy.yml` tourne chaque nuit et à chaque poussée sur `main` : vérification
+des types et des tests, compilation, téléchargement de l'export Inducks, construction et contrôle
+de la base, découpage, puis publication sur Cloudflare Pages (secrets `CLOUDFLARE_API_TOKEN` et
+`CLOUDFLARE_ACCOUNT_ID`). Le même workflow publie un miroir sur GitHub Pages dès que Pages est
+activé dans les réglages du dépôt (source : GitHub Actions).
 
-> **Note:** A minimal backend proxy runs on `http://localhost:3000` solely to proxy images from external providers and bypass CORS restrictions. All SQL queries are executed securely directly from the client!
+La liaison Workers AI (`wrangler.toml`) alimente `functions/api/ask.ts`. Sur le plan gratuit,
+l'allocation quotidienne est plafonnée sans facturation possible.
 
-### Using a local database (ISV files)
+## Crédits
 
-If you don't want to use Turso, or if you exceed the free-tier limits, you can import the raw Inducks database directly into your browser:
-1. Obtain the official Inducks ISV database dump (usually a ZIP file containing `.isv` files).
-2. Extract the `.isv` files to a folder on your computer.
-3. Click the **Import DB** button in the top right corner of the application.
-4. Select all the extracted `.isv` files. The app will parse them, create the tables, build necessary indexes for speed, and load the entire database into a dedicated **Web Worker**.
-5. Your searches will now be executed entirely offline, with results **streamed progressively** to the UI without ever freezing your browser!
+- Données : le projet [I.N.D.U.C.K.S.](https://inducks.org) et ses bénévoles.
+- Projet d'origine : [WizyxGH/InducksButBetter](https://github.com/WizyxGH/InducksButBetter).
 
-## Architecture and optimizations
-
-- **Modular React architecture**: The search interface has been completely refactored. The business logic has been extracted into dedicated custom hooks (`useSearchFilters.ts`, `useSearchExecution.ts`, `useMetadata.ts`), and the UI has been split into independent sub-components (`SearchForm.tsx` and `SearchResults.tsx`).
-- **Edge database (`@libsql/client/web`)**: The app connects directly to Turso via HTTP.
-- **Web Worker Database Engine**: When using a local ISV database, `sql.js` operates entirely inside a Web Worker thread. Heavy SQL searches are executed asynchronously and streamed progressively to the UI, guaranteeing a flawless 60 FPS experience with no UI freezing.
-- **Vite bundle optimization (manualChunks)**: Code splitting is configured to separate dependencies (`react-vendor`, `ui-vendor`, `db-vendor`, `ai-vendor`) for faster initial page loads and optimal browser caching.
-- **Aggressive caching**: To preserve free-tier quotas, static metadata (countries, universes, languages) is cached via `sessionStorage`.
-- **JSON injection**: The personal collection filter uses SQLite's `json_each()` function to pass thousands of issue codes to the database in a single, lightweight payload.
-
-## Deployment (Cloudflare Pages)
-
-`.github/workflows/build-db.yml` runs nightly: it fetches the ISV files, rebuilds the
-database, verifies that every real query still uses an index, splits the result into chunks
-and deploys.
-
-Add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as repository secrets. No database
-credentials exist any more — there is nothing left to leak.
-
-**Why Cloudflare Pages rather than R2 or GitHub Pages.** The choice is not about which is
-technically nicest, it is about which one *cannot send you a bill*:
-
-| | Free tier | On overage |
-|---|---|---|
-| **Cloudflare Pages** | unlimited bandwidth, 20 000 files, **25 MiB max per file** | never billed |
-| GitHub Pages | 1 GB site, ~100 GB/month soft | never billed (email, or service stops) |
-| Cloudflare R2 | 10 GB, 10 M reads/month, egress genuinely free | ⚠️ **billed automatically** |
-
-R2 is the more elegant fit — one big file, no chunking — but its overage is billed, which is
-exactly how the previous setup failed. Pages is capped at 25 MiB per file, hence the 20 MiB
-chunks. The database is over 1 GB, which rules out GitHub Pages as the primary host.
-
-A `*.pages.dev` subdomain is provided free; no domain purchase is required.
-
-## Credits
-
-- **Luis Bärenfaller**: German, Italian, and Portuguese translations.
-
----
-
-<div align="center">
-  <h3>🌟 Support the project</h3>
-  <p>If you find this project useful or simply love Disney comics, please consider <strong>giving it a star</strong>! It helps the project grow and motivates me to add more features. ⭐</p>
-  <br />
-  <i>Built with ❤️ for Inducks contributors,Disney comics fans and collectors.</i>
-</div>
+Site de fans non officiel, sans lien avec The Walt Disney Company.

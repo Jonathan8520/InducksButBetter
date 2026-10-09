@@ -1,0 +1,273 @@
+import { useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { motion, useReducedMotion } from "motion/react";
+import { Bird, BookMarked, Dices, FlaskConical, Layers, Library, Orbit, PenLine, Search } from "lucide-react";
+import { Page, Section } from "../components/page";
+import { StoryShelf } from "../components/stories";
+import { Cover } from "../components/ui/Media";
+import { Segmented, Select } from "../components/ui/Controls";
+import { Skeleton, ErrorState } from "../components/ui/States";
+import { Button } from "../components/ui/Button";
+import { anniversary, dbInfo } from "../data/home";
+import { latestIssues } from "../data/issues";
+import { countries } from "../data/publications";
+import { randomStory } from "../data/stories";
+import { ui } from "../lib/ui";
+import { routes } from "../lib/routes";
+import { formatDate, formatNumber } from "../lib/format";
+import { countryName } from "../lib/inducks";
+import { settings } from "../lib/store";
+
+const LANG_COUNTRY: Record<string, string> = {
+  fr: "fr", en: "us", de: "de", it: "it", es: "es", pt: "br", nl: "nl", da: "dk", sv: "se",
+  fi: "fi", no: "no", nb: "no", pl: "pl", el: "gr",
+};
+
+function useHomeCountry() {
+  const { i18n } = useTranslation();
+  const chosen = settings.use((s) => s.country);
+  return chosen || LANG_COUNTRY[(i18n.resolvedLanguage || "en").split("-")[0]] || "us";
+}
+
+function Hero() {
+  const { t } = useTranslation();
+  const reduce = useReducedMotion();
+  const navigate = useNavigate();
+  const info = useQuery({ queryKey: ["dbinfo"], queryFn: dbInfo, staleTime: Infinity });
+  const country = useHomeCountry();
+  const covers = useQuery({
+    queryKey: ["latest", country, 18],
+    queryFn: () => latestIssues(country, 18),
+    staleTime: Infinity,
+  });
+  const [rolling, setRolling] = useState(false);
+  const stats = info.data?.stats;
+  const shown = (covers.data ?? []).filter((c) => c.img).slice(0, 5);
+
+  const surprise = async () => {
+    setRolling(true);
+    try {
+      const code = await randomStory();
+      if (code) navigate(routes.story(code));
+    } finally {
+      setRolling(false);
+    }
+  };
+
+  return (
+    <section className="hero">
+      <div className="hero__text">
+        <h1 className="hero__title">{t("home.title")}</h1>
+        <p className="hero__lead">
+          {stats
+            ? t("home.lead", {
+                stories: formatNumber(stats.stories),
+                issues: formatNumber(stats.issues),
+                creators: formatNumber(stats.creators),
+              })
+            : t("home.leadLoading")}
+        </p>
+        <button className="hero__search" onClick={() => ui.openPalette()}>
+          <Search size={20} />
+          <span>{t("home.searchPlaceholder")}</span>
+        </button>
+        <div className="hero__examples">
+          <span className="muted">{t("home.try")}</span>
+          {["Carl Barks", "Don Rosa", "Picsou Magazine", "Topolino 3000", "Gyro Gearloose"].map((ex) => (
+            <button key={ex} className="example" onClick={() => ui.openPalette(ex)}>
+              {ex}
+            </button>
+          ))}
+        </div>
+        <div className="hero__actions">
+          <Button variant="primary" icon={<Search size={17} />} onClick={() => navigate(routes.search())}>
+            {t("home.advanced")}
+          </Button>
+          <Button icon={<Dices size={17} />} onClick={surprise} disabled={rolling}>
+            {t("home.random")}
+          </Button>
+        </div>
+      </div>
+      <div className="hero__covers" aria-hidden>
+        {shown.length === 0 && covers.isLoading && (
+          <div className="hero__fan">
+            {[0, 1, 2].map((i) => (
+              <div className="hero__fan-item" key={i} style={{ ["--i" as string]: i - 1 }}>
+                <Skeleton w="100%" h="100%" r={3} />
+              </div>
+            ))}
+          </div>
+        )}
+        {shown.length > 0 && (
+          <div className="hero__fan">
+            {shown.map((c, i) => {
+              const offset = i - (shown.length - 1) / 2;
+              return (
+                <motion.div
+                  key={c.issuecode}
+                  className="hero__fan-item"
+                  style={{ ["--i" as string]: offset, zIndex: 10 - Math.abs(Math.round(offset)) }}
+                  initial={reduce ? false : { opacity: 0, y: 40, rotate: 0 }}
+                  animate={{ opacity: 1, y: 0, rotate: offset * 6 }}
+                  transition={{ type: "spring", stiffness: 140, damping: 18, delay: 0.08 * i }}
+                >
+                  <Link to={routes.issue(c.issuecode, c.publicationcode)} tabIndex={-1}>
+                    <Cover img={c.img} alt="" quality="medium" seed={c.issuecode} eager />
+                  </Link>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+        {shown.length > 0 && (
+          <p className="hero__caption">
+            {t("home.coversCaption", { country: countryName(country) })}
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function Latest() {
+  const { t } = useTranslation();
+  const country = useHomeCountry();
+  const list = useQuery({
+    queryKey: ["latest", country, 18],
+    queryFn: () => latestIssues(country, 18),
+    staleTime: Infinity,
+  });
+  const all = useQuery({ queryKey: ["countries"], queryFn: countries, staleTime: Infinity });
+  const options = useMemo(
+    () =>
+      (all.data ?? [])
+        .map((c) => ({ code: c.code, name: countryName(c.code, c.name) }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [all.data],
+  );
+  return (
+    <Section
+      id="latest"
+      title={t("home.latest")}
+      aside={
+        <Select
+          aria-label={t("home.country")}
+          value={country}
+          onChange={(e) => settings.set({ country: e.target.value })}
+        >
+          {!options.some((o) => o.code === country) && <option value={country}>{countryName(country)}</option>}
+          {options.map((o) => (
+            <option key={o.code} value={o.code}>
+              {o.name}
+            </option>
+          ))}
+        </Select>
+      }
+    >
+      {list.isError && <ErrorState error={list.error} retry={() => list.refetch()} />}
+      <div className="issue-shelf">
+        {(list.data ?? Array.from({ length: 8 }, () => null)).map((it, i) =>
+          it ? (
+            <Link key={it.issuecode} to={routes.issue(it.issuecode, it.publicationcode)} className="issue-tile">
+              <Cover img={it.img} alt="" seed={it.issuecode} />
+              <span className="issue-tile__title">
+                {it.publicationTitle} <span className="num">{it.number}</span>
+              </span>
+              <span className="issue-tile__date">{formatDate(it.date, "short")}</span>
+            </Link>
+          ) : (
+            <div className="issue-tile" key={i}>
+              <Skeleton w="100%" h={190} r={3} />
+              <Skeleton w="80%" h={12} />
+            </div>
+          ),
+        )}
+      </div>
+    </Section>
+  );
+}
+
+function Anniversary() {
+  const { t } = useTranslation();
+  const [years, setYears] = useState<"25" | "50" | "75">("75");
+  const data = useQuery({
+    queryKey: ["anniversary", years],
+    queryFn: () => anniversary(Number(years), 10),
+    staleTime: Infinity,
+  });
+  const month = new Intl.DateTimeFormat(undefined, { month: "long" }).format(new Date());
+  return (
+    <Section
+      id="anniversary"
+      title={t("home.anniversary", { years, month })}
+      aside={
+        <Segmented
+          label={t("home.anniversaryChoice")}
+          value={years}
+          onChange={setYears}
+          items={[
+            { value: "25", label: t("home.yearsAgo", { n: 25 }) },
+            { value: "50", label: t("home.yearsAgo", { n: 50 }) },
+            { value: "75", label: t("home.yearsAgo", { n: 75 }) },
+          ]}
+        />
+      }
+    >
+      {data.data && data.data.sids.length === 0 ? (
+        <p className="muted">{t("home.anniversaryNone")}</p>
+      ) : (
+        <StoryShelf sids={data.data?.sids ?? []} />
+      )}
+    </Section>
+  );
+}
+
+function ExploreList() {
+  const { t } = useTranslation();
+  const info = useQuery({ queryKey: ["dbinfo"], queryFn: dbInfo, staleTime: Infinity });
+  const s = info.data?.stats;
+  const items = [
+    { to: routes.countries(), icon: Library, key: "publications", n: s ? t("home.n.publications", { n: formatNumber(s.publications), c: formatNumber(s.countries) }) : "" },
+    { to: routes.creators(), icon: PenLine, key: "creators", n: s ? t("home.n.creators", { n: formatNumber(s.creators) }) : "" },
+    { to: routes.characters(), icon: Bird, key: "characters", n: s ? t("home.n.characters", { n: formatNumber(s.characters) }) : "" },
+    { to: routes.universes(), icon: Orbit, key: "universes", n: t("nav.hint.universes") },
+    { to: routes.subseriesList(), icon: Layers, key: "series", n: t("nav.hint.series") },
+    { to: routes.collection(), icon: BookMarked, key: "collection", n: t("nav.hint.collection") },
+    { to: routes.lab(), icon: FlaskConical, key: "lab", n: t("nav.hint.lab") },
+  ];
+  return (
+    <Section id="explore" title={t("home.explore")}>
+      <ul className="explore-list">
+        {items.map((it) => {
+          const Icon = it.icon;
+          return (
+            <li key={it.key}>
+              <Link to={it.to}>
+                <span className="explore-list__icon">
+                  <Icon size={20} strokeWidth={1.8} />
+                </span>
+                <span>
+                  <strong>{t(`nav.${it.key}`)}</strong>
+                  <small>{it.n}</small>
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </Section>
+  );
+}
+
+export default function Home() {
+  return (
+    <Page>
+      <Hero />
+      <Latest />
+      <Anniversary />
+      <ExploreList />
+    </Page>
+  );
+}

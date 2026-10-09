@@ -1,0 +1,115 @@
+/*
+ * Jetons de design.
+ *
+ * Encre bleu nuit sur papier blanc, et un seul jaune « surligneur » pour dire où l'on est
+ * (élément actif, filtre posé, correspondance de recherche). La couleur vive de la page,
+ * ce sont les couvertures et les cases des histoires : l'interface reste en retrait.
+ */
+:root {
+  --paper: #ffffff;
+  --surface: #f2f4f8;
+  --surface-2: #e8ecf3;
+  --raised: #ffffff;
+  --ink: #162447;
+  --ink-2: #3c4a6e;
+  --ink-3: #6b7694;
+  --line: #dde2ec;
+  --line-strong: #c6cddc;
+  --marker: #ffd23f;
+  --marker-ink: #1d1a05;
+  --marker-soft: #fff3c4;
+  --signal: #d7263d;
+  --ok: #1e7d4f;
+  --link: #1f4bb3;
+  --focus: #1f4bb3;
+  --shadow-color: 222 40% 20%;
+  --scrim: rgb(14 22 46 / 0.42);
+  --cover-bg: #e4e8f0;
+
+  --font-display: "Bricolage Grotesque Variable", "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-ui: "Instrument Sans Variable", "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --t-xs: 0.8125rem;   /* 13 */
+  --t-sm: 0.875rem;    /* 14 */
+  --t-md: 0.9375rem;   /* 15 */
+  --t-lg: 1.0625rem;   /* 17 */
+  --t-xl: 1.3125rem;   /* 21 */
+  --t-2xl: 1.75rem;    /* 28 */
+  --t-3xl: 2.5rem;     /* 40 */
+  --t-4xl: 3.5rem;     /* 56 */
+
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-cover: 3px;
+
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  --rail: 248px;
+  --content: 1180px;
+  --topbar: 60px;
+  --tabbar: 64px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.08);
+  --shadow-md: 0 2px 6px hsl(var(--shadow-color) / 0.08), 0 12px 32px -12px hsl(var(--shadow-color) / 0.22);
+  --shadow-lg: 0 24px 64px -16px hsl(var(--shadow-color) / 0.35);
+  --shadow-cover: 0 1px 1px hsl(var(--shadow-color) / 0.12), 0 6px 14px -6px hsl(var(--shadow-color) / 0.35);
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --paper: #0f172e;
+  --surface: #151f3b;
+  --surface-2: #1c2849;
+  --raised: #182344;
+  --ink: #e9edf7;
+  --ink-2: #c3cbe0;
+  --ink-3: #8d99b8;
+  --line: #26325a;
+  --line-strong: #34426f;
+  --marker: #ffd23f;
+  --marker-ink: #1d1a05;
+  --marker-soft: #3a3417;
+  --signal: #ff5c6c;
+  --ok: #4cc38a;
+  --link: #9cb7ff;
+  --focus: #9cb7ff;
+  --shadow-color: 230 60% 3%;
+  --scrim: rgb(4 8 20 / 0.6);
+  --cover-bg: #1c2849;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f172e;
+    --surface: #151f3b;
+    --surface-2: #1c2849;
+    --raised: #182344;
+    --ink: #e9edf7;
+    --ink-2: #c3cbe0;
+    --ink-3: #8d99b8;
+    --line: #26325a;
+    --line-strong: #34426f;
+    --marker: #ffd23f;
+    --marker-ink: #1d1a05;
+    --marker-soft: #3a3417;
+    --signal: #ff5c6c;
+    --ok: #4cc38a;
+    --link: #9cb7ff;
+    --focus: #9cb7ff;
+    --shadow-color: 230 60% 3%;
+    --scrim: rgb(4 8 20 / 0.6);
+    --cover-bg: #1c2849;
+    color-scheme: dark;
+  }
+}
