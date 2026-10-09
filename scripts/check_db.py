@@ -62,6 +62,8 @@ HOT = {
         "ORDER BY pubs DESC LIMIT 10", ["1950-10", "1950-10~"]),
     "histoire du jour": ("SELECT storycode FROM story_pick WHERE n = ?", [42]),
     "recherche sans critère": (
+        "SELECT s.sid FROM story_search s WHERE s.kind = 'n' ORDER BY s.pubs DESC, s.sid LIMIT 30", []),
+    "filtres, les plus récentes": (
         "SELECT s.sid FROM story_search s WHERE s.kind = 'n' AND s.date < ':' "
         "ORDER BY s.date DESC, s.sid LIMIT 30", []),
     "inédits d'un pays": (

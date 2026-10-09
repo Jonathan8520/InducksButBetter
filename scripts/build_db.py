@@ -389,7 +389,8 @@ step("story_search", """
     FROM story""",
     # Index couvrant (sid est la clé) : « parues tel mois, les plus publiées » sans lire la table.
     "CREATE INDEX story_search_date ON story_search(date, kind, pubs)",
-    "CREATE INDEX story_search_pubs ON story_search(pubs)")
+    # (pubs, kind) : « les plus publiées » sans critère se lit dans l'index seul.
+    "CREATE INDEX story_search_pubs ON story_search(pubs, kind)")
 
 # Rang de popularité : l'index plein texte des titres est numéroté dans cet ordre, si bien
 # que les N premiers résultats d'une recherche sont les N histoires les plus publiées, lus

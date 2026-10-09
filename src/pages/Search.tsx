@@ -460,7 +460,7 @@ export default function Search() {
               </Button>
               <Select
                 aria-label={t("search.sort")}
-                value={f.sort ?? (f.q ? "relevance" : "date_desc")}
+                value={f.sort ?? (f.q ? "relevance" : active ? "date_desc" : "pubs")}
                 onChange={(e) => set({ sort: e.target.value })}
               >
                 <option value="relevance">{t("search.sorts.relevance")}</option>

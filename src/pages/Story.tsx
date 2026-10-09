@@ -353,7 +353,9 @@ export default function Story() {
               [t("story.origin"), s.header?.title ?? ""],
               [
                 t("story.reach"),
-                s.pubs ? t("story.reachN", { pubs: formatNumber(s.pubs), countries: formatNumber(s.countries), count: s.countries }) : "",
+                s.pubs
+                  ? `${t("story.printings", { count: s.pubs, n: formatNumber(s.pubs) })} ${t("story.inCountries", { count: s.countries, n: formatNumber(s.countries) })}`
+                  : "",
               ],
               [
                 t("story.partOf"),

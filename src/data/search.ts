@@ -129,7 +129,9 @@ function build(f: SearchFilters) {
     where.push("s.kind = 'n'");
   }
 
-  const sort = f.sort ?? (words ? "relevance" : "date_desc");
+  // Par défaut : pertinence avec des mots, les plus publiées sans critère (les classiques
+  // d'abord), les plus récentes quand des filtres sont posés.
+  const sort = f.sort ?? (words ? "relevance" : hasCriteria(f) ? "date_desc" : "pubs");
   // Les dates inconnues (« ? ») se trient après les chiffres : en ordre décroissant, elles
   // passeraient devant tout le reste.
   if (sort === "date_desc") where.push("s.date < ':'");

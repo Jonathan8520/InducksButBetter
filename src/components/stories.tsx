@@ -85,7 +85,7 @@ export function StoryRow({ s, index = 0, owned }: { s: StoryCard; index?: number
         </span>
         {s.pubs > 0 && (
           <span className="story-row__pubs num" title={t("story.publishedTimes", { count: s.pubs })}>
-            {t("story.pubsShort", { n: formatNumber(s.pubs) })}
+            {t("story.printings", { count: s.pubs, n: formatNumber(s.pubs) })}
           </span>
         )}
       </div>

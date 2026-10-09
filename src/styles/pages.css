@@ -1857,3 +1857,18 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* Choix segmentés dans le panneau de filtres : toute la largeur, libellés longs (italien,
+   allemand) répartis plutôt que coupés. */
+.filters .segmented {
+  display: flex;
+  width: 100%;
+}
+.filters .segmented__item {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 2px 6px;
+  font-size: var(--t-xs);
+  text-align: center;
+  line-height: 1.2;
+}
