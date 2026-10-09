@@ -19,6 +19,7 @@ import { decodeSegment, inducksUrl, routes } from "../lib/routes";
 import { formatDate, formatNumber } from "../lib/format";
 import { countryName, fullUrl, kindLabel, languageName, rolesLabel } from "../lib/inducks";
 import { collection, ownsIssue } from "../lib/collection";
+import { useHomeCountry } from "../lib/homeCountry";
 import { recordVisit, ui } from "../lib/ui";
 
 function StorySkeleton() {
@@ -62,6 +63,7 @@ function LongList<T>({ items, render, className = "pub-list", max = 25 }: { item
 function Publications({ sid, total }: { sid: number; total: number }) {
   const { t } = useTranslation();
   const [view, setView] = useState<"country" | "date">("country");
+  const home = useHomeCountry();
   const pubs = useQuery({ queryKey: ["story-pubs", sid], queryFn: () => storyPublications(sid), staleTime: Infinity });
   const groups = useMemo(() => {
     const list = pubs.data ?? [];
@@ -72,8 +74,11 @@ function Publications({ sid, total }: { sid: number; total: number }) {
       by.set(p.countrycode, arr);
     }
     for (const arr of by.values()) arr.sort((a, b) => (a.date || "9").localeCompare(b.date || "9"));
-    return [...by.entries()].sort((a, b) => b[1].length - a[1].length);
-  }, [pubs.data]);
+    // Le pays du visiteur d'abord (où la lire chez soi), puis les plus nombreux.
+    return [...by.entries()].sort(
+      (a, b) => Number(b[0] === home) - Number(a[0] === home) || b[1].length - a[1].length,
+    );
+  }, [pubs.data, home]);
   const chrono = useMemo(
     () => [...(pubs.data ?? [])].sort((a, b) => (a.date || "9").localeCompare(b.date || "9")),
     [pubs.data],
@@ -149,7 +154,7 @@ function Publications({ sid, total }: { sid: number; total: number }) {
               defaultOpen={i === 0 || groups.length <= 2}
               title={
                 <>
-                  <CountryTag code={cc} />
+                  <CountryTag code={cc} decorative />
                   <span>{countryName(cc)}</span>
                 </>
               }

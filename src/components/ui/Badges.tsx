@@ -13,8 +13,26 @@ export function KindTag({ kind }: { kind: string | null | undefined }) {
 }
 
 /** Pays : un code court et lisible, le nom complet au survol et pour les lecteurs d'écran. */
-export function CountryTag({ code, link = false, name }: { code: string; link?: boolean; name?: string | null }) {
+export function CountryTag({
+  code,
+  link = false,
+  name,
+  decorative = false,
+}: {
+  code: string;
+  link?: boolean;
+  name?: string | null;
+  /** Le nom du pays est déjà écrit à côté : l'étiquette n'est pas lue une seconde fois. */
+  decorative?: boolean;
+}) {
   const label = countryName(code, name);
+  if (decorative) {
+    return (
+      <span className="country-tag" aria-hidden>
+        {code.toUpperCase()}
+      </span>
+    );
+  }
   const content = (
     <>
       <span aria-hidden>{code.toUpperCase()}</span>

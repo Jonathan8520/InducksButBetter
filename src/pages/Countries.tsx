@@ -47,7 +47,7 @@ export function Countries() {
         {list.map((c) => (
           <li key={c.code}>
             <Link to={routes.country(c.code)}>
-              <CountryTag code={c.code} />
+              <CountryTag code={c.code} decorative />
               <span className="country-list__name">{c.label}</span>
               <span className="country-list__bar" aria-hidden>
                 <span style={{ width: `${Math.max(2, (100 * c.issues) / max)}%` }} />

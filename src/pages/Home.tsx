@@ -20,18 +20,8 @@ import { ui } from "../lib/ui";
 import { routes } from "../lib/routes";
 import { formatDate, formatNumber } from "../lib/format";
 import { countryName, rolesLabel } from "../lib/inducks";
+import { useHomeCountry } from "../lib/homeCountry";
 import { settings } from "../lib/store";
-
-const LANG_COUNTRY: Record<string, string> = {
-  fr: "fr", en: "us", de: "de", it: "it", es: "es", pt: "br", nl: "nl", da: "dk", sv: "se",
-  fi: "fi", no: "no", nb: "no", pl: "pl", el: "gr",
-};
-
-function useHomeCountry() {
-  const { i18n } = useTranslation();
-  const chosen = settings.use((s) => s.country);
-  return chosen || LANG_COUNTRY[(i18n.resolvedLanguage || "en").split("-")[0]] || "us";
-}
 
 function Hero() {
   const { t } = useTranslation();
