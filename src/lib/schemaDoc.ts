@@ -26,6 +26,9 @@ character_top(code, kind 'co'|'creator', rank, other, total)
 universe(code PK, comment, characters)
 universe_name(code, lang, name)
 universe_character(universe, stories, code)
+person_label(code PK, name) -- compact names, cheapest way to show creator names
+character_label(code, lang, name, PK(code, lang)) -- lang '' = base name; fr/en/de/it/es/pt/nl = localized names
+publication_label(code PK, title, countrycode, issues)
 person(code PK, name, nationality, official, birthname, born, bornplace, died, diedplace, comment, fake, stories, first, last, roles "role:count;…", indexed, years "stories per year: 1947:3,1948:12,…")
 person_alias(code, name)
 person_url(code, site, url)

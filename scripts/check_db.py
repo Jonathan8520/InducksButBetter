@@ -64,6 +64,10 @@ HOT = {
         "SELECT s.sid FROM story_search s WHERE s.sid IN (SELECT sid FROM person_story WHERE code = 'CB') "
         "AND NOT EXISTS (SELECT 1 FROM story_country x WHERE x.countrycode = 'fr' AND x.sid = s.sid) "
         "ORDER BY s.pubs DESC LIMIT 30", []),
+    "noms d'auteurs": ("SELECT code, name FROM person_label WHERE code IN ('CB', 'DR')", []),
+    "noms de personnages": (
+        "SELECT code, lang, name FROM character_label WHERE code IN ('US', 'DD') AND lang IN ('fr', '')", []),
+    "titres de publications": ("SELECT code, title FROM publication_label WHERE code IN ('fr/PM', 'it/TL')", []),
     "numéros indexés par une personne": (
         "SELECT * FROM person_issue WHERE code = ? AND job = 'i' ORDER BY date DESC LIMIT 48", ["CB"]),
 }

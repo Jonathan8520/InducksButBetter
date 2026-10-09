@@ -92,13 +92,13 @@ export async function issueDetail(pub: string, number: string): Promise<IssueDet
     ),
     rows<{ issuecode: string; publicationcode: string | null; title: string | null }>(
       `SELECT c.b AS issuecode, i.publicationcode, p.title FROM issue_collecting c
-       LEFT JOIN issue i ON i.issuecode = c.b LEFT JOIN publication p ON p.code = i.publicationcode
+       LEFT JOIN issue i ON i.issuecode = c.b LEFT JOIN publication_label p ON p.code = i.publicationcode
        WHERE c.a = ? AND c.dir = 'collects'`,
       [code],
     ),
     rows<{ issuecode: string; publicationcode: string | null; title: string | null }>(
       `SELECT c.b AS issuecode, i.publicationcode, p.title FROM issue_collecting c
-       LEFT JOIN issue i ON i.issuecode = c.b LEFT JOIN publication p ON p.code = i.publicationcode
+       LEFT JOIN issue i ON i.issuecode = c.b LEFT JOIN publication_label p ON p.code = i.publicationcode
        WHERE c.a = ? AND c.dir = 'collected'`,
       [code],
     ),
@@ -186,7 +186,7 @@ export async function latestIssues(country: string, limit = 18): Promise<IssueTi
   const r = await rows<IssueTile & { publicationTitle: string }>(
     `SELECT i.issuecode, i.publicationcode, i.number, i.title, i.date, i.img, i.stories,
             p.title AS publicationTitle
-     FROM issue i LEFT JOIN publication p ON p.code = i.publicationcode
+     FROM issue i LEFT JOIN publication_label p ON p.code = i.publicationcode
      WHERE i.countrycode = ? AND i.date <= ? AND i.date >= '1900'
      ORDER BY i.date DESC LIMIT ?`,
     [country, today, limit * 2],
@@ -213,7 +213,7 @@ export async function issueTiles(codes: string[]): Promise<IssueTile[]> {
       ...(await rows<IssueTile>(
         `SELECT i.issuecode, i.publicationcode, i.number, i.title, i.date, i.img, i.stories,
                 p.title AS publicationTitle, p.issues AS publicationIssues
-         FROM issue i LEFT JOIN publication p ON p.code = i.publicationcode
+         FROM issue i LEFT JOIN publication_label p ON p.code = i.publicationcode
          WHERE i.issuecode IN (${placeholders(part.length)})`,
         part,
       )),

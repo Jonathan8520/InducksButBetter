@@ -113,7 +113,7 @@ export function personIssues(code: string, job: string, offset = 0, limit = 60) 
   return rows<{ issuecode: string; date: string; publicationcode: string; number: string; title: string | null; img: string | null; publicationTitle: string | null }>(
     `SELECT x.issuecode, x.date, i.publicationcode, i.number, i.title, i.img, p.title AS publicationTitle
      FROM person_issue x JOIN issue i ON i.issuecode = x.issuecode
-     LEFT JOIN publication p ON p.code = i.publicationcode
+     LEFT JOIN publication_label p ON p.code = i.publicationcode
      WHERE x.code = ? AND x.job = ? ORDER BY x.date DESC LIMIT ? OFFSET ?`,
     [code, job, limit, offset],
   );

@@ -1,6 +1,8 @@
 /**
- * Résolution groupée des noms (auteurs, personnages, publications). Ces tables sont petites
- * et très demandées : un cache mémoire évite de les relire d'une page à l'autre.
+ * Résolution groupée des noms (auteurs, personnages, publications). Les tables d'étiquettes
+ * (person_label, character_label, publication_label) ne contiennent que les noms : quelques
+ * tranches en tout, vite dans le cache du navigateur. Un cache mémoire évite en plus de les
+ * relire d'une page à l'autre.
  */
 import { placeholders, rows } from "../db/client";
 import { dataLanguages } from "../lib/inducks";
@@ -31,7 +33,7 @@ async function resolve<T>(
 export function personNames(codes: Iterable<string>) {
   return resolve(people, codes, async (part) => {
     const r = await rows<{ code: string; name: string }>(
-      `SELECT code, name FROM person WHERE code IN (${placeholders(part.length)})`,
+      `SELECT code, name FROM person_label WHERE code IN (${placeholders(part.length)})`,
       part,
     );
     return r.map((x) => [x.code, x.name || x.code]);
@@ -41,22 +43,25 @@ export function personNames(codes: Iterable<string>) {
 export function characterNames(codes: Iterable<string>) {
   const [lang] = dataLanguages();
   return resolve(characters, codes, async (part) => {
-    const r = await rows<{ code: string; name: string }>(
-      `SELECT c.code,
-              COALESCE((SELECT n.name FROM character_name n
-                        WHERE n.code = c.code AND n.lang = ?
-                        ORDER BY n.preferred DESC LIMIT 1), c.name) AS name
-       FROM character c WHERE c.code IN (${placeholders(part.length)})`,
-      [lang, ...part],
+    // Nom dans la langue de l'interface s'il existe, sinon le nom de base (langue vide).
+    const r = await rows<{ code: string; lang: string; name: string }>(
+      `SELECT code, lang, name FROM character_label
+       WHERE code IN (${placeholders(part.length)}) AND lang IN (?, '')`,
+      [...part, lang],
     );
-    return r.map((x) => [x.code, x.name || x.code]);
+    const best = new Map<string, { lang: string; name: string }>();
+    for (const x of r) {
+      const cur = best.get(x.code);
+      if (!cur || (cur.lang === "" && x.lang !== "")) best.set(x.code, x);
+    }
+    return [...best.entries()].map(([code, x]) => [code, x.name || code]);
   });
 }
 
 export function publicationTitles(codes: Iterable<string>) {
   return resolve(publications, codes, async (part) => {
     const r = await rows<{ code: string; title: string; countrycode: string }>(
-      `SELECT code, title, countrycode FROM publication WHERE code IN (${placeholders(part.length)})`,
+      `SELECT code, title, countrycode FROM publication_label WHERE code IN (${placeholders(part.length)})`,
       part,
     );
     return r.map((x) => [x.code, { title: x.title || x.code, countrycode: x.countrycode }]);

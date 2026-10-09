@@ -1002,6 +1002,37 @@ step("issue_collecting", """
        WHERE collectingissuecode IS NOT NULL AND collectedissuecode IS NOT NULL""")
 
 
+# --- Étiquettes ---------------------------------------------------------------------------
+# Noms seuls, sans commentaires ni compteurs : quelques centaines de Ko en tout, vite mis en
+# cache par le navigateur. Chaque page qui affiche des auteurs, des personnages ou des
+# publications y résout ses noms au lieu de descendre dans les grosses tables.
+
+UI_LANGS = "('fr', 'en', 'de', 'it', 'es', 'pt', 'nl')"
+
+step("person_label", """
+    CREATE TABLE person_label (code TEXT PRIMARY KEY, name TEXT) WITHOUT ROWID""",
+    "INSERT INTO person_label SELECT code, COALESCE(name, code) FROM person")
+
+step("character_label", """
+    CREATE TABLE character_label (code TEXT, lang TEXT, name TEXT, PRIMARY KEY (code, lang))
+    WITHOUT ROWID""",
+    # Langue vide : le nom de base, utilisé quand la langue demandée n'a pas de nom propre.
+    "INSERT INTO character_label SELECT code, '', COALESCE(name, code) FROM character",
+    f"""INSERT OR IGNORE INTO character_label
+    SELECT code, lang, name FROM (
+        SELECT code, lang, name, ROW_NUMBER() OVER (PARTITION BY code, lang
+                                                    ORDER BY preferred DESC, name) AS rn
+        FROM character_name WHERE lang IN {UI_LANGS})
+    WHERE rn = 1""")
+
+step("publication_label", """
+    CREATE TABLE publication_label (
+        code TEXT PRIMARY KEY, title TEXT, countrycode TEXT, issues INTEGER
+    ) WITHOUT ROWID""",
+    """INSERT INTO publication_label
+       SELECT code, COALESCE(title, code), countrycode, issues FROM publication""")
+
+
 # --- Recherche plein texte ---------------------------------------------------------------
 # Index sans contenu : rowid = sid (ou rowid de la table source). Le texte n'est pas
 # dupliqué, seul l'index l'est. Le tokenizer unicode61 replie casse et accents.

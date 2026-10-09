@@ -129,7 +129,7 @@ async function issues(q: string) {
   const match = ftsTrigram(pubPart);
   if (match && pubs.length < 3) {
     const r = await rows<{ code: string }>(
-      `SELECT code FROM publication WHERE code IN
+      `SELECT code FROM publication_label WHERE code IN
          (SELECT key FROM fts_publication WHERE fts_publication MATCH ? LIMIT 100)
        ORDER BY issues DESC LIMIT 4`,
       [match],
@@ -141,7 +141,7 @@ async function issues(q: string) {
   const preferred = pubs.sort((a, b) => Number(b.startsWith(lang + "/")) - Number(a.startsWith(lang + "/")));
   return rows<OmniResults["issues"][number]>(
     `SELECT i.issuecode, i.publicationcode, i.number, i.title, i.date, i.img, p.title AS publicationTitle
-     FROM issue i JOIN publication p ON p.code = i.publicationcode
+     FROM issue i JOIN publication_label p ON p.code = i.publicationcode
      WHERE i.publicationcode IN (${placeholders(preferred.length)}) AND i.number = ?
      LIMIT 5`,
     [...preferred.slice(0, 6), number],
