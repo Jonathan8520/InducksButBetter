@@ -16,14 +16,31 @@ labo SQL assisté par IA.
 | Assistant SQL | modèle IA téléchargé dans le navigateur (WebGPU, plusieurs centaines de Mo) | modèle hébergé (Workers AI), sans clé ; clé personnelle optionnelle (Groq, OpenRouter, Mistral, Gemini) |
 | Interface | thème par défaut de la bibliothèque de composants | identité propre, responsive, animations, palette de recherche (Ctrl K) |
 
+## Ce qu'on y trouve
+
+- **Recherche** par titre (toutes langues), code, personnage, auteur et rôle, période, pages,
+  pays de parution ou d'absence (« jamais publiée en France »), avec export CSV.
+- **Palette** (Ctrl K ou `/`) : histoires, numéros (« Picsou Magazine 272 »), auteurs,
+  personnages, publications et séries en une seule saisie.
+- **Fiche histoire** : titres dans chaque langue, résumés, personnages, numéro de première
+  parution, toutes les parutions par pays ou par date, versions, références.
+- **Numéros** : sommaire illustré, premières parutions signalées, feuilletage au clavier (← →).
+- **Auteurs et personnages** : graphique des histoires par année (un clic ouvre l'année dans la
+  recherche), personnages et collaborateurs les plus fréquents.
+- **Ma collection** : import de l'export Inducks, avancement par publication, numéros manquants
+  copiables en liste (« 1-249, 300-569 »), filtre « possédés ou manquants » partout.
+- **Labo SQL** : éditeur avec autocomplétion du schéma, exemples, et assistant qui écrit la
+  requête à partir d'une question en français.
+- Interface en 7 langues, thème clair ou sombre, utilisable au téléphone.
+
 ## Architecture
 
 ```
-inducks.org/isv.tgz ──► scripts/build_db.py ──► inducks.sqlite (~650 Mo)
+inducks.org/isv.tgz ──► scripts/build_db.py ──► inducks.sqlite (~1 Go)
    (export quotidien)    tables regroupées,        │
                          FTS5, index ciblés         ▼
                                             scripts/split_db.py
-                                            tranches de 256 Kio compressées (~210 Mo)
+                                            tranches de 256 Kio compressées (~280 Mo)
                                                     │
                                                     ▼
                                Cloudflare Pages (site + tranches + /api/ask)
@@ -40,6 +57,9 @@ navigateur : React ─► pool de Web Workers SQLite (WASM) ─► VFS HTTP ─�
   (`/db/<empreinte>/`), mises en cache un an par le navigateur. Seul `manifest.json` est revalidé.
 - **Plusieurs workers.** SQLite est synchrone : les requêtes indépendantes d'une page (une fiche
   lance une dizaine de requêtes) avancent en parallèle sur 2 à 4 workers.
+- **Mise à jour sans casse.** Une page restée ouverte pendant la publication nocturne détecte
+  que sa version de base a disparu, relit le manifeste et rejoue la requête ; un ancien fichier de
+  code introuvable provoque un rechargement unique.
 - **Garde-fous de construction.** `scripts/check_db.py` vérifie le contenu (entités connues) et
   que les requêtes chaudes passent par un index. Une base qui échoue n'est jamais publiée ; si
   inducks.org ne répond pas, la dernière base valide est republiée.
@@ -51,7 +71,7 @@ Prérequis : Node 22, pnpm 10, Python 3.12.
 ```bash
 pnpm install
 
-# Construire la base localement (5 minutes environ)
+# Construire la base localement (quelques minutes)
 mkdir -p data/isv
 curl -L -o data/isv.tgz https://inducks.org/inducks/isv.tgz
 tar -xzf data/isv.tgz -C data/isv --strip-components=1
