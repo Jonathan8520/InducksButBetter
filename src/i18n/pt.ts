@@ -73,6 +73,7 @@ const pt: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     characters_other: "{{n}} personagens",
   },
   db: {
+    refreshed: "A base de dados acabou de ser atualizada; a partir de agora usa-se a nova versão.",
     connecting: "Acesso à base de dados…",
     updated: "Dados de {{date}}",
     unreachable: "Base de dados inacessível",

@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MotionConfig } from "motion/react";
 import "@fontsource-variable/bricolage-grotesque/standard.css";
 import "@fontsource-variable/instrument-sans";
-import "./i18n";
+import i18n from "./i18n";
 import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/layout.css";
@@ -13,7 +13,8 @@ import "./styles/components.css";
 import "./styles/pages.css";
 import App from "./App";
 import { applyTheme, settings } from "./lib/store";
-import { manifest } from "./db/client";
+import { manifest, onDbUpdate } from "./db/client";
+import { ui } from "./lib/ui";
 
 applyTheme(settings.get().theme);
 window
@@ -33,6 +34,12 @@ const client = new QueryClient({
       refetchOnWindowFocus: false,
     },
   },
+});
+
+// Nouvelle base publiée pendant la visite : la page continue sur la nouvelle version.
+onDbUpdate(() => {
+  void client.invalidateQueries({ queryKey: ["dbinfo"] });
+  ui.toast(i18n.t("db.refreshed"));
 });
 
 createRoot(document.getElementById("root")!).render(

@@ -7,7 +7,7 @@
  * fiche, les vignettes d'une page de résultats — avancent plus vite côte à côte.
  */
 import sqlite3InitModule from "@sqlite.org/sqlite-wasm";
-import { ChunkReader } from "./chunkReader";
+import { ChunkReader, STALE } from "./chunkReader";
 import { installVfs, VFS_NAME } from "./vfs";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -90,21 +90,27 @@ function query(req: QueryRequest): Omit<QueryResponse, "id" | "ok"> {
   const rows: Record<string, unknown>[] = [];
   let columns: string[] = [];
   let truncated = false;
-  const stmt = db.prepare(req.sql);
   try {
-    if (req.params?.length) stmt.bind(req.params);
-    columns = stmt.getColumnNames();
-    const max = req.maxRows ?? Infinity;
-    while (stmt.step()) {
-      if (rows.length >= max) {
-        truncated = true;
-        break;
+    const stmt = db.prepare(req.sql);
+    try {
+      if (req.params?.length) stmt.bind(req.params);
+      columns = stmt.getColumnNames();
+      const max = req.maxRows ?? Infinity;
+      while (stmt.step()) {
+        if (rows.length >= max) {
+          truncated = true;
+          break;
+        }
+        rows.push(stmt.get({}));
       }
-      rows.push(stmt.get({}));
+    } finally {
+      stmt.finalize();
+      deadline = 0;
     }
-  } finally {
-    stmt.finalize();
-    deadline = 0;
+  } catch (err) {
+    // SQLite ne voit qu'une erreur d'entrée-sortie : on rend la vraie cause au client.
+    if (reader.stale) throw new Error(STALE);
+    throw err;
   }
   return { rows, columns, truncated, ms: performance.now() - started, io: reader.takeStats() };
 }

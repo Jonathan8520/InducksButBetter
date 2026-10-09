@@ -41,6 +41,9 @@ export interface IoStats {
   hits: number;
 }
 
+/** Message d'erreur convenu : la base a changé de version pendant la visite. */
+export const STALE = "DB_STALE";
+
 /** Plafond mémoire du cache de tranches décompressées, par worker. */
 const CACHE_BUDGET = 48 * 1024 * 1024;
 
@@ -50,6 +53,11 @@ export class ChunkReader {
   private cache = new Map<number, Uint8Array>();
   private cachedBytes = 0;
   stats: IoStats = { requests: 0, bytes: 0, hits: 0 };
+  /**
+   * Vrai quand une tranche a disparu : le site a été republié avec une nouvelle base et
+   * l'ancienne version n'est plus servie. La page doit relire le manifeste.
+   */
+  stale = false;
 
   constructor(manifestUrl: string, manifest: Manifest) {
     const dir = manifestUrl.slice(0, manifestUrl.lastIndexOf("/") + 1);
@@ -120,6 +128,13 @@ export class ChunkReader {
         xhr.open("GET", this.base + name, false);
         xhr.responseType = "arraybuffer";
         xhr.send();
+        // Une tranche absente revient en 404, ou en page HTML (repli « application monopage »
+        // de l'hébergeur) : dans les deux cas cette version de la base n'existe plus.
+        const type = xhr.getResponseHeader("content-type") ?? "";
+        if (xhr.status === 404 || (xhr.status === 200 && type.includes("text/html"))) {
+          this.stale = true;
+          throw new Error(STALE);
+        }
         if (xhr.status !== 200) throw new Error(`HTTP ${xhr.status} ${name}`);
         const raw = new Uint8Array(xhr.response as ArrayBuffer);
         this.stats.requests++;
@@ -127,6 +142,7 @@ export class ChunkReader {
         return this.manifest.compression === "deflate-raw" ? inflateSync(raw) : raw;
       } catch (err) {
         lastError = err;
+        if (this.stale) break;
       }
     }
     throw lastError instanceof Error ? lastError : new Error(String(lastError));

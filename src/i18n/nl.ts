@@ -73,6 +73,7 @@ const nl: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     characters_other: "{{n}} figuren",
   },
   db: {
+    refreshed: "De database is net bijgewerkt; vanaf nu wordt de nieuwe versie gebruikt.",
     connecting: "Verbinden met de database…",
     updated: "Gegevens van {{date}}",
     unreachable: "Database onbereikbaar",

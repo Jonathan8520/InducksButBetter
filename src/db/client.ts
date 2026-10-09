@@ -14,6 +14,8 @@ import type {
 } from "./worker";
 import type { Manifest } from "./chunkReader";
 
+const STALE = "DB_STALE";
+
 export type { Param };
 export type Row = Record<string, unknown>;
 
@@ -119,7 +121,53 @@ function pick(): Slot {
   return best;
 }
 
+/** Prévenu quand la base a été remplacée par une version plus récente en cours de visite. */
+const updateListeners = new Set<() => void>();
+export function onDbUpdate(fn: () => void): () => void {
+  updateListeners.add(fn);
+  return () => updateListeners.delete(fn);
+}
+
+let generation = 0;
+
+/** Ferme tous les workers : les prochains rouvriront la base d'après le manifeste du jour. */
+function reopen(seen: number): void {
+  if (seen !== generation) return; // un autre appel a déjà rouvert
+  generation++;
+  for (const slot of pool) {
+    slot.worker.terminate();
+    for (const p of slot.pending.values()) p.reject(new Error(STALE));
+  }
+  pool.length = 0;
+  manifestPromise = null;
+  if (lab) {
+    lab.worker.terminate();
+    lab = null;
+  }
+  updateListeners.forEach((fn) => fn());
+}
+
+/**
+ * Le site est republié chaque nuit avec une nouvelle base ; une page restée ouverte
+ * réclame alors des tranches qui n'existent plus. On rouvre la base et on rejoue la
+ * requête une fois, sans que la page ne s'en aperçoive.
+ */
 export async function query<T = Row>(
+  sql: string,
+  params: Param[] = [],
+  options: QueryOptions = {},
+): Promise<QueryResult<T>> {
+  const seen = generation;
+  try {
+    return await queryOnce<T>(sql, params, options);
+  } catch (err) {
+    if (!(err instanceof Error) || err.message !== STALE) throw err;
+    reopen(seen);
+    return queryOnce<T>(sql, params, options);
+  }
+}
+
+async function queryOnce<T = Row>(
   sql: string,
   params: Param[] = [],
   options: QueryOptions = {},

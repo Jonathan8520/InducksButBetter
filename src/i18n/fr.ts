@@ -69,6 +69,7 @@ const fr = {
     characters_other: "{{n}} personnages",
   },
   db: {
+    refreshed: "La base vient d'être mise à jour, la suite de la visite utilise la nouvelle version.",
     connecting: "Connexion à la base…",
     updated: "Base du {{date}}",
     unreachable: "Base injoignable",

@@ -73,6 +73,7 @@ const de: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     characters_other: "{{n}} Figuren",
   },
   db: {
+    refreshed: "Die Datenbank wurde gerade aktualisiert; ab jetzt wird die neue Version verwendet.",
     connecting: "Verbindung zur Datenbank…",
     updated: "Daten vom {{date}}",
     unreachable: "Datenbank nicht erreichbar",

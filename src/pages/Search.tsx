@@ -270,7 +270,11 @@ function ActiveChips({ params, set, f }: { params: Params; set: (patch: Record<s
     }),
   );
   if (f.from || f.to)
-    chips.push({ key: "period", label: `${f.from ?? "…"}–${f.to ?? "…"}`, remove: () => set({ from: null, to: null }) });
+    chips.push({
+      key: "period",
+      label: f.from && f.from === f.to ? f.from : `${f.from ?? "…"}–${f.to ?? "…"}`,
+      remove: () => set({ from: null, to: null }),
+    });
   if (f.pagesMin || f.pagesMax)
     chips.push({
       key: "pages",
