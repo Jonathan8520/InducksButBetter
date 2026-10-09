@@ -369,3 +369,10 @@
   font-variation-settings: "wdth" 88;
   color: var(--ink);
 }
+
+/* Lien d'aide clavier : inutile sur un écran tactile. */
+@media (pointer: coarse) {
+  .site-foot__keys {
+    display: none;
+  }
+}

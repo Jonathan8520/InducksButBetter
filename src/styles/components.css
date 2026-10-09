@@ -1037,3 +1037,50 @@ a.country-tag:hover {
   padding: 5px 10px;
   white-space: nowrap;
 }
+
+/* Aide des raccourcis clavier. */
+.shortcuts {
+  margin: 0;
+  padding: 4px 22px 22px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.shortcuts > div {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  gap: 12px;
+  align-items: baseline;
+}
+.shortcuts dt {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.shortcuts dd {
+  margin: 0;
+  color: var(--ink-2);
+}
+.shortcuts kbd {
+  font-family: var(--font-ui);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  min-width: 26px;
+  text-align: center;
+  padding: 2px 7px;
+  border-radius: 5px;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+/* Bouton qui se présente comme un lien. */
+.link-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}

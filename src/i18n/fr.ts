@@ -185,6 +185,16 @@ const fr = {
     peak_other: "Record en {{year}} : {{n}} histoires",
     aria: "{{label}}, de {{from}} à {{to}}. Flèches pour parcourir, Entrée pour voir les histoires de l'année.",
   },
+  shortcuts: {
+    enter: "Entrée",
+    title: "Raccourcis clavier",
+    palette: "Ouvrir la recherche rapide",
+    paletteNav: "Parcourir et ouvrir un résultat",
+    issues: "Numéro précédent ou suivant",
+    run: "Exécuter la requête du labo",
+    close: "Fermer une fenêtre",
+    help: "Afficher cette aide",
+  },
   story: {
     untitled: "Sans titre",
     originalTitle: "Titre original :",

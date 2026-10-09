@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Logo } from "./Logo";
 import { FOOTER, PRIMARY, SECONDARY, isActive, type NavItem } from "./nav";
 import { CommandPalette } from "./CommandPalette";
-import { Sheet } from "../ui/Overlay";
+import { Dialog, Sheet } from "../ui/Overlay";
 import { IconButton } from "../ui/Button";
 import { ui, useUi } from "../../lib/ui";
 import { applyTheme, settings, type Theme } from "../../lib/store";
@@ -176,6 +176,38 @@ function Toasts() {
   );
 }
 
+/** Raccourcis clavier, ouverts avec « ? ». */
+function Shortcuts() {
+  const { t } = useTranslation();
+  const open = useUi((s) => s.shortcuts);
+  const mod = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl";
+  const rows: [string[], string][] = [
+    [[mod, "K"], t("shortcuts.palette")],
+    [["/"], t("shortcuts.palette")],
+    [["↑", "↓", t("shortcuts.enter")], t("shortcuts.paletteNav")],
+    [["←", "→"], t("shortcuts.issues")],
+    [[mod, t("shortcuts.enter")], t("shortcuts.run")],
+    [["Esc"], t("shortcuts.close")],
+    [["?"], t("shortcuts.help")],
+  ];
+  return (
+    <Dialog open={open} onClose={() => ui.set({ shortcuts: false })} title={t("shortcuts.title")} size="sm">
+      <dl className="shortcuts">
+        {rows.map(([keys, label], i) => (
+          <div key={i}>
+            <dt>
+              {keys.map((k) => (
+                <kbd key={k}>{k}</kbd>
+              ))}
+            </dt>
+            <dd>{label}</dd>
+          </div>
+        ))}
+      </dl>
+    </Dialog>
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
@@ -190,6 +222,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       } else if (e.key === "/" && !typing) {
         e.preventDefault();
         ui.openPalette();
+      } else if (e.key === "?" && !typing) {
+        e.preventDefault();
+        ui.set({ shortcuts: true });
       }
     };
     window.addEventListener("keydown", onKey);
@@ -261,6 +296,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             <a className="link" href="https://github.com/Jonathan8520/InducksButBetter" target="_blank" rel="noreferrer">
               GitHub
             </a>
+            <span className="site-foot__keys">
+              {" "}
+              <span aria-hidden>/</span>{" "}
+              <button type="button" className="link link-button" onClick={() => ui.set({ shortcuts: true })}>
+                {t("shortcuts.title")}
+              </button>
+            </span>
           </p>
         </footer>
       </div>
@@ -268,6 +310,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <TabBar />
       <Explore />
       <CommandPalette />
+      <Shortcuts />
       <Toasts />
     </div>
   );

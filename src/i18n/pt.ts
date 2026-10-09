@@ -189,6 +189,16 @@ const pt: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     peak_other: "Recorde em {{year}}: {{n}} histórias",
     aria: "{{label}}, de {{from}} a {{to}}. Setas para percorrer, Enter para ver as histórias do ano.",
   },
+  shortcuts: {
+    enter: "Enter",
+    title: "Atalhos de teclado",
+    palette: "Abrir a pesquisa rápida",
+    paletteNav: "Percorrer e abrir um resultado",
+    issues: "Número anterior ou seguinte",
+    run: "Executar a consulta do laboratório",
+    close: "Fechar uma janela",
+    help: "Mostrar esta ajuda",
+  },
   story: {
     untitled: "Sem título",
     originalTitle: "Título original:",

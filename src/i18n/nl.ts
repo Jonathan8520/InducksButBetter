@@ -189,6 +189,16 @@ const nl: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     peak_other: "Piek in {{year}}: {{n}} verhalen",
     aria: "{{label}}, van {{from}} tot {{to}}. Pijltjestoetsen om te bladeren, Enter voor de verhalen van dat jaar.",
   },
+  shortcuts: {
+    enter: "Enter",
+    title: "Sneltoetsen",
+    palette: "Snel zoeken openen",
+    paletteNav: "Door resultaten bladeren en openen",
+    issues: "Vorig of volgend nummer",
+    run: "Labo-query uitvoeren",
+    close: "Een venster sluiten",
+    help: "Deze hulp tonen",
+  },
   story: {
     untitled: "Zonder titel",
     originalTitle: "Oorspronkelijke titel:",

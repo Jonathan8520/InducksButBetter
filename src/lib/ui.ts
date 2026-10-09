@@ -5,10 +5,11 @@ interface UiState {
   palette: boolean;
   paletteQuery: string;
   explore: boolean;
+  shortcuts: boolean;
   toasts: { id: number; text: string; tone?: "ok" | "error" }[];
 }
 
-let state: UiState = { palette: false, paletteQuery: "", explore: false, toasts: [] };
+let state: UiState = { palette: false, paletteQuery: "", explore: false, shortcuts: false, toasts: [] };
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
