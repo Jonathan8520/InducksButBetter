@@ -469,7 +469,8 @@ const de: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     cancelled: "Abfrage gestoppt.",
     rows_one: "{{n}} Zeile",
     rows_other: "{{n}} Zeilen",
-    io: "{{req}} Netzwerkzugriffe, {{size}}",
+    io_one: "{{req}} Netzwerkzugriff, {{size}}",
+    io_other: "{{req}} Netzwerkzugriffe, {{size}}",
     hint: "Schreib eine Abfrage und klicke auf Ausführen. Die Spalten storycode, issuecode, personcode und charactercode werden zu Links.",
     ex: {
       thisWeek: "Neuerscheinungen der Woche weltweit",

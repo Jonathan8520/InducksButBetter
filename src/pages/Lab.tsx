@@ -286,7 +286,7 @@ export default function Lab() {
               <div className="lab__stats">
                 <span className="num">{t("lab.rows", { count: result.rows.length, n: formatNumber(result.rows.length) })}{result.truncated ? "+" : ""}</span>
                 <span className="num">{Math.round(result.ms)} ms</span>
-                <span className="num">{t("lab.io", { req: formatNumber(result.io.requests), size: formatBytes(result.io.bytes) })}</span>
+                <span className="num">{t("lab.io", { count: result.io.requests, req: formatNumber(result.io.requests), size: formatBytes(result.io.bytes) })}</span>
                 <span className="spacer" />
                 {result.rows.length > 0 && (
                   <Button size="sm" icon={<Download size={14} />} onClick={exportCsv}>

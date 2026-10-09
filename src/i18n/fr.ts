@@ -465,7 +465,8 @@ const fr = {
     cancelled: "Requête arrêtée.",
     rows_one: "{{n}} ligne",
     rows_other: "{{n}} lignes",
-    io: "{{req}} lectures réseau, {{size}}",
+    io_one: "{{req}} lecture réseau, {{size}}",
+    io_other: "{{req}} lectures réseau, {{size}}",
     hint: "Écrivez une requête puis Exécuter. Les colonnes storycode, issuecode, personcode et charactercode deviennent des liens.",
     ex: {
       thisWeek: "Parutions de la semaine dans le monde",

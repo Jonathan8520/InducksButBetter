@@ -469,7 +469,8 @@ const it: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     cancelled: "Query interrotta.",
     rows_one: "{{n}} riga",
     rows_other: "{{n}} righe",
-    io: "{{req}} letture di rete, {{size}}",
+    io_one: "{{req}} lettura di rete, {{size}}",
+    io_other: "{{req}} letture di rete, {{size}}",
     hint: "Scrivi una query, poi Esegui. Le colonne storycode, issuecode, personcode e charactercode diventano link.",
     ex: {
       thisWeek: "Uscite della settimana nel mondo",

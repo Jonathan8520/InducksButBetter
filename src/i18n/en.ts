@@ -469,7 +469,8 @@ const en: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     cancelled: "Query stopped.",
     rows_one: "{{n}} row",
     rows_other: "{{n}} rows",
-    io: "{{req}} network reads, {{size}}",
+    io_one: "{{req}} network read, {{size}}",
+    io_other: "{{req}} network reads, {{size}}",
     hint: "Write a query, then Run. storycode, issuecode, personcode and charactercode columns become links.",
     ex: {
       thisWeek: "This week's releases worldwide",

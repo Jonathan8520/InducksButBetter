@@ -469,7 +469,8 @@ const pt: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     cancelled: "Consulta interrompida.",
     rows_one: "{{n}} linha",
     rows_other: "{{n}} linhas",
-    io: "{{req}} leituras de rede, {{size}}",
+    io_one: "{{req}} leitura de rede, {{size}}",
+    io_other: "{{req}} leituras de rede, {{size}}",
     hint: "Escreva uma consulta e clique em Executar. As colunas storycode, issuecode, personcode e charactercode passam a ser links.",
     ex: {
       thisWeek: "Lançamentos da semana no mundo",

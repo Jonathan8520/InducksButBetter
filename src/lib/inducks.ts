@@ -136,11 +136,13 @@ function displayNames(cache: Map<string, Intl.DisplayNames | null>, type: "regio
 const SPECIAL_COUNTRIES: Record<string, string> = { zz: "—" };
 
 /**
- * Codes historiques d'Inducks que les noms ISO actuels traduisent mal : « YU » donnerait
- * « Serbie », déjà porté par « RS ».
+ * Codes d'Inducks que les noms ISO traduisent mal ou pas : « YU » donnerait « Serbie », déjà
+ * porté par « RS » ; « DC » (BD numériques) n'est pas un pays.
  */
 const HISTORIC_COUNTRIES: Record<string, Record<string, string>> = {
   yu: { fr: "Yougoslavie", en: "Yugoslavia", de: "Jugoslawien", it: "Jugoslavia", es: "Yugoslavia", pt: "Jugoslávia", nl: "Joegoslavië" },
+  // Pseudo-pays d'Inducks pour les publications numériques.
+  dc: { fr: "BD numériques", en: "Digital comics", de: "Digitale Comics", it: "Fumetti digitali", es: "Cómics digitales", pt: "Quadrinhos digitais", nl: "Digitale strips" },
 };
 
 export function countryName(code: unknown, fallback?: unknown): string {

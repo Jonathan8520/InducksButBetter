@@ -469,7 +469,8 @@ const nl: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     cancelled: "Query gestopt.",
     rows_one: "{{n}} rij",
     rows_other: "{{n}} rijen",
-    io: "{{req}} netwerkverzoeken, {{size}}",
+    io_one: "{{req}} netwerkverzoek, {{size}}",
+    io_other: "{{req}} netwerkverzoeken, {{size}}",
     hint: "Schrijf een query en klik op Uitvoeren. De kolommen storycode, issuecode, personcode en charactercode worden links.",
     ex: {
       thisWeek: "Verschenen deze week wereldwijd",
