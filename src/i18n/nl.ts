@@ -486,6 +486,7 @@ const nl: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     dataLead: "De database wordt elke nacht opnieuw opgebouwd uit de openbare Inducks-export. Je browser leest alleen de pagina's die hij nodig heeft.",
   },
   about: {
+    links: "Een Inducks-link werkt hier ook: vervang gewoon het domein.",
     title: "Over",
     lead: "InducksButBetter is een andere manier om Inducks te doorzoeken, de gezamenlijke database van Disney-strips.",
     howTitle: "Hoe het werkt",
@@ -515,7 +516,7 @@ const nl: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     notFound: "{{what}} niet gevonden",
     notFoundBody: "Deze code staat niet in de database, of is gewijzigd. Probeer te zoeken.",
     pageNotFound: "Deze pagina bestaat niet",
-    pageNotFoundBody: "De link is misschien verouderd. Begin opnieuw op de homepage of via",
+    pageNotFoundBody: "De link is misschien verouderd. Begin opnieuw op de homepage of zoek direct.",
   },
   roles: {
     p: "Plot",

@@ -911,6 +911,10 @@ a.country-tag:hover {
 }
 .empty__action {
   margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
 }
 .is-stale {
   opacity: 0.55;

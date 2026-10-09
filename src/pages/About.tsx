@@ -1,5 +1,4 @@
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Page, PageHead, Section } from "../components/page";
 import { Empty } from "../components/ui/States";
@@ -33,6 +32,10 @@ export default function About() {
             . {t("about.data2")}
           </p>
           <p>{t("about.data3")}</p>
+          <p>
+            {t("about.links")} <code>inducks.org/story.php?c=W+OS++386-02</code> →{" "}
+            <code>{window.location.host}/story.php?c=W+OS++386-02</code>
+          </p>
         </Section>
         <Section title={t("about.creditsTitle")}>
           <p>
@@ -65,12 +68,17 @@ export function NotFoundPage() {
       <Empty
         title={t("errors.pageNotFound")}
         action={
-          <ButtonLink to={routes.home()} variant="primary">
-            {t("nav.home")}
-          </ButtonLink>
+          <>
+            <ButtonLink to={routes.home()} variant="primary">
+              {t("nav.home")}
+            </ButtonLink>
+            <ButtonLink to={routes.search()} variant="secondary">
+              {t("nav.search")}
+            </ButtonLink>
+          </>
         }
       >
-        {t("errors.pageNotFoundBody")} <Link className="link" to={routes.search()}>{t("nav.search")}</Link>
+        {t("errors.pageNotFoundBody")}
       </Empty>
     </Page>
   );

@@ -1,8 +1,9 @@
 import { Component, lazy, Suspense, type ComponentType, type ReactNode } from "react";
-import { Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell";
 import { ErrorState, Skeleton } from "./components/ui/States";
 import Home from "./pages/Home";
+import { routes } from "./lib/routes";
 
 /**
  * Après une mise en ligne, une page restée ouverte réclame d'anciens fichiers de code qui
@@ -80,6 +81,16 @@ function ToCountry() {
   return <Navigate to={country ? `/countries/${country}` : "/countries"} replace />;
 }
 
+/**
+ * Adresses d'inducks.org (« /story.php?c=W+OS++386-02 ») : il suffit de remplacer le domaine
+ * dans un lien d'Inducks pour arriver sur la page équivalente ici.
+ */
+function FromInducks({ to }: { to: (code: string) => string }) {
+  const [params] = useSearchParams();
+  const code = params.get("c");
+  return <Navigate to={code ? to(code) : "/"} replace />;
+}
+
 function Fallback() {
   return (
     <div className="page" aria-busy="true">
@@ -108,6 +119,15 @@ export default function App() {
             <Route path="/issues/:country" element={<ToCountry />} />
             <Route path="/issues" element={<ToCountry />} />
             <Route path="/stories" element={<Navigate to="/search" replace />} />
+          <Route path="/story.php" element={<FromInducks to={routes.story} />} />
+          <Route path="/issue.php" element={<FromInducks to={(c) => routes.issue(c)} />} />
+          <Route path="/publication.php" element={<FromInducks to={routes.publication} />} />
+          <Route path="/creator.php" element={<FromInducks to={routes.creator} />} />
+          <Route path="/character.php" element={<FromInducks to={routes.character} />} />
+          <Route path="/universe.php" element={<FromInducks to={routes.universe} />} />
+          <Route path="/subseries.php" element={<FromInducks to={routes.subseries} />} />
+          <Route path="/country.php" element={<FromInducks to={routes.country} />} />
+          <Route path="/publisher.php" element={<FromInducks to={routes.publisher} />} />
             <Route path="/countries" element={<Countries />} />
             <Route path="/countries/:code" element={<Country />} />
             <Route path="/creators" element={<Creators />} />

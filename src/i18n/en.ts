@@ -486,6 +486,7 @@ const en: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     dataLead: "The database is rebuilt every night from the public Inducks export. Your browser only reads the pages it needs.",
   },
   about: {
+    links: "An Inducks link also works here: just replace the domain.",
     title: "About",
     lead: "InducksButBetter is another way to browse Inducks, the collaborative database of Disney comics.",
     howTitle: "How it works",
@@ -515,7 +516,7 @@ const en: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     notFound: "{{what}} not found",
     notFoundBody: "This code isn't in the database, or it has changed. Try searching.",
     pageNotFound: "This page doesn't exist",
-    pageNotFoundBody: "The link may be outdated. Start again from home or",
+    pageNotFoundBody: "The link may be outdated. Start again from the home page or search directly.",
   },
   roles: {
     p: "Plot",

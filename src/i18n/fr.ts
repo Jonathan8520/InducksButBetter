@@ -482,6 +482,7 @@ const fr = {
     dataLead: "La base est reconstruite chaque nuit depuis l'export public d'Inducks. Votre navigateur n'en lit que les pages utiles.",
   },
   about: {
+    links: "Un lien d'Inducks fonctionne aussi ici : remplacez simplement le domaine.",
     title: "À propos",
     lead: "InducksButBetter est une autre façon de parcourir Inducks, la base de données collaborative des bandes dessinées Disney.",
     howTitle: "Comment ça marche",
@@ -511,7 +512,7 @@ const fr = {
     notFound: "{{what}} est introuvable",
     notFoundBody: "Ce code n'existe pas dans la base, ou il a changé depuis. Essayez la recherche.",
     pageNotFound: "Cette page n'existe pas",
-    pageNotFoundBody: "Le lien est peut-être ancien. Repartez de l'accueil ou de la",
+    pageNotFoundBody: "Le lien est peut-être ancien. Repartez de l'accueil ou cherchez directement.",
   },
   roles: {
     p: "Synopsis",
