@@ -59,8 +59,7 @@ async function characters(q: string) {
   const [lang] = dataLanguages();
   const match = ftsTrigram(q);
   const base = `SELECT c.code,
-      COALESCE((SELECT n.name FROM character_name n WHERE n.code = c.code AND n.lang = ?
-                ORDER BY n.preferred DESC LIMIT 1), c.name) AS name, c.stories
+      COALESCE((SELECT l.name FROM character_label l WHERE l.code = c.code AND l.lang = ?), c.name) AS name, c.stories
     FROM character c`;
   if (match) {
     return rows<OmniResults["characters"][number]>(
