@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { BookOpen } from "lucide-react";
 import { hue, initials } from "../../lib/text";
 import { mediumUrl, thumbUrl } from "../../lib/inducks";
@@ -22,8 +22,21 @@ interface CoverProps {
  */
 export function Cover({ img, alt, quality = "thumb", className, ratio = 0.74, eager, seed }: CoverProps) {
   const src = quality === "medium" ? mediumUrl(img) : thumbUrl(img);
-  const [state, setState] = useState<"loading" | "ok" | "error">(src ? "loading" : "error");
-  useEffect(() => setState(src ? "loading" : "error"), [src]);
+  // L'état est attaché à une adresse précise : quand l'adresse change, on repart de
+  // « loading » sans effet après coup. (Un effet remettait « loading » au retour sur une
+  // page, après que l'image en cache avait déjà signalé son chargement : elle restait
+  // invisible.)
+  const [status, setStatus] = useState<{ src: string | null; state: "loading" | "ok" | "error" }>({
+    src,
+    state: src ? "loading" : "error",
+  });
+  const state = status.src === src ? status.state : src ? "loading" : "error";
+  const settle = (next: "ok" | "error") => setStatus({ src, state: next });
+  // Image déjà dans le cache du navigateur : elle peut être complète avant que l'écouteur
+  // de chargement ne serve, on le vérifie à l'insertion.
+  const imgRef = (el: HTMLImageElement | null) => {
+    if (el && el.complete && el.naturalWidth > 0 && state === "loading") settle("ok");
+  };
   const h = hue(seed ?? alt);
   return (
     <div
@@ -37,8 +50,9 @@ export function Cover({ img, alt, quality = "thumb", className, ratio = 0.74, ea
           loading={eager ? "eager" : "lazy"}
           decoding="async"
           referrerPolicy="no-referrer"
-          onLoad={() => setState("ok")}
-          onError={() => setState("error")}
+          ref={imgRef}
+          onLoad={() => settle("ok")}
+          onError={() => settle("error")}
         />
       )}
       {state === "error" && (
