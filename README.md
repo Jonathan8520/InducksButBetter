@@ -28,11 +28,14 @@ labo SQL assisté par IA.
 - **Auteurs et personnages** : graphique des histoires par année (un clic ouvre l'année dans la
   recherche), personnages et collaborateurs les plus fréquents.
 - **Ma collection** : import de l'export Inducks, avancement par publication, numéros manquants
-  copiables en liste (« 1-249, 300-569 »), filtre « possédés ou manquants » partout.
+  copiables en liste (« 1-249, 300-569 »), histoires possédées signalées dans toutes les listes,
+  raccourcis « ce qui me manque » chez Barks, Rosa, Scarpa…
 - **Labo SQL** : éditeur avec autocomplétion du schéma, exemples, et assistant qui écrit la
   requête à partir d'une question en français.
 - **Histoire du jour** à l'accueil, et les liens d'Inducks fonctionnent tels quels : remplacer
   `inducks.org` par l'adresse du site dans `…/story.php?c=…` mène à la même fiche.
+- **Liens partagés** avec titre, auteurs et image de la fiche (aperçus des messageries et
+  réseaux sociaux), et un `sitemap.xml` des fiches principales pour les moteurs de recherche.
 - Interface en 7 langues, thème clair ou sombre, utilisable au téléphone, raccourcis clavier
   (touche `?`).
 
@@ -46,7 +49,10 @@ inducks.org/isv.tgz ──► scripts/build_db.py ──► inducks.sqlite (~1 G
                                             tranches de 256 Kio compressées (~280 Mo)
                                                     │
                                                     ▼
-                               Cloudflare Pages (site + tranches + /api/ask)
+              scripts/og_index.py ──► aperçus de liens + sitemap.xml
+                                                    │
+                                                    ▼
+          Cloudflare Pages (site + tranches + /api/ask + fonctions d'aperçu)
                                                     │
 navigateur : React ─► pool de Web Workers SQLite (WASM) ─► VFS HTTP ─► tranches utiles seulement
 ```
@@ -59,7 +65,11 @@ navigateur : React ─► pool de Web Workers SQLite (WASM) ─► VFS HTTP ─�
 - **Des tranches immuables.** Chaque reconstruction publie un nouveau dossier de tranches
   (`/db/<empreinte>/`), mises en cache un an par le navigateur. Seul `manifest.json` est revalidé.
 - **Plusieurs workers.** SQLite est synchrone : les requêtes indépendantes d'une page (une fiche
-  lance une dizaine de requêtes) avancent en parallèle sur 2 à 4 workers.
+  lance une dizaine de requêtes) avancent en parallèle sur 2 à 4 workers (2 sur téléphone, avec
+  des caches plus petits).
+- **Des tables précalculées pour les écrans fréquents.** Document complet de chaque histoire
+  (`story_doc`), étiquettes de noms compactes, derniers numéros de chaque pays, histoires par
+  année : une fiche d'histoire se lit en une vingtaine de tranches, l'accueil aussi.
 - **Mise à jour sans casse.** Une page restée ouverte pendant la publication nocturne détecte
   que sa version de base a disparu, relit le manifeste et rejoue la requête ; un ancien fichier de
   code introuvable provoque un rechargement unique.
