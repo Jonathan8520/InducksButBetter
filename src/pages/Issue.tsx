@@ -46,6 +46,10 @@ function TocNotes({ notes }: { notes: TocEntry["notes"] }) {
 
 function Toc({ toc }: { toc: TocEntry[] }) {
   const { t } = useTranslation();
+  // Dans un numéro presque entièrement inédit, la pastille sur chaque ligne n'apprend rien :
+  // on ne la montre que lorsqu'elle distingue quelques entrées des rééditions.
+  const content = toc.filter((e) => e.sid && e.kind !== "c");
+  const markFirsts = content.filter((e) => e.first).length <= content.length / 2;
   return (
     <ol className="toc">
       {toc.map((e) => (
@@ -74,7 +78,7 @@ function Toc({ toc }: { toc: TocEntry[] }) {
               {e.kind && e.title && <span>{kindLabel(e.kind)}</span>}
               {e.pages && <span>{t("story.pagesShort", { n: e.pages })}</span>}
               {e.part && <span>{t("story.part", { n: e.part })}</span>}
-              {e.first && e.kind !== "c" && (
+              {markFirsts && e.first && e.kind !== "c" && (
                 <span className="first-tag" title={t("toc.firstHint")}>
                   {t("toc.first")}
                 </span>
