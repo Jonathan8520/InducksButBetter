@@ -173,6 +173,8 @@ export interface IssueTile {
   img: string | null;
   stories: number;
   publicationTitle?: string;
+  /** Nombre total de numéros de la publication (pour « 12 sur 597 »). */
+  publicationIssues?: number;
 }
 
 /** Numéros les plus récents d'un pays (parutions de la semaine, du mois…). */
@@ -207,7 +209,7 @@ export async function issueTiles(codes: string[]): Promise<IssueTile[]> {
     out.push(
       ...(await rows<IssueTile>(
         `SELECT i.issuecode, i.publicationcode, i.number, i.title, i.date, i.img, i.stories,
-                p.title AS publicationTitle
+                p.title AS publicationTitle, p.issues AS publicationIssues
          FROM issue i LEFT JOIN publication p ON p.code = i.publicationcode
          WHERE i.issuecode IN (${placeholders(part.length)})`,
         part,

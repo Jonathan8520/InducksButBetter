@@ -389,6 +389,8 @@ const nl: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     storiesTitle_other: "{{n}} verhalen",
   },
   collection: {
+    seeMissing: "Ontbrekende bekijken",
+    completion: "{{n}} van {{total}} nummers in bezit",
     title: "Mijn collectie",
     lead: "Importeer je lijst met nummers uit Inducks: elke pagina toont dan wat je hebt, en de zoekfunctie kan filteren op verhalen die je hebt of mist.",
     importHelp: "Open op inducks.org je collectie en download die als lijst. Plak de tekst hier of kies het bestand. Eén nummer per regel, als land^code.",

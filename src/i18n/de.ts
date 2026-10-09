@@ -389,6 +389,8 @@ const de: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     storiesTitle_other: "{{n}} Geschichten",
   },
   collection: {
+    seeMissing: "Fehlende ansehen",
+    completion: "{{n}} von {{total}} Heften vorhanden",
     title: "Meine Sammlung",
     lead: "Importiere deine Heftliste von Inducks: Jede Seite zeigt dann, was du besitzt, und die Suche kann nach Geschichten filtern, die du hast oder die dir fehlen.",
     importHelp: "Öffne auf inducks.org deine Sammlung und lade sie als Liste herunter. Füge den Text hier ein oder wähle die Datei. Eine Ausgabe pro Zeile, im Format land^code.",

@@ -389,6 +389,8 @@ const it: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     storiesTitle_other: "{{n}} storie",
   },
   collection: {
+    seeMissing: "Vedi i mancanti",
+    completion: "{{n}} albi posseduti su {{total}}",
     title: "La mia collezione",
     lead: "Importa da Inducks l'elenco dei tuoi albi: ogni pagina mostrerà cosa possiedi, e la ricerca potrà filtrare le storie che hai o che ti mancano.",
     importHelp: "Su inducks.org apri la tua collezione e scaricala come elenco. Incolla qui il testo o scegli il file. Un numero per riga, nel formato paese^codice.",

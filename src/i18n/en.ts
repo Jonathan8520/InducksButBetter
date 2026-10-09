@@ -389,6 +389,8 @@ const en: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     storiesTitle_other: "{{n}} stories",
   },
   collection: {
+    seeMissing: "See missing",
+    completion: "{{n}} of {{total}} issues owned",
     title: "My collection",
     lead: "Import your issue list from Inducks: every page shows what you own, and search can filter the stories you have or miss.",
     importHelp: "On inducks.org, open your collection and choose “Download my collection”. Paste the text here or pick the file. One issue per line, as country^code.",

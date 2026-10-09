@@ -125,9 +125,9 @@ export default function Collection() {
   }, [state.issues, state.analyzed]);
 
   const groups = useMemo(() => {
-    const by = new Map<string, { title: string; list: IssueTile[] }>();
+    const by = new Map<string, { title: string; total: number; list: IssueTile[] }>();
     for (const it of tiles.data ?? []) {
-      const g = by.get(it.publicationcode) ?? { title: it.publicationTitle ?? it.publicationcode, list: [] };
+      const g = by.get(it.publicationcode) ?? { title: it.publicationTitle ?? it.publicationcode, total: it.publicationIssues ?? 0, list: [] };
       g.list.push(it);
       by.set(it.publicationcode, g);
     }
@@ -218,7 +218,19 @@ export default function Collection() {
               <CountryTag code={code.split("/")[0]} /> {g.title}
             </Link>
           }
-          aside={<span className="num muted">{formatNumber(g.list.length)}</span>}
+          aside={
+            <span className="completion num" title={t("collection.completion", { n: formatNumber(g.list.length), total: formatNumber(g.total) })}>
+              <span className="completion__track" aria-hidden>
+                <span style={{ width: `${Math.min(100, (100 * g.list.length) / Math.max(1, g.total))}%` }} />
+              </span>
+              {t("publication.ownedN", { n: formatNumber(g.list.length), total: formatNumber(g.total) })}
+              {g.total > g.list.length && (
+                <Link className="link" to={`${routes.publication(code)}?show=missing`}>
+                  {t("collection.seeMissing")}
+                </Link>
+              )}
+            </span>
+          }
         >
           <div className="issue-grid issue-grid--compact">
             {g.list.map((it) => (

@@ -385,6 +385,8 @@ const fr = {
     storiesTitle_other: "{{n}} histoires",
   },
   collection: {
+    seeMissing: "Voir les manquants",
+    completion: "{{n}} numéros possédés sur {{total}}",
     title: "Ma collection",
     lead: "Importez la liste de vos numéros depuis Inducks : vous verrez ce que vous possédez sur chaque fiche, et la recherche pourra filtrer les histoires que vous avez ou qui vous manquent.",
     importHelp: "Sur inducks.org, ouvrez votre collection et choisissez « Télécharger ma collection ». Collez le texte ici ou choisissez le fichier. Une ligne par numéro, au format pays^code.",

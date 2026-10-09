@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ClipboardList, ExternalLink, Grid3x3, List } from "lucide-react";
@@ -37,7 +37,9 @@ export default function Publication() {
   const code = `${decodeSegment(params.country ?? "")}/${decodeSegment(params.pub ?? "")}`;
   const [view, setView] = useState<"grid" | "list">("grid");
   const [filter, setFilter] = useState("");
-  const [show, setShow] = useState<"all" | "owned" | "missing">("all");
+  const [search] = useSearchParams();
+  const initialShow = search.get("show");
+  const [show, setShow] = useState<"all" | "owned" | "missing">(initialShow === "owned" || initialShow === "missing" ? initialShow : "all");
   const owned = collection.use((c) => c.issues);
   const ownedSet = useMemo(() => new Set(owned), [owned]);
 

@@ -1713,3 +1713,38 @@
     animation: none;
   }
 }
+
+/* Collection : avancement de chaque publication. */
+.completion {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.completion__track {
+  width: 72px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.completion__track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ok);
+}
+
+/* Sur téléphone la barre d'outils passe à la ligne : boutons alignés à gauche, sans
+   espace de remplissage, et le champ prend toute la largeur. */
+@media (max-width: 719px) {
+  .toolbar .spacer {
+    display: none;
+  }
+  .toolbar .input {
+    max-width: none;
+    flex: 1 1 100%;
+  }
+}
