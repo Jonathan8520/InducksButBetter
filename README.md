@@ -31,7 +31,10 @@ labo SQL assisté par IA.
   copiables en liste (« 1-249, 300-569 »), filtre « possédés ou manquants » partout.
 - **Labo SQL** : éditeur avec autocomplétion du schéma, exemples, et assistant qui écrit la
   requête à partir d'une question en français.
-- Interface en 7 langues, thème clair ou sombre, utilisable au téléphone.
+- **Histoire du jour** à l'accueil, et les liens d'Inducks fonctionnent tels quels : remplacer
+  `inducks.org` par l'adresse du site dans `…/story.php?c=…` mène à la même fiche.
+- Interface en 7 langues, thème clair ou sombre, utilisable au téléphone, raccourcis clavier
+  (touche `?`).
 
 ## Architecture
 
@@ -82,6 +85,8 @@ ln -s ../data/db public/db
 
 pnpm dev        # http://localhost:5173
 pnpm test       # tests unitaires
+pnpm build && pnpm exec vite preview --port 4173 &
+node scripts/smoke.mjs   # test de fumée dans Chromium
 pnpm build      # site statique dans dist/
 ```
 
@@ -89,7 +94,8 @@ pnpm build      # site statique dans dist/
 
 `.github/workflows/deploy.yml` tourne chaque nuit et à chaque poussée sur `main` : vérification
 des types et des tests, compilation, téléchargement de l'export Inducks, construction et contrôle
-de la base, découpage, puis publication sur Cloudflare Pages (secrets `CLOUDFLARE_API_TOKEN` et
+de la base, découpage, test de fumée dans Chromium (`scripts/smoke.mjs` ouvre les écrans
+principaux sur le site compilé), puis publication sur Cloudflare Pages (secrets `CLOUDFLARE_API_TOKEN` et
 `CLOUDFLARE_ACCOUNT_ID`). Le même workflow publie un miroir sur GitHub Pages dès que Pages est
 activé dans les réglages du dépôt (source : GitHub Actions).
 
