@@ -19,7 +19,7 @@ import { formatDate, formatNumber, yearSpan } from "../lib/format";
 import { languageName } from "../lib/inducks";
 import { norm } from "../lib/text";
 import { recordVisit } from "../lib/ui";
-import { OnlyToggle } from "./Creators";
+import { OnlyToggle, useOnlyFallback } from "./Creators";
 
 export function Characters() {
   const { t } = useTranslation();
@@ -96,6 +96,7 @@ export function Character() {
     placeholderData: keepPreviousData,
     staleTime: Infinity,
   });
+  useOnlyFallback(only, setOnly, page.isPlaceholderData ? undefined : page.data?.total, code);
   const first = useQuery({
     queryKey: ["cards", [q.data?.first_sid]],
     queryFn: () => storyCards([q.data!.first_sid!]),

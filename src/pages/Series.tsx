@@ -15,7 +15,7 @@ import { decodeSegment, inducksUrl, routes } from "../lib/routes";
 import { formatNumber, yearSpan } from "../lib/format";
 import { countryName, languageName } from "../lib/inducks";
 import { recordVisit } from "../lib/ui";
-import { OnlyToggle } from "./Creators";
+import { OnlyToggle, useOnlyFallback } from "./Creators";
 import { CountryTag } from "../components/ui/Badges";
 
 export function SeriesList() {
@@ -75,6 +75,7 @@ export function Series() {
     placeholderData: keepPreviousData,
     staleTime: Infinity,
   });
+  useOnlyFallback(only, setOnly, page.isPlaceholderData ? undefined : page.data?.total, code);
   const s = q.data;
   useEffect(() => {
     if (s) recordVisit({ kind: "series", code: s.code, label: s.name, href: routes.subseries(s.code) });

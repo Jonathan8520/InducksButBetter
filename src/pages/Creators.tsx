@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -126,6 +126,25 @@ export function OnlyToggle({ value, onChange }: { value: "stories" | "all"; onCh
   );
 }
 
+/**
+ * « Histoires seulement » est le réglage par défaut ; pour un dessinateur de couvertures
+ * ou une série d'articles, il donnerait une liste vide. On bascule alors une fois sur « Tout ».
+ */
+export function useOnlyFallback(
+  only: "stories" | "all",
+  setOnly: (v: "stories" | "all") => void,
+  total: number | undefined,
+  key: string,
+) {
+  const done = useRef<string | null>(null);
+  useEffect(() => {
+    if (only === "stories" && total === 0 && done.current !== key) {
+      done.current = key;
+      setOnly("all");
+    }
+  }, [only, total, key, setOnly]);
+}
+
 function CreatorStories({ code, total }: { code: string; total: number }) {
   const { t } = useTranslation();
   const [role, setRole] = useState("");
@@ -139,6 +158,7 @@ function CreatorStories({ code, total }: { code: string; total: number }) {
     placeholderData: keepPreviousData,
     staleTime: Infinity,
   });
+  useOnlyFallback(only, setOnly, role || page.isPlaceholderData ? undefined : page.data?.total, code);
   return (
     <Section
       id="stories"
