@@ -95,7 +95,9 @@ jobs:
         run: |
           MATCHED="${{ steps.cache.outputs.cache-matched-key }}"
           WANTED="db-${{ hashFiles('scripts/build_db.py') }}-${{ steps.day.outputs.day }}"
-          if [ -f data/inducks.sqlite ] && [ "${MATCHED#"$WANTED"}" != "$MATCHED" ]; then
+          # La tâche de nuit repart toujours de l'export du jour ; les poussées réutilisent la base.
+          if [ "${{ github.event_name }}" != "schedule" ] && [ -f data/inducks.sqlite ] \
+             && [ "${MATCHED#"$WANTED"}" != "$MATCHED" ]; then
             echo "hit=true" >> "$GITHUB_OUTPUT"
             echo "Base du jour réutilisée ($MATCHED)"
           else
