@@ -35,7 +35,7 @@ export function formatNumber(n: unknown): string {
 }
 
 export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} o`;
+  if (bytes < 1024) return `${bytes} ${locale().startsWith("fr") ? "o" : "B"}`;
   const units = ["Ko", "Mo", "Go"];
   let v = bytes / 1024;
   let u = 0;
@@ -45,7 +45,8 @@ export function formatBytes(bytes: number): string {
   }
   const isFr = locale().startsWith("fr");
   const label = isFr ? units[u] : units[u].replace("o", "B");
-  return `${v < 10 ? v.toFixed(1) : Math.round(v)} ${label}`;
+  const n = new Intl.NumberFormat(locale(), { maximumFractionDigits: v < 10 ? 1 : 0, minimumFractionDigits: v < 10 ? 1 : 0 });
+  return `${n.format(v)} ${label}`;
 }
 
 /** Pages d'une histoire : entières, fraction, ou les deux (« 10 ½ »). */
