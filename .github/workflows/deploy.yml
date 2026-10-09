@@ -88,9 +88,23 @@ jobs:
             db-${{ hashFiles('scripts/build_db.py') }}-
             db-
 
+      # La clé enregistrée porte le numéro d'exécution : on compare donc le préfixe (même
+      # script, même jour) pour savoir si la base restaurée est celle du jour.
+      - name: Base du jour déjà construite ?
+        id: fresh
+        run: |
+          MATCHED="${{ steps.cache.outputs.cache-matched-key }}"
+          WANTED="db-${{ hashFiles('scripts/build_db.py') }}-${{ steps.day.outputs.day }}"
+          if [ -f data/inducks.sqlite ] && [ "${MATCHED#"$WANTED"}" != "$MATCHED" ]; then
+            echo "hit=true" >> "$GITHUB_OUTPUT"
+            echo "Base du jour réutilisée ($MATCHED)"
+          else
+            echo "hit=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Télécharger l'export Inducks
         id: isv
-        if: steps.cache.outputs.cache-hit != 'true' || inputs.rebuild
+        if: steps.fresh.outputs.hit != 'true' || inputs.rebuild
         continue-on-error: true
         run: |
           mkdir -p data/isv
