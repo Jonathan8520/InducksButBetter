@@ -944,7 +944,7 @@ step("toc", """
     CREATE TABLE toc (
         issuecode TEXT, pos TEXT, entry TEXT, sid INTEGER, storycode TEXT, title TEXT,
         otitle TEXT, kind TEXT, pages INTEGER, num INTEGER, den INTEGER, part TEXT,
-        creators TEXT, img TEXT, notes TEXT, PRIMARY KEY (issuecode, pos, entry)
+        creators TEXT, img TEXT, notes TEXT, first INTEGER, PRIMARY KEY (issuecode, pos, entry)
     ) WITHOUT ROWID""", """
     INSERT OR IGNORE INTO toc
     SELECT e.issuecode, COALESCE(e.position, ''),
@@ -960,7 +960,9 @@ step("toc", """
                'sideways', CASE WHEN e.sideways = 'Y' THEN 1 END,
                'uncertain', CASE WHEN e.uncertain = 'Y' THEN 1 END,
                'printedcode', e.printedcode, 'comment', e.comment,
-               'hero', e.printedhero, 'in', e.includedin)), '{}')
+               'hero', e.printedhero, 'in', e.includedin)), '{}'),
+           -- Première parution : le numéro a la date de première publication de l'histoire.
+           CASE WHEN st.date GLOB '[0-9][0-9][0-9][0-9]*' AND st.date = e.date THEN 1 END
     FROM _entry e
     LEFT JOIN story st ON st.storycode = e.storycode
     LEFT JOIN _ver v ON v.svc = e.svc

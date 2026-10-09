@@ -1748,3 +1748,13 @@
     flex: 1 1 100%;
   }
 }
+
+/* Sommaire : histoire publiée pour la première fois dans ce numéro. */
+.first-tag {
+  font-size: var(--t-xs);
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: var(--marker-soft);
+  color: var(--ink);
+}

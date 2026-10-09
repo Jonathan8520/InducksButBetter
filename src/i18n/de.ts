@@ -241,6 +241,9 @@ const de: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     notesTitle: "Anmerkungen von Inducks",
   },
   issue: {
+    firsts: "Erstveröffentlichungen",
+    firstsN_one: "{{n}} Geschichte hier zum ersten Mal veröffentlicht",
+    firstsN_other: "{{n}} Geschichten hier zum ersten Mal veröffentlicht",
     prevKey: "Vorheriges Heft (←)",
     nextKey: "Nächstes Heft (→)",
     cover: "Titelbild von {{title}}",
@@ -263,6 +266,8 @@ const de: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     collectedIn: "Nachgedruckt in",
   },
   toc: {
+    first: "Erstveröffentlichung",
+    firstHint: "Dieses Heft hat die Geschichte als erstes veröffentlicht",
     notes: {
       changes: "Geändert:",
       cut: "Gekürzte Seiten:",

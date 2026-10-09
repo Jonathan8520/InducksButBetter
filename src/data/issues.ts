@@ -36,6 +36,8 @@ export interface TocEntry {
   people: { code: string; name: string; roles: string[] }[];
   img: string | null;
   notes: Record<string, string | number> | null;
+  /** Ce numéro est la première parution de l'histoire. */
+  first: boolean;
 }
 
 export interface IssueDetail extends IssueRow {
@@ -75,8 +77,8 @@ export async function issueDetail(pub: string, number: string): Promise<IssueDet
   const code = issue.issuecode;
 
   const [toc, pubRow, publisher, jobs, collects, collectedIn, siblings] = await Promise.all([
-    rows<{ pos: string; entry: string; sid: number | null; storycode: string | null; title: string | null; otitle: string | null; kind: string | null; pages: number | null; num: number | null; den: number | null; part: string | null; creators: string | null; img: string | null; notes: string | null }>(
-      `SELECT pos, entry, sid, storycode, title, otitle, kind, pages, num, den, part, creators, img, notes
+    rows<{ pos: string; entry: string; sid: number | null; storycode: string | null; title: string | null; otitle: string | null; kind: string | null; pages: number | null; num: number | null; den: number | null; part: string | null; creators: string | null; img: string | null; notes: string | null; first: number | null }>(
+      `SELECT pos, entry, sid, storycode, title, otitle, kind, pages, num, den, part, creators, img, notes, first
        FROM toc WHERE issuecode = ? ORDER BY pos, entry`,
       [code],
     ),
@@ -154,6 +156,7 @@ export async function issueDetail(pub: string, number: string): Promise<IssueDet
         })),
         img: t.img,
         notes,
+        first: t.first === 1,
       };
     }),
     jobs: jobs.map((j) => ({ code: j.personcode, name: names.get(j.personcode) ?? j.personcode, job: j.job })),

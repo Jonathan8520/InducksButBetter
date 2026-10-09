@@ -237,6 +237,9 @@ const fr = {
     notesTitle: "Notes d'Inducks",
   },
   issue: {
+    firsts: "Inédits",
+    firstsN_one: "{{n}} histoire publiée ici pour la première fois",
+    firstsN_other: "{{n}} histoires publiées ici pour la première fois",
     prevKey: "Numéro précédent (←)",
     nextKey: "Numéro suivant (→)",
     cover: "Couverture de {{title}}",
@@ -259,6 +262,8 @@ const fr = {
     collectedIn: "Repris dans",
   },
   toc: {
+    first: "Première parution",
+    firstHint: "Ce numéro est le premier à publier cette histoire",
     notes: {
       changes: "Modifiée :",
       cut: "Planches coupées :",

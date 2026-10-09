@@ -74,6 +74,11 @@ function Toc({ toc }: { toc: TocEntry[] }) {
               {e.kind && e.title && <span>{kindLabel(e.kind)}</span>}
               {e.pages && <span>{t("story.pagesShort", { n: e.pages })}</span>}
               {e.part && <span>{t("story.part", { n: e.part })}</span>}
+              {e.first && e.kind !== "c" && (
+                <span className="first-tag" title={t("toc.firstHint")}>
+                  {t("toc.first")}
+                </span>
+              )}
             </p>
             {e.people.length > 0 && (
               <p className="toc__people">
@@ -110,6 +115,7 @@ export default function Issue() {
   const owned = collection.use((c) => (q.data ? c.issues.includes(q.data.issuecode) : false));
   const d = q.data;
   const navigate = useNavigate();
+  const firsts = d ? new Set(d.toc.filter((e) => e.first && e.kind !== "c" && e.sid).map((e) => e.sid)).size : 0;
 
   // Flèches gauche et droite : numéro précédent ou suivant, comme on feuillette une pile.
   useEffect(() => {
@@ -235,6 +241,7 @@ export default function Issue() {
               [t("issue.printrun"), d.printrun],
               [t("issue.attached"), d.attached],
               [t("issue.contents"), d.entries ? t("issue.entries", { count: d.entries, n: formatNumber(d.entries) }) : ""],
+              [t("issue.firsts"), firsts ? t("issue.firstsN", { count: firsts, n: formatNumber(firsts) }) : ""],
               ...jobs.map(
                 (j) =>
                   [
