@@ -24,8 +24,19 @@ import { useHomeCountry } from "../lib/homeCountry";
 import { useInView } from "../lib/useInView";
 import { settings } from "../lib/store";
 
+/** Exemples de la palette, dans les noms que connaît le lecteur de chaque langue. */
+const EXAMPLES: Record<string, string[]> = {
+  fr: ["Carl Barks", "Don Rosa", "Picsou Magazine", "Topolino 3000", "Géo Trouvetou"],
+  en: ["Carl Barks", "Don Rosa", "Uncle Scrooge", "Gyro Gearloose", "Topolino 3000"],
+  de: ["Carl Barks", "Don Rosa", "Lustiges Taschenbuch", "Onkel Dagobert", "Daniel Düsentrieb"],
+  it: ["Romano Scarpa", "Giorgio Cavazzano", "Topolino 3000", "Zio Paperone", "Carl Barks"],
+  es: ["Carl Barks", "Don Rosa", "Tío Gilito", "Pato Donald", "Topolino 3000"],
+  pt: ["Carl Barks", "Don Rosa", "Tio Patinhas", "Pato Donald", "Topolino 3000"],
+  nl: ["Carl Barks", "Don Rosa", "Donald Duck", "Oom Dagobert", "Willie Wortel"],
+};
+
 function Hero() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const reduce = useReducedMotion();
   const navigate = useNavigate();
   const info = useQuery({ queryKey: ["dbinfo"], queryFn: dbInfo, staleTime: Infinity });
@@ -68,7 +79,7 @@ function Hero() {
         </button>
         <div className="hero__examples">
           <span className="muted">{t("home.try")}</span>
-          {["Carl Barks", "Don Rosa", "Picsou Magazine", "Topolino 3000", "Gyro Gearloose"].map((ex) => (
+          {(EXAMPLES[(i18n.resolvedLanguage || "en").split("-")[0]] ?? EXAMPLES.en).map((ex) => (
             <button key={ex} className="example" onClick={() => ui.openPalette(ex)}>
               {ex}
             </button>
