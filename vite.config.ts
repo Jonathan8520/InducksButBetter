@@ -17,12 +17,13 @@ export default defineConfig({
     chunkSizeWarningLimit: 900,
     rollupOptions: {
       output: {
-        manualChunks(id) {
-          if (id.includes("node_modules")) {
-            if (id.includes("@codemirror") || id.includes("@uiw") || id.includes("@lezer")) return "editor";
-            if (id.includes("motion") || id.includes("framer")) return "motion";
-            if (id.includes("react") || id.includes("scheduler")) return "react";
-          }
+        // React et motion servent partout : chacun son fichier, mis en cache une fois.
+        // CodeMirror n'a pas de groupe : il reste dans le morceau du labo, chargé à la demande.
+        codeSplitting: {
+          groups: [
+            { name: "react", test: /[\\/]node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom)[\\/]/, priority: 20 },
+            { name: "motion", test: /[\\/]node_modules[\\/](motion|framer-motion|motion-dom|motion-utils)[\\/]/, priority: 10 },
+          ],
         },
       },
     },
