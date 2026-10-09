@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { BookmarkCheck, BookmarkPlus, ChevronLeft, ChevronRight, ExternalLink, Maximize2 } from "lucide-react";
 import { Breadcrumbs, Facts, Page, Section } from "../components/page";
+import { ShareButton } from "../components/ShareButton";
 import { InducksText } from "../components/InducksText";
 import { Cover } from "../components/ui/Media";
 import { Code, CountryTag } from "../components/ui/Badges";
@@ -108,6 +109,21 @@ export default function Issue() {
   });
   const owned = collection.use((c) => (q.data ? c.issues.includes(q.data.issuecode) : false));
   const d = q.data;
+  const navigate = useNavigate();
+
+  // Flèches gauche et droite : numéro précédent ou suivant, comme on feuillette une pile.
+  useEffect(() => {
+    if (!d) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      const el = e.target as HTMLElement | null;
+      if (el?.closest("input, textarea, select, [contenteditable], [role=dialog], svg")) return;
+      const to = e.key === "ArrowLeft" ? d.prev : e.key === "ArrowRight" ? d.next : null;
+      if (to) navigate(routes.issue(to.issuecode, d.publicationcode));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [d, navigate]);
 
   useEffect(() => {
     if (d)
@@ -171,7 +187,7 @@ export default function Issue() {
             </button>
             <div className="issue-nav">
               {d.prev ? (
-                <Link className="btn btn--secondary btn--sm" to={routes.issue(d.prev.issuecode, d.publicationcode)}>
+                <Link className="btn btn--secondary btn--sm" to={routes.issue(d.prev.issuecode, d.publicationcode)} title={t("issue.prevKey")}>
                   <ChevronLeft size={15} />
                   <span>{d.prev.number}</span>
                 </Link>
@@ -179,7 +195,7 @@ export default function Issue() {
                 <span />
               )}
               {d.next && (
-                <Link className="btn btn--secondary btn--sm" to={routes.issue(d.next.issuecode, d.publicationcode)}>
+                <Link className="btn btn--secondary btn--sm" to={routes.issue(d.next.issuecode, d.publicationcode)} title={t("issue.nextKey")}>
                   <span>{d.next.number}</span>
                   <ChevronRight size={15} />
                 </Link>
@@ -247,6 +263,7 @@ export default function Issue() {
               <span>{t("common.onInducks")}</span>
               <ExternalLink size={15} />
             </a>
+            <ShareButton title={`${d.publicationTitle} ${d.number}`} />
           </div>
           {d.comment && <InducksText text={d.comment} className="detail__comment" />}
         </div>

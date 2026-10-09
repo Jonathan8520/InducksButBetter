@@ -48,6 +48,8 @@ const fr = {
     breadcrumbs: "Fil d'Ariane",
     onInducks: "Voir sur Inducks",
     copyCode: "Copier le code",
+    share: "Partager",
+    linkCopied: "Lien copié",
     copied: "{{what}} copié",
     oldest: "Plus anciennes",
     newest: "Plus récentes",
@@ -234,6 +236,8 @@ const fr = {
     notesTitle: "Notes d'Inducks",
   },
   issue: {
+    prevKey: "Numéro précédent (←)",
+    nextKey: "Numéro suivant (→)",
     cover: "Couverture de {{title}}",
     date: "Date de parution",
     pages: "Pages",

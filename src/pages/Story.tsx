@@ -7,6 +7,7 @@ import { BookMarked, Copy, ExternalLink, Maximize2 } from "lucide-react";
 import { Facts, Page, Section } from "../components/page";
 import { Breadcrumbs } from "../components/page";
 import { InducksText } from "../components/InducksText";
+import { ShareButton } from "../components/ShareButton";
 import { Cover, Avatar } from "../components/ui/Media";
 import { Code, CountryTag, KindTag } from "../components/ui/Badges";
 import { IconButton } from "../components/ui/Button";
@@ -316,10 +317,13 @@ export default function Story() {
               <span>{t("common.onInducks")}</span>
               <ExternalLink size={15} />
             </a>
-            <Link className="btn btn--ghost btn--md" to={routes.search({ by: s.people[0]?.code })}>
-              <BookMarked size={15} />
-              <span>{t("story.moreBy", { name: s.people[0]?.name ?? "" })}</span>
-            </Link>
+            {s.people[0] && (
+              <Link className="btn btn--ghost btn--md" to={routes.search({ by: s.people[0].code })}>
+                <BookMarked size={15} />
+                <span>{t("story.moreBy", { name: s.people[0].name })}</span>
+              </Link>
+            )}
+            <ShareButton title={s.title || s.storycode} />
           </div>
 
           {desc && (

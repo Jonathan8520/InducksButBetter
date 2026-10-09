@@ -52,6 +52,8 @@ const it: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     breadcrumbs: "Percorso di navigazione",
     onInducks: "Vedi su Inducks",
     copyCode: "Copia il codice",
+    share: "Condividi",
+    linkCopied: "Link copiato",
     copied: "{{what}} copiato",
     oldest: "Meno recenti",
     newest: "Più recenti",
@@ -238,6 +240,8 @@ const it: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     notesTitle: "Note di Inducks",
   },
   issue: {
+    prevKey: "Albo precedente (←)",
+    nextKey: "Albo successivo (→)",
     cover: "Copertina di {{title}}",
     date: "Data di uscita",
     pages: "Pagine",
