@@ -18,7 +18,7 @@ storyheader(code PK, title, countrycode, comment)
 subseries(code PK, name, official, comment, category, stories, first, last, img)
 subseries_name(code, lang, name, preferred)
 subseries_story(code, date, sid) PK(code, date, sid)
-character(code PK, name, official, onetime, heroonly, comment, stories, first, last, first_sid)
+character(code PK, name, official, onetime, heroonly, comment, stories, first, last, first_sid, years "stories per year: 1947:3,1948:12,…")
 character_name(code, lang, name, preferred, comment) -- localized names: e.g. code 'US' is Uncle Scrooge, 'Picsou' in fr
 character_alias(code, name)
 character_story(code, date, sid) PK(code, date, sid) -- stories in which a character appears
@@ -26,7 +26,7 @@ character_top(code, kind 'co'|'creator', rank, other, total)
 universe(code PK, comment, characters)
 universe_name(code, lang, name)
 universe_character(universe, stories, code)
-person(code PK, name, nationality, official, birthname, born, bornplace, died, diedplace, comment, fake, stories, first, last, roles "role:count;…", indexed)
+person(code PK, name, nationality, official, birthname, born, bornplace, died, diedplace, comment, fake, stories, first, last, roles "role:count;…", indexed, years "stories per year: 1947:3,1948:12,…")
 person_alias(code, name)
 person_url(code, site, url)
 person_story(code, date, sid, roles) PK(code, date, sid) -- stories of a creator, roles like 'pwai'

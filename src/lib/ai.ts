@@ -24,6 +24,8 @@ Rules:
 - Well-known codes: CB = Carl Barks, DR = Don Rosa, RSc = Romano Scarpa, GCa = Giorgio Cavazzano, FG = Floyd Gottfredson, AT = Al Taliaferro, PM = Paul Murry, WVH = William Van Horn, MRt = Marco Rota, TFa = Tito Faraci. Characters: DD Donald Duck, US Uncle Scrooge, MM Mickey Mouse, GY Gyro Gearloose, HDL Huey Dewey and Louie, GL Gladstone Gander, BB Beagle Boys, MDS Magica De Spell, GO Goofy, PE Pete, PB Phantom Blot, DA Daisy Duck, MI Minnie Mouse, JW Junior Woodchucks.
 - Countries are lower-case ISO codes (fr, it, us, de, nl, dk, no, se, fi, br, es…).
 - Prefer the clustered tables: person_story for stories of a creator, character_story for stories of a character, story_country for countries, story_pub for printings, toc for issue contents.
+- The database is read over the network page by page: every scanned row costs time. story.pubs (number of printings) and story.countries are precomputed: use them to rank or filter by popularity, never COUNT over story_pub for that. Join story_pub only when the question needs the printings themselves (dates, issues).
+- "Never published in country X": NOT EXISTS (SELECT 1 FROM story_country c WHERE c.countrycode = 'x' AND c.sid = s.sid).
 - Return readable columns (storycode, title, date, names), not only ids. Join story on sid to get storycode and title.
 - story.date and issue.date are text 'YYYY-MM-DD' with variable precision: compare with prefixes, e.g. date >= '1950' AND date < '1960'.
 - For "titles containing a word", use fts_story with story_rank (see schema).
