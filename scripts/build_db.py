@@ -773,7 +773,7 @@ step("person_story", """
          first = (SELECT MIN(CASE WHEN date GLOB '[0-9][0-9][0-9][0-9]*' THEN date END)
                   FROM person_story x WHERE x.code = person.code AND x.roles GLOB '*[pwai]*'),
          last = (SELECT MAX(CASE WHEN date GLOB '[0-9][0-9][0-9][0-9]*' THEN date END)
-                 FROM person_story x WHERE x.code = person.code AND x.roles GLOB '*[pwai]*')"",
+                 FROM person_story x WHERE x.code = person.code AND x.roles GLOB '*[pwai]*')""",
     # Histogramme compact « année:nombre,… » pour le graphique de la fiche auteur.
     YEARS_SQL.format(table="person", rel="person_story", extra="AND x.roles GLOB '*[pwai]*'"))
 
