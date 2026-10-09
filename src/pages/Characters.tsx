@@ -18,6 +18,7 @@ import { formatDate, formatNumber, yearSpan } from "../lib/format";
 import { languageName } from "../lib/inducks";
 import { norm } from "../lib/text";
 import { recordVisit } from "../lib/ui";
+import { OnlyToggle } from "./Creators";
 
 export function Characters() {
   const { t } = useTranslation();
@@ -84,12 +85,13 @@ export function Character() {
   const { t, i18n } = useTranslation();
   const code = decodeSegment(useParams().code ?? "");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const [only, setOnly] = useState<"stories" | "all">("stories");
   const [offset, setOffset] = useState(0);
-  useEffect(() => setOffset(0), [order, code]);
+  useEffect(() => setOffset(0), [order, code, only]);
   const q = useQuery({ queryKey: ["character", code, i18n.resolvedLanguage], queryFn: () => characterDetail(code), staleTime: Infinity });
   const page = useQuery({
-    queryKey: ["char-stories", code, order, offset],
-    queryFn: () => characterStories(code, { order, offset, limit: PAGE }),
+    queryKey: ["char-stories", code, order, offset, only],
+    queryFn: () => characterStories(code, { order, offset, limit: PAGE, only }),
     placeholderData: keepPreviousData,
     staleTime: Infinity,
   });
@@ -229,15 +231,18 @@ export function Character() {
         id="stories"
         title={t("character.storiesTitle", { count: page.data?.total ?? 0, n: formatNumber(page.data?.total ?? 0) })}
         aside={
-          <Segmented
-            label={t("search.sort")}
-            value={order}
-            onChange={setOrder}
-            items={[
-              { value: "asc", label: t("common.oldest") },
-              { value: "desc", label: t("common.newest") },
-            ]}
-          />
+          <div className="section__tools">
+            <OnlyToggle value={only} onChange={setOnly} />
+            <Segmented
+              label={t("search.sort")}
+              value={order}
+              onChange={setOrder}
+              items={[
+                { value: "asc", label: t("common.oldest") },
+                { value: "desc", label: t("common.newest") },
+              ]}
+            />
+          </div>
         }
       >
         {page.isError && <ErrorState error={page.error} retry={() => page.refetch()} />}

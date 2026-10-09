@@ -4,20 +4,16 @@
  */
 export const SCHEMA_DOC = `
 story(sid INTEGER PK, storycode TEXT UNIQUE, title, date "first publication AAAA[-MM[-JJ]]", kind "n=story k=newspaper strip g=game c=cover i=illustration t=text story a=article f=centerfold", pages INTEGER, num, den "page fraction", rows "strips per page", hero "charactercode of main hero", creators "role:personcode;… roles p=plot w=script a=pencils i=ink", img, pubs "number of printings", countries "number of countries", header, parts)
-story_text(sid PK, comment, plot)
 story_title(sid, lang, title) PK(sid, lang) -- title of the first printing in each language (fr, en, de, it, nl, da, fi, no, sv, es, pt…)
 story_search(sid PK, date, kind, pages REAL, pubs, hero) -- narrow copy of story for fast filtering
 story_rank(rank INTEGER PK, sid) -- rank 1 = most printed story
 story_code(code, sid) -- lower-case storycodes without spaces, e.g. 'wos386-02'
-story_version(sid, svc, kind, pages, num, den, rows, cols, what, plot, creators)
 story_pub(sid, date, issuecode, pos, title, lang, part) PK(sid, date, issuecode, pos) -- every printing of a story
 story_country(countrycode, sid, first) PK(countrycode, sid) -- countries where a story was printed, with first date there
 story_job(sid, personcode, role) PK(sid, personcode, role)
 story_char(sid, charactercode, n, comment) PK(sid, charactercode)
 story_desc(sid, lang, text) PK(sid, lang)
-story_part(super, part, sid, title, date) -- parts of multi-part stories (super = whole story sid)
-story_ref(sid, other, dir 'in'|'out', reason)
-story_url(sid, site, url)
+story_doc(storycode PK, sid, doc JSON) -- everything shown on a story page (titles, credits, characters, parts, references)
 storyheader(code PK, title, countrycode, comment)
 subseries(code PK, name, official, comment, category, stories, first, last, img)
 subseries_name(code, lang, name, preferred)

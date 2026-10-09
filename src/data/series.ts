@@ -51,16 +51,17 @@ export async function seriesDetail(code: string) {
 
 export async function seriesStories(
   code: string,
-  opts: { order?: "asc" | "desc"; offset?: number; limit?: number },
+  opts: { order?: "asc" | "desc"; offset?: number; limit?: number; only?: "stories" | "all" },
 ): Promise<ListPage> {
   const order = opts.order === "desc" ? "DESC" : "ASC";
+  const kind = opts.only === "all" ? "" : " AND kind IN ('n', 'k')";
   const [list, total] = await Promise.all([
     rows<{ sid: number }>(
-      `SELECT sid FROM subseries_story WHERE code = ?
+      `SELECT sid FROM subseries_story WHERE code = ?${kind}
        ORDER BY CASE WHEN date = '' THEN 1 ELSE 0 END, date ${order}, sid LIMIT ? OFFSET ?`,
       [code, opts.limit ?? 30, opts.offset ?? 0],
     ),
-    one<{ stories: number }>("SELECT stories FROM subseries WHERE code = ?", [code]),
+    one<{ n: number }>(`SELECT COUNT(*) AS n FROM subseries_story WHERE code = ?${kind}`, [code]),
   ]);
-  return { sids: list.map((r) => r.sid), total: total?.stories ?? 0 };
+  return { sids: list.map((r) => r.sid), total: total?.n ?? 0 };
 }

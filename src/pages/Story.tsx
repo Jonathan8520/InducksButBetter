@@ -35,6 +35,23 @@ function StorySkeleton() {
   );
 }
 
+/** Longue liste tronquée, dépliable d'un clic. */
+function LongList<T>({ items, render, className = "pub-list", max = 25 }: { items: T[]; render: (item: T) => React.ReactNode; className?: string; max?: number }) {
+  const { t } = useTranslation();
+  const [all, setAll] = useState(false);
+  const shown = all ? items : items.slice(0, max);
+  return (
+    <>
+      <ul className={className}>{shown.map(render)}</ul>
+      {items.length > max && !all && (
+        <button className="more-btn" onClick={() => setAll(true)}>
+          {t("common.showAll", { n: formatNumber(items.length) })}
+        </button>
+      )}
+    </>
+  );
+}
+
 function Publications({ sid, total }: { sid: number; total: number }) {
   const { t } = useTranslation();
   const [view, setView] = useState<"country" | "date">("country");
@@ -95,7 +112,7 @@ function Publications({ sid, total }: { sid: number; total: number }) {
           {groups.map(([cc, list], i) => (
             <Disclosure
               key={cc}
-              defaultOpen={i < 2 || groups.length <= 3}
+              defaultOpen={i === 0 || groups.length <= 2}
               title={
                 <>
                   <CountryTag code={cc} />
@@ -109,18 +126,16 @@ function Publications({ sid, total }: { sid: number; total: number }) {
                 </span>
               }
             >
-              <ul className="pub-list">
-                {list.map((p) => (
-                  <Row key={p.issuecode + p.pos} p={p} />
-                ))}
-              </ul>
+              <LongList items={list} render={(p) => <Row key={p.issuecode + p.pos} p={p} />} />
             </Disclosure>
           ))}
         </div>
       )}
       {pubs.data && view === "date" && (
-        <ul className="pub-list pub-list--flat">
-          {chrono.map((p) => (
+        <LongList
+          className="pub-list pub-list--flat"
+          items={chrono}
+          render={(p) => (
             <li key={p.issuecode + p.pos} className="pub-row">
               <span className="pub-row__date num">{formatDate(p.date, "short") || "—"}</span>
               <span className="pub-row__main">
@@ -136,8 +151,8 @@ function Publications({ sid, total }: { sid: number; total: number }) {
                 {ownsIssue(p.issuecode) && <span className="owned-dot">{t("collection.owned")}</span>}
               </span>
             </li>
-          ))}
-        </ul>
+          )}
+        />
       )}
     </Section>
   );
@@ -273,9 +288,9 @@ export default function Story() {
             </Link>
           </div>
 
-          {(desc || s.plot) && (
+          {desc && (
             <Section title={t("story.summary")}>
-              <InducksText text={desc?.text ?? s.plot} className="lead-text" />
+              <InducksText text={desc.text} className="lead-text" />
               {s.descriptions.length > 1 && (
                 <Disclosure title={t("story.otherDescriptions", { count: s.descriptions.length - 1 })}>
                   <dl className="lang-list">
@@ -343,7 +358,7 @@ export default function Story() {
       )}
 
       {s.refs.length > 0 && (
-        <Section title={t("story.references", { count: s.refs.length })}>
+        <Section title={t("story.references", { count: s.refCount })}>
           <ul className="ref-list">
             {s.refs.slice(0, 60).map((r) => (
               <li key={r.dir + r.sid + (r.reason ?? "")}>

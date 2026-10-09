@@ -36,9 +36,9 @@ BIG = {
 
 #: Requêtes chaudes (forme identique à celles de src/data/*.ts).
 HOT = {
-    "fiche histoire": ("SELECT * FROM story WHERE storycode = ?", ["W OS  386-02"]),
+    "fiche histoire": ("SELECT doc FROM story_doc WHERE storycode = ?", ["W OS  386-02"]),
+    "fiches compactes": ("SELECT * FROM story WHERE sid IN (1, 2, 3)", []),
     "parutions d'une histoire": ("SELECT * FROM story_pub WHERE sid = ?", [1]),
-    "personnages d'une histoire": ("SELECT * FROM story_char WHERE sid = ?", [1]),
     "sommaire d'un numéro": ("SELECT * FROM toc WHERE issuecode = ? ORDER BY pos, entry", ["fr/PM  272"]),
     "numéro par publication et numéro": (
         "SELECT * FROM issue WHERE publicationcode = ? AND number = ?", ["fr/PM", "272"]),
@@ -87,6 +87,11 @@ def main() -> int:
     check("entrées de sommaire", n > 1_500_000, f"{n:,}")
     row = one("SELECT title, pubs, creators FROM story WHERE storycode = 'W OS  386-02'")
     check("Only A Poor Old Man", bool(row) and row[1] > 100 and "CB" in (row[2] or ""), str(row))
+    doc = one("SELECT doc FROM story_doc WHERE storycode = 'W OS  386-02'")
+    import json
+    d = json.loads(doc[0]) if doc else {}
+    check("document de fiche", len(d.get("titles") or {}) > 10 and len(d.get("chars") or []) >= 3,
+          f"{len(d.get('titles') or {})} titres, {len(d.get('chars') or [])} personnages")
     row = one("SELECT name, stories FROM person WHERE code = 'CB'")
     check("Carl Barks", bool(row) and row[1] > 1000, str(row))
     row = one("SELECT COUNT(*) FROM toc WHERE issuecode = 'fr/PM  272'")

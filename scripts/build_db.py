@@ -573,10 +573,10 @@ step("subseries_name", """
 
 step("subseries_story", """
     CREATE TABLE subseries_story (
-        code TEXT, date TEXT, sid INTEGER, PRIMARY KEY (code, date, sid)
+        code TEXT, date TEXT, sid INTEGER, kind TEXT, PRIMARY KEY (code, date, sid)
     ) WITHOUT ROWID""", """
     INSERT OR IGNORE INTO subseries_story
-    SELECT ss.subseriescode, COALESCE(st.date, ''), st.sid
+    SELECT ss.subseriescode, COALESCE(st.date, ''), st.sid, st.kind
     FROM s.inducks_storysubseries ss JOIN story st ON st.storycode = ss.storycode
     WHERE ss.subseriescode IS NOT NULL""",
     "CREATE INDEX subseries_story_sid ON subseries_story(sid)",
@@ -587,6 +587,47 @@ step("subseries_story", """
          img = (SELECT st.img FROM subseries_story x JOIN story st ON st.sid = x.sid
                 WHERE x.code = subseries.code AND st.img IS NOT NULL
                 ORDER BY st.pubs DESC LIMIT 1)""")
+
+# --- Fiche histoire en un seul document --------------------------------------------------
+# La page d'une histoire lisait une vingtaine de tables (titres, résumés, crédits,
+# personnages, versions, épisodes, références, liens…), chacune au prix d'une descente de
+# B-arbre, soit 70 requêtes réseau à froid. Tout est ici réuni en un document JSON par
+# histoire, regroupé par code : une seule descente (3 ou 4 requêtes) pour toute la fiche.
+# Seuls les noms (auteurs, personnages, séries) restent résolus à part, sur de petites
+# tables vite en cache.
+step("story_doc", """
+    CREATE TABLE story_doc (storycode TEXT PRIMARY KEY, sid INTEGER, doc TEXT) WITHOUT ROWID""", """
+    INSERT INTO story_doc
+    SELECT s.storycode, s.sid, json_patch('{}', json_object(
+      'sid', s.sid, 'code', s.storycode, 'title', s.title, 'date', s.date, 'kind', s.kind,
+      'pages', s.pages, 'num', s.num, 'den', s.den, 'rows', s.rows, 'hero', s.hero,
+      'creators', s.creators, 'img', s.img, 'pubs', s.pubs, 'countries', s.countries,
+      'header', (SELECT json_array(h.code, h.title) FROM storyheader h WHERE h.code = s.header),
+      'comment', t.comment,
+      'titles', json((SELECT json_group_object(lang, title) FROM story_title x WHERE x.sid = s.sid)),
+      'desc', json((SELECT json_group_object(lang, text) FROM story_desc x WHERE x.sid = s.sid)),
+      'jobs', json((SELECT json_group_array(json_array(personcode, role)) FROM story_job x
+                    WHERE x.sid = s.sid)),
+      'chars', json((SELECT json_group_array(json_array(charactercode, n, comment)) FROM (
+                       SELECT * FROM story_char x WHERE x.sid = s.sid ORDER BY n, charactercode))),
+      'versions', json((SELECT json_group_array(json_array(svc, kind, pages, num, den, rows, what))
+                        FROM story_version x WHERE x.sid = s.sid)),
+      'parts', json((SELECT json_group_array(json_array(st.storycode, p.part,
+                                                          COALESCE(p.title, st.title), p.date))
+                     FROM (SELECT * FROM story_part p WHERE p.super = s.sid
+                           ORDER BY CAST(p.part AS INTEGER), p.part) p
+                     JOIN story st ON st.sid = p.sid)),
+      'partOf', json((SELECT json_array(st.storycode, st.title, p.part) FROM story_part p
+                      JOIN story st ON st.sid = p.super WHERE p.sid = s.sid LIMIT 1)),
+      'series', json((SELECT json_group_array(code) FROM subseries_story x WHERE x.sid = s.sid)),
+      'refs', json((SELECT json_group_array(json_array(st.storycode, st.title, st.kind, r.dir, r.reason))
+                    FROM (SELECT * FROM story_ref r WHERE r.sid = s.sid LIMIT 80) r
+                    JOIN story st ON st.sid = r.other)),
+      'refCount', (SELECT COUNT(*) FROM story_ref r WHERE r.sid = s.sid),
+      'links', json((SELECT json_group_array(json_array(u.site, si.name, u.url)) FROM story_url u
+                     LEFT JOIN site si ON si.sitecode = u.site WHERE u.sid = s.sid))
+    ))
+    FROM story s LEFT JOIN story_text t ON t.sid = s.sid""")
 
 # --- Personnages et univers -----------------------------------------------------------
 
@@ -603,17 +644,23 @@ step("character", """
 
 step("character_story", """
     CREATE TABLE character_story (
-        code TEXT, date TEXT, sid INTEGER, PRIMARY KEY (code, date, sid)
+        code TEXT, date TEXT, sid INTEGER, kind TEXT, PRIMARY KEY (code, date, sid)
     ) WITHOUT ROWID""", """
     INSERT OR IGNORE INTO character_story
-    SELECT sc.charactercode, COALESCE(st.date, ''), st.sid
+    SELECT sc.charactercode, COALESCE(st.date, ''), st.sid, st.kind
     FROM story_char sc JOIN story st ON st.sid = sc.sid""",
     """UPDATE character SET
          stories = (SELECT COUNT(*) FROM character_story x WHERE x.code = character.code),
          first = (SELECT MIN(CASE WHEN date GLOB '[0-9][0-9][0-9][0-9]*' THEN date END) FROM character_story x WHERE x.code = character.code),
          last = (SELECT MAX(CASE WHEN date GLOB '[0-9][0-9][0-9][0-9]*' THEN date END) FROM character_story x WHERE x.code = character.code)""",
-    """UPDATE character SET first_sid = (SELECT x.sid FROM character_story x
-       WHERE x.code = character.code AND x.date = character.first LIMIT 1)""")
+    # Première apparition : la plus ancienne vraie histoire, pas une couverture ou une
+    # illustration datée d'avant (sinon, la plus ancienne entrée tout court).
+    """UPDATE character SET first_sid = COALESCE(
+         (SELECT x.sid FROM character_story x JOIN story s ON s.sid = x.sid
+          WHERE x.code = character.code AND x.date GLOB '[0-9][0-9][0-9][0-9]*' AND s.kind = 'n'
+          ORDER BY x.date LIMIT 1),
+         (SELECT x.sid FROM character_story x
+          WHERE x.code = character.code AND x.date = character.first LIMIT 1))""")
 
 step("character_name", """
     CREATE TABLE character_name (
@@ -699,19 +746,24 @@ step("person", """
 
 step("person_story", """
     CREATE TABLE person_story (
-        code TEXT, date TEXT, sid INTEGER, roles TEXT, PRIMARY KEY (code, date, sid)
+        code TEXT, date TEXT, sid INTEGER, roles TEXT, kind TEXT, PRIMARY KEY (code, date, sid)
     ) WITHOUT ROWID""", """
     INSERT OR IGNORE INTO person_story
-    SELECT j.personcode, COALESCE(st.date, ''), j.sid, GROUP_CONCAT(j.role, '')
+    SELECT j.personcode, COALESCE(st.date, ''), j.sid, GROUP_CONCAT(j.role, ''), st.kind
     FROM (SELECT sid, personcode, role FROM story_job
           ORDER BY sid, personcode, CASE role WHEN 'p' THEN 0 WHEN 'w' THEN 1 WHEN 'a' THEN 2
                                      WHEN 'i' THEN 3 ELSE 4 END) j
     JOIN story st ON st.sid = j.sid
     GROUP BY j.personcode, j.sid""",
+    # Le rôle « r » signale une histoire qui cite l'auteur sans qu'il y ait travaillé : il
+    # ne compte ni dans le nombre d'histoires, ni dans les années d'activité.
     """UPDATE person SET
-         stories = (SELECT COUNT(*) FROM person_story x WHERE x.code = person.code),
-         first = (SELECT MIN(CASE WHEN date GLOB '[0-9][0-9][0-9][0-9]*' THEN date END) FROM person_story x WHERE x.code = person.code),
-         last = (SELECT MAX(CASE WHEN date GLOB '[0-9][0-9][0-9][0-9]*' THEN date END) FROM person_story x WHERE x.code = person.code)""")
+         stories = (SELECT COUNT(*) FROM person_story x WHERE x.code = person.code
+                    AND x.roles GLOB '*[pwai]*'),
+         first = (SELECT MIN(CASE WHEN date GLOB '[0-9][0-9][0-9][0-9]*' THEN date END)
+                  FROM person_story x WHERE x.code = person.code AND x.roles GLOB '*[pwai]*'),
+         last = (SELECT MAX(CASE WHEN date GLOB '[0-9][0-9][0-9][0-9]*' THEN date END)
+                 FROM person_story x WHERE x.code = person.code AND x.roles GLOB '*[pwai]*')""")
 
 step("_roles", """
     CREATE TABLE _roles (code TEXT PRIMARY KEY, roles TEXT) WITHOUT ROWID""", """
@@ -878,15 +930,17 @@ step("publisher_publication", """
 # Sommaire d'un numéro, regroupé par numéro puis position.
 step("toc", """
     CREATE TABLE toc (
-        issuecode TEXT, pos TEXT, entry TEXT, sid INTEGER, title TEXT, kind TEXT,
-        pages INTEGER, num INTEGER, den INTEGER, part TEXT, creators TEXT, img TEXT,
-        notes TEXT, PRIMARY KEY (issuecode, pos, entry)
+        issuecode TEXT, pos TEXT, entry TEXT, sid INTEGER, storycode TEXT, title TEXT,
+        otitle TEXT, kind TEXT, pages INTEGER, num INTEGER, den INTEGER, part TEXT,
+        creators TEXT, img TEXT, notes TEXT, PRIMARY KEY (issuecode, pos, entry)
     ) WITHOUT ROWID""", """
     INSERT OR IGNORE INTO toc
     SELECT e.issuecode, COALESCE(e.position, ''),
            CASE WHEN substr(e.entrycode, 1, length(e.issuecode)) = e.issuecode
                 THEN substr(e.entrycode, length(e.issuecode) + 1) ELSE e.entrycode END,
-           st.sid, e.title, v.kind, v.entirepages, v.num, v.den, e.part, c.creators, t.img,
+           st.sid, st.storycode, e.title,
+           CASE WHEN st.title IS NOT e.title THEN st.title END,
+           v.kind, v.entirepages, v.num, v.den, e.part, c.creators, COALESCE(t.img, st.img),
            NULLIF(json_patch('{}', json_object(
                'changes', e.changes, 'cut', e.cut, 'minor', e.minorchanges,
                'missing', e.missingpanels,
@@ -947,12 +1001,9 @@ FTS = [
         FROM story_rank rk JOIN story st ON st.sid = rk.sid"""),
     # Descriptions et résumés.
     ("fts_desc", "unicode61 remove_diacritics 2", """
-        SELECT st.sid, COALESCE((SELECT GROUP_CONCAT(text, ' ') FROM story_desc d
-                                 WHERE d.sid = st.sid), '') || ' ' ||
-               COALESCE((SELECT plot FROM story_text t WHERE t.sid = st.sid), '')
+        SELECT st.sid, (SELECT GROUP_CONCAT(text, ' ') FROM story_desc d WHERE d.sid = st.sid)
         FROM story st
-        WHERE EXISTS (SELECT 1 FROM story_desc d WHERE d.sid = st.sid)
-           OR EXISTS (SELECT 1 FROM story_text t WHERE t.sid = st.sid AND t.plot IS NOT NULL)"""),
+        WHERE EXISTS (SELECT 1 FROM story_desc d WHERE d.sid = st.sid)"""),
 ]
 
 #: Petites tables de noms : FTS trigram AVEC une colonne clé (pas de rowid stable à exploiter).
@@ -984,6 +1035,10 @@ NAME_FTS = [
                FROM universe_name n WHERE n.code = u.code), ''))
         FROM universe u"""),
 ]
+
+
+#: Supprimées une fois story_doc et les index plein texte construits.
+DROP_AFTER_FTS = ["story_text", "story_version", "story_ref", "story_url", "story_part"]
 
 
 def build_final(staging: str, out: str) -> dict:
@@ -1028,6 +1083,11 @@ def build_final(staging: str, out: str) -> dict:
         db.commit()
         n = db.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0]
         print(f"  ok {name:<24} {n:>10,} lignes  {time.time() - t:6.1f}s")
+
+    # Tables dont le contenu vit désormais dans story_doc (et dans l'index fts_desc).
+    for name in DROP_AFTER_FTS:
+        db.execute(f'DROP TABLE IF EXISTS "{name}"')
+    db.commit()
 
     # Nettoyage des tables de travail.
     for (name,) in db.execute(

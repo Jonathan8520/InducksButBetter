@@ -1584,3 +1584,16 @@
 .about p + p {
   margin-top: 0.75em;
 }
+
+.more-btn {
+  align-self: flex-start;
+  margin-top: 8px;
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font-weight: 600;
+  font-size: var(--t-sm);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

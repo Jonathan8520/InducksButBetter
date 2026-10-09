@@ -5,7 +5,7 @@ import { Check } from "lucide-react";
 import { Facts, Page, PageHead, Section } from "../components/page";
 import { Field, Input, Segmented, Select } from "../components/ui/Controls";
 import { applyTheme, settings, type AiProvider, type Theme } from "../lib/store";
-import { LANGUAGES } from "../i18n";
+import { LANGUAGES, setLanguage } from "../i18n";
 import { defaultModel, PROVIDER_IDS } from "../lib/ai";
 import { dbInfo } from "../data/home";
 import { resetLocalizedNames } from "../data/names";
@@ -29,7 +29,7 @@ export default function Settings() {
             <Select
               value={i18n.resolvedLanguage}
               onChange={(e) => {
-                void i18n.changeLanguage(e.target.value).then(() => {
+                void setLanguage(e.target.value).then(() => {
                   resetLocalizedNames();
                   void client.invalidateQueries();
                 });

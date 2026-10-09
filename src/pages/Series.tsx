@@ -15,6 +15,7 @@ import { decodeSegment, inducksUrl, routes } from "../lib/routes";
 import { formatNumber, yearSpan } from "../lib/format";
 import { countryName, languageName } from "../lib/inducks";
 import { recordVisit } from "../lib/ui";
+import { OnlyToggle } from "./Creators";
 import { CountryTag } from "../components/ui/Badges";
 
 export function SeriesList() {
@@ -64,12 +65,13 @@ export function Series() {
   const { t, i18n } = useTranslation();
   const code = decodeSegment(useParams().code ?? "");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const [only, setOnly] = useState<"stories" | "all">("stories");
   const [offset, setOffset] = useState(0);
-  useEffect(() => setOffset(0), [order, code]);
+  useEffect(() => setOffset(0), [order, code, only]);
   const q = useQuery({ queryKey: ["series-detail", code, i18n.resolvedLanguage], queryFn: () => seriesDetail(code), staleTime: Infinity });
   const page = useQuery({
-    queryKey: ["series-stories", code, order, offset],
-    queryFn: () => seriesStories(code, { order, offset, limit: PAGE }),
+    queryKey: ["series-stories", code, order, offset, only],
+    queryFn: () => seriesStories(code, { order, offset, limit: PAGE, only }),
     placeholderData: keepPreviousData,
     staleTime: Infinity,
   });
@@ -116,15 +118,18 @@ export function Series() {
         id="stories"
         title={t("series.storiesTitle", { count: page.data?.total ?? 0, n: formatNumber(page.data?.total ?? 0) })}
         aside={
-          <Segmented
-            label={t("search.sort")}
-            value={order}
-            onChange={setOrder}
-            items={[
-              { value: "asc", label: t("common.oldest") },
-              { value: "desc", label: t("common.newest") },
-            ]}
-          />
+          <div className="section__tools">
+            <OnlyToggle value={only} onChange={setOnly} />
+            <Segmented
+              label={t("search.sort")}
+              value={order}
+              onChange={setOrder}
+              items={[
+                { value: "asc", label: t("common.oldest") },
+                { value: "desc", label: t("common.newest") },
+              ]}
+            />
+          </div>
         }
       >
         <div className={page.isPlaceholderData ? "is-stale" : undefined}>

@@ -25,7 +25,7 @@ function groupByYear(list: IssueTile[]) {
     arr.push(it);
     map.set(y, arr);
   }
-  return [...map.entries()];
+  return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
 }
 
 export default function Publication() {

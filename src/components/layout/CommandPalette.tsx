@@ -13,11 +13,13 @@ import { ui, useUi, recentVisits } from "../../lib/ui";
 import { routes } from "../../lib/routes";
 import { formatNumber, year } from "../../lib/format";
 import { countryName, kindLabel } from "../../lib/inducks";
-import { highlight } from "../../lib/text";
+import { highlight, norm, packCode } from "../../lib/text";
 
 interface Item {
   key: string;
   href: string;
+  /** Le nom correspond exactement à la saisie : son groupe passe en tête. */
+  exact?: boolean;
   title: ReactNode;
   sub?: ReactNode;
   media?: ReactNode;
@@ -84,6 +86,7 @@ export function CommandPalette() {
       out.push({
         key: `s-${s.sid}`,
         href: routes.story(s.storycode),
+        exact: packCode(s.storycode) === packCode(debounced) || norm(s.title) === norm(debounced),
         group: "stories",
         title: <Hl text={s.title || s.storycode} q={debounced} />,
         sub: (
@@ -103,6 +106,7 @@ export function CommandPalette() {
       out.push({
         key: `i-${i.issuecode}`,
         href: routes.issue(i.issuecode, i.publicationcode),
+        exact: true,
         group: "issues",
         title: `${i.publicationTitle} ${i.number}`,
         sub: (
@@ -118,6 +122,7 @@ export function CommandPalette() {
       out.push({
         key: `p-${p.code}`,
         href: routes.creator(p.code),
+        exact: norm(p.name) === norm(debounced) || p.code.toLowerCase() === debounced.toLowerCase(),
         group: "people",
         title: <Hl text={p.name} q={debounced} />,
         sub: (
@@ -133,6 +138,7 @@ export function CommandPalette() {
       out.push({
         key: `c-${c.code}`,
         href: routes.character(c.code),
+        exact: norm(c.name) === norm(debounced),
         group: "characters",
         title: <Hl text={c.name} q={debounced} />,
         sub: <span>{t("counts.stories", { count: c.stories ?? 0, n: formatNumber(c.stories ?? 0) })}</span>,
@@ -143,6 +149,7 @@ export function CommandPalette() {
       out.push({
         key: `pub-${p.code}`,
         href: routes.publication(p.code),
+        exact: norm(p.title) === norm(debounced),
         group: "publications",
         title: <Hl text={p.title} q={debounced} />,
         sub: (
@@ -158,13 +165,19 @@ export function CommandPalette() {
       out.push({
         key: `ser-${s.code}`,
         href: routes.subseries(s.code),
+        exact: norm(s.name) === norm(debounced),
         group: "series",
         title: <Hl text={s.name} q={debounced} />,
         sub: <span>{t("counts.stories", { count: s.stories ?? 0, n: formatNumber(s.stories ?? 0) })}</span>,
         media: <Layers size={16} />,
       });
     }
-    return out;
+    // Groupes contenant une correspondance exacte d'abord (« Don Rosa » est un auteur
+    // avant d'être un mot dans des titres), l'ordre interne de chaque groupe est conservé.
+    const groups = [...new Set(out.map((i) => i.group))];
+    const rank = (g: string) => (out.some((i) => i.group === g && i.exact) ? 0 : 1);
+    groups.sort((a, b) => rank(a) - rank(b));
+    return groups.flatMap((g) => out.filter((i) => i.group === g));
   }, [debounced, res.data, t]);
 
   const all: Item[] = useMemo(

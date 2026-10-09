@@ -49,6 +49,7 @@ async function toCards(list: StoryRow[]): Promise<StoryCard[]> {
   const credits = new Map(list.map((r) => [r.sid, parseCredits(r.creators)]));
   const codes = new Set<string>();
   for (const c of credits.values()) for (const x of c) codes.add(x.code);
+  for (const r of list) if (r.hero && !/^[A-Za-z0-9]/.test(r.hero)) r.hero = null;
   const heroes = list.map((r) => r.hero).filter((h): h is string => !!h);
   const [names, heroNames] = await Promise.all([personNames(codes), characterNames(heroes)]);
   return list.map((r) => {
@@ -112,148 +113,148 @@ export interface StoryDetail extends StoryCard {
   partOf: { sid: number; storycode: string; title: string | null; part: string | null } | null;
   subseries: { code: string; name: string }[];
   refs: { sid: number; storycode: string; title: string | null; kind: string | null; dir: "in" | "out"; reason: string | null }[];
+  refCount: number;
   links: { site: string; name: string | null; url: string }[];
 }
 
+interface StoryDoc {
+  sid: number;
+  code: string;
+  title: string | null;
+  date: string | null;
+  kind: string | null;
+  pages: number | null;
+  num: number | null;
+  den: number | null;
+  rows: number | null;
+  hero: string | null;
+  creators: string | null;
+  img: string | null;
+  pubs: number | null;
+  countries: number | null;
+  header: [string, string] | null;
+  comment: string | null;
+  plot: string | null;
+  titles: Record<string, string> | null;
+  desc: Record<string, string> | null;
+  jobs: [string, string][] | null;
+  chars: [string, number | null, string | null][] | null;
+  versions: [string, string | null, number | null, number | null, number | null, number | null, string | null][] | null;
+  parts: [string, string | null, string | null, string | null][] | null;
+  partOf: [string, string | null, string | null] | null;
+  series: string[] | null;
+  refs: [string, string | null, string | null, "in" | "out", number | null][] | null;
+  refCount: number | null;
+  links: [string, string | null, string][] | null;
+}
+
+/**
+ * Fiche complète d'une histoire. Tout tient dans un document (table story_doc) lu en une
+ * seule descente d'index ; seuls les noms sont résolus ensuite, en parallèle.
+ */
 export async function storyDetail(code: string): Promise<StoryDetail | null> {
   const [lang] = dataLanguages();
-  const base = await one<StoryRow & { rows: number | null; countries: number; header: string | null }>(
-    `SELECT ${CARD_COLUMNS}, s.rows, s.countries, s.header FROM story s WHERE s.storycode = ?`,
-    [lang, code],
-  );
-  if (!base) return null;
-  const sid = base.sid;
+  const row = await one<{ doc: string }>("SELECT doc FROM story_doc WHERE storycode = ?", [code]);
+  if (!row) return null;
+  const d = JSON.parse(row.doc) as StoryDoc;
+  if (d.hero && !/^[A-Za-z0-9]/.test(d.hero)) d.hero = null;
+  const titles = d.titles ?? {};
+  const local = titles[lang] && titles[lang] !== d.title ? titles[lang] : null;
 
-  const [card] = await toCards([base]);
-  const [
-    text,
-    titles,
-    descriptions,
-    jobs,
-    chars,
-    versions,
-    parts,
-    partOf,
-    subseries,
-    refs,
-    links,
-    header,
-  ] = await Promise.all([
-    one<{ comment: string | null; plot: string | null }>(
-      "SELECT comment, plot FROM story_text WHERE sid = ?",
-      [sid],
-    ),
-    rows<{ lang: string; title: string }>("SELECT lang, title FROM story_title WHERE sid = ?", [sid]),
-    rows<{ lang: string; text: string }>("SELECT lang, text FROM story_desc WHERE sid = ?", [sid]),
-    rows<{ personcode: string; role: string }>(
-      "SELECT personcode, role FROM story_job WHERE sid = ?",
-      [sid],
-    ),
-    rows<{ charactercode: string; n: number | null; comment: string | null }>(
-      "SELECT charactercode, n, comment FROM story_char WHERE sid = ? ORDER BY n, charactercode",
-      [sid],
-    ),
-    rows<{ svc: string; kind: string | null; pages: number | null; num: number | null; den: number | null; rows: number | null; what: string | null; plot: string | null }>(
-      "SELECT svc, kind, pages, num, den, rows, what, plot FROM story_version WHERE sid = ?",
-      [sid],
-    ),
-    rows<{ sid: number; storycode: string; part: string | null; title: string | null; date: string | null }>(
-      `SELECT p.sid, s.storycode, p.part, COALESCE(p.title, s.title) AS title, p.date
-       FROM story_part p JOIN story s ON s.sid = p.sid WHERE p.super = ?
-       ORDER BY CAST(p.part AS INTEGER), p.part`,
-      [sid],
-    ),
-    one<{ sid: number; storycode: string; title: string | null; part: string | null }>(
-      `SELECT s.sid, s.storycode, s.title, p.part FROM story_part p
-       JOIN story s ON s.sid = p.super WHERE p.sid = ? LIMIT 1`,
-      [sid],
-    ),
-    rows<{ code: string; name: string }>(
-      `SELECT x.code,
-              COALESCE((SELECT n.name FROM subseries_name n WHERE n.code = x.code AND n.lang = ?
-                        ORDER BY n.preferred DESC LIMIT 1), ss.name, x.code) AS name
-       FROM subseries_story x LEFT JOIN subseries ss ON ss.code = x.code
-       WHERE x.sid = ?`,
-      [lang, sid],
-    ),
-    rows<{ other: number; dir: "in" | "out"; reason: string | null }>(
-      `SELECT r.other, r.dir,
-              COALESCE((SELECT text FROM ref_reason x WHERE x.id = r.reason AND x.lang = ?),
-                       (SELECT text FROM ref_reason x WHERE x.id = r.reason AND x.lang = 'en')) AS reason
-       FROM (SELECT * FROM story_ref WHERE sid = ? LIMIT 60) r`,
-      [lang, sid],
-    ),
-    rows<{ site: string; name: string | null; url: string }>(
-      `SELECT u.site, si.name, u.url FROM story_url u LEFT JOIN site si ON si.sitecode = u.site
-       WHERE u.sid = ?`,
-      [sid],
-    ),
-    base.header
-      ? one<{ code: string; title: string }>("SELECT code, title FROM storyheader WHERE code = ?", [base.header])
-      : Promise.resolve(null),
-  ]);
-
-  const refStories = new Map(
-    (
-      await fanOut<{ sid: number; storycode: string; title: string | null; kind: string | null }>(
-        (part) => ({
-          sql: `SELECT sid, storycode, title, kind FROM story WHERE sid IN (${placeholders(part.length)})`,
-          params: part,
-        }),
-        [...new Set(refs.map((r) => r.other))],
-      )
-    ).map((r) => [r.sid, r]),
+  const jobs = d.jobs ?? [];
+  const chars = d.chars ?? [];
+  const credits = parseCredits(d.creators);
+  const personCodes = [...new Set([...jobs.map((j) => j[0]), ...credits.map((c) => c.code)])].filter(
+    (c) => c !== "?" && c !== "-",
   );
-  const personCodes = [...new Set(jobs.map((j) => j.personcode))].filter((c) => c !== "?" && c !== "-");
-  const [names, charNames] = await Promise.all([
+  const reasonIds = [...new Set((d.refs ?? []).map((r) => r[4]).filter((x): x is number => x !== null))];
+  const seriesCodes = d.series ?? [];
+
+  const [names, charNames, series, reasons] = await Promise.all([
     personNames(personCodes),
-    characterNames(chars.map((c) => c.charactercode)),
+    characterNames([...chars.map((c) => c[0]), ...(d.hero ? [d.hero] : [])]),
+    seriesCodes.length
+      ? rows<{ code: string; name: string }>(
+          `SELECT s.code, COALESCE((SELECT n.name FROM subseries_name n WHERE n.code = s.code AND n.lang = ?
+                    ORDER BY n.preferred DESC LIMIT 1), s.name, s.code) AS name
+           FROM subseries s WHERE s.code IN (${placeholders(seriesCodes.length)})`,
+          [lang, ...seriesCodes],
+        )
+      : Promise.resolve([]),
+    reasonIds.length
+      ? rows<{ id: number; lang: string; text: string }>(
+          `SELECT id, lang, text FROM ref_reason WHERE id IN (${placeholders(reasonIds.length)})
+           AND lang IN (?, 'en')`,
+          [...reasonIds, lang],
+        )
+      : Promise.resolve([]),
   ]);
+
+  const reasonText = (id: number | null) => {
+    if (id === null) return null;
+    const list = reasons.filter((r) => r.id === id);
+    return (list.find((r) => r.lang === lang) ?? list[0])?.text ?? null;
+  };
+
   const order = ["p", "w", "a", "i", "r"];
   const people = personCodes
-    .map((code) => ({
-      code,
-      name: names.get(code) ?? code,
+    .map((pc) => ({
+      code: pc,
+      name: names.get(pc) ?? pc,
       roles: jobs
-        .filter((j) => j.personcode === code)
-        .map((j) => j.role)
+        .filter((j) => j[0] === pc)
+        .map((j) => j[1])
         .sort((a, b) => order.indexOf(a) - order.indexOf(b)),
     }))
+    .filter((p) => p.roles.length > 0)
     .sort((a, b) => order.indexOf(a.roles[0]) - order.indexOf(b.roles[0]));
+  const { writers, artists } = writersArtists(credits);
 
   return {
-    ...card,
-    comment: text?.comment ?? null,
-    plot: text?.plot ?? null,
-    rows: base.rows,
-    countries: base.countries ?? 0,
-    header,
-    titles,
-    descriptions,
+    sid: d.sid,
+    storycode: d.code,
+    title: local ?? d.title ?? "",
+    original: local ? d.title : null,
+    date: d.date,
+    kind: d.kind,
+    pages: formatPages(d.pages, d.num, d.den),
+    hero: d.hero,
+    heroName: d.hero ? charNames.get(d.hero) ?? null : null,
+    credits,
+    writers: writers.map((c) => ({ code: c, name: names.get(c) ?? c })),
+    artists: artists.map((c) => ({ code: c, name: names.get(c) ?? c })),
+    img: d.img,
+    pubs: d.pubs ?? 0,
+    comment: d.comment,
+    plot: d.plot,
+    rows: d.rows,
+    countries: d.countries ?? 0,
+    header: d.header ? { code: d.header[0], title: d.header[1] } : null,
+    titles: Object.entries(titles).map(([l, t]) => ({ lang: l, title: t })),
+    descriptions: Object.entries(d.desc ?? {}).map(([l, t]) => ({ lang: l, text: t })),
     people,
-    characters: chars.map((c) => ({
-      code: c.charactercode,
-      name: charNames.get(c.charactercode) ?? c.charactercode,
-      comment: c.comment,
+    characters: chars.map(([cc, , comment]) => ({ code: cc, name: charNames.get(cc) ?? cc, comment })),
+    versions: (d.versions ?? []).map(([svc, kind, pages, num, den, rows_, what]) => ({
+      svc,
+      kind,
+      pages: formatPages(pages, num, den),
+      rows: rows_,
+      what,
+      plot: null,
     })),
-    versions: versions.map((v) => ({
-      svc: v.svc,
-      kind: v.kind,
-      pages: formatPages(v.pages, v.num, v.den),
-      rows: v.rows,
-      what: v.what,
-      plot: v.plot,
+    parts: (d.parts ?? []).map(([storycode, part, title, date], i) => ({ sid: i, storycode, part, title, date })),
+    partOf: d.partOf ? { sid: 0, storycode: d.partOf[0], title: d.partOf[1], part: d.partOf[2] } : null,
+    subseries: series,
+    refs: (d.refs ?? []).map(([storycode, title, kind, dir, reason], i) => ({
+      sid: i,
+      storycode,
+      title,
+      kind,
+      dir,
+      reason: reasonText(reason),
     })),
-    parts,
-    partOf,
-    subseries,
-    refs: refs
-      .map((r) => {
-        const st = refStories.get(r.other);
-        return st ? { sid: st.sid, storycode: st.storycode, title: st.title, kind: st.kind, dir: r.dir, reason: r.reason } : null;
-      })
-      .filter((r): r is NonNullable<typeof r> => r !== null),
-    links,
+    refCount: d.refCount ?? 0,
+    links: (d.links ?? []).map(([site, name, url]) => ({ site, name, url })),
   };
 }
 

@@ -70,7 +70,7 @@ function Toc({ toc }: { toc: TocEntry[] }) {
             {e.originalTitle && <p className="toc__original">{e.originalTitle}</p>}
             <p className="toc__meta">
               {e.storycode && <Code>{e.storycode}</Code>}
-              {e.kind && <span>{kindLabel(e.kind)}</span>}
+              {e.kind && e.title && <span>{kindLabel(e.kind)}</span>}
               {e.pages && <span>{t("story.pagesShort", { n: e.pages })}</span>}
               {e.part && <span>{t("story.part", { n: e.part })}</span>}
             </p>

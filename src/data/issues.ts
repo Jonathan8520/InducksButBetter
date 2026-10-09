@@ -1,5 +1,5 @@
-import { fanOut, one, placeholders, rows } from "../db/client";
-import { dataLanguages, parseCredits } from "../lib/inducks";
+import { one, placeholders, rows } from "../db/client";
+import { parseCredits } from "../lib/inducks";
 import { formatPages } from "../lib/format";
 import { personNames } from "./names";
 
@@ -72,12 +72,11 @@ export async function findIssue(pub: string, number: string): Promise<IssueRow |
 export async function issueDetail(pub: string, number: string): Promise<IssueDetail | null> {
   const issue = await findIssue(pub, number);
   if (!issue) return null;
-  const [lang] = dataLanguages();
   const code = issue.issuecode;
 
   const [toc, pubRow, publisher, jobs, collects, collectedIn, siblings] = await Promise.all([
-    rows<{ pos: string; entry: string; sid: number | null; title: string | null; kind: string | null; pages: number | null; num: number | null; den: number | null; part: string | null; creators: string | null; img: string | null; notes: string | null }>(
-      `SELECT pos, entry, sid, title, kind, pages, num, den, part, creators, img, notes
+    rows<{ pos: string; entry: string; sid: number | null; storycode: string | null; title: string | null; otitle: string | null; kind: string | null; pages: number | null; num: number | null; den: number | null; part: string | null; creators: string | null; img: string | null; notes: string | null }>(
+      `SELECT pos, entry, sid, storycode, title, otitle, kind, pages, num, den, part, creators, img, notes
        FROM toc WHERE issuecode = ? ORDER BY pos, entry`,
       [code],
     ),
@@ -115,21 +114,6 @@ export async function issueDetail(pub: string, number: string): Promise<IssueDet
     ]),
   ]);
 
-  // Les histoires du sommaire sont lues à part, réparties entre les workers.
-  const sids = [...new Set(toc.map((t) => t.sid).filter((x): x is number => x !== null))];
-  const stories = new Map(
-    (
-      await fanOut<{ sid: number; storycode: string; title: string | null; img: string | null; local: string | null }>(
-        (part) => ({
-          sql: `SELECT s.sid, s.storycode, s.title, s.img,
-                       (SELECT x.title FROM story_title x WHERE x.sid = s.sid AND x.lang = ?) AS local
-                FROM story s WHERE s.sid IN (${placeholders(part.length)})`,
-          params: [lang, ...part],
-        }),
-        sids,
-      )
-    ).map((r) => [r.sid, r]),
-  );
   const creditsByEntry = toc.map((t) => parseCredits(t.creators));
   const codes = new Set<string>();
   creditsByEntry.forEach((c) => c.forEach((x) => codes.add(x.code)));
@@ -153,15 +137,13 @@ export async function issueDetail(pub: string, number: string): Promise<IssueDet
       } catch {
         notes = null;
       }
-      const st = t.sid !== null ? stories.get(t.sid) : undefined;
-      const title = t.title ?? st?.local ?? st?.title ?? null;
       return {
         pos: t.pos,
         entry: t.entry,
         sid: t.sid,
-        storycode: st?.storycode ?? null,
-        title,
-        originalTitle: st?.title && st.title !== title ? st.title : null,
+        storycode: t.storycode,
+        title: t.title ?? t.otitle,
+        originalTitle: t.title && t.otitle ? t.otitle : null,
         kind: t.kind,
         pages: formatPages(t.pages, t.num, t.den),
         part: t.part,
@@ -170,7 +152,7 @@ export async function issueDetail(pub: string, number: string): Promise<IssueDet
           name: names.get(code) ?? code,
           roles,
         })),
-        img: t.img ?? st?.img ?? null,
+        img: t.img,
         notes,
       };
     }),

@@ -38,7 +38,11 @@ export async function personDetail(code: string): Promise<PersonDetail | null> {
   if (!p) return null;
   const [aliases, links, tops, jobs] = await Promise.all([
     rows<{ name: string }>("SELECT name FROM person_alias WHERE code = ?", [code]),
-    rows<{ site: string; url: string }>("SELECT site, url FROM person_url WHERE code = ?", [code]),
+    rows<{ site: string; url: string }>(
+      `SELECT COALESCE(s.name, u.site) AS site, u.url FROM person_url u
+       LEFT JOIN site s ON s.sitecode = u.site WHERE u.code = ?`,
+      [code],
+    ),
     rows<{ kind: string; other: string; total: number }>(
       "SELECT kind, other, total FROM person_top WHERE code = ? ORDER BY kind, rank",
       [code],
@@ -56,11 +60,11 @@ export async function personDetail(code: string): Promise<PersonDetail | null> {
   ]);
   return {
     ...p,
-    aliases: aliases.map((a) => a.name).filter((a) => a && a !== p.name),
+    aliases: aliases.map((a) => a.name).filter((a) => a && a !== p.name && a !== p.code),
     links,
     roleCounts: (p.roles ?? "")
       .split(";")
-      .filter(Boolean)
+      .filter((x) => x && !x.startsWith("r:"))
       .map((x) => {
         const [role, n] = x.split(":");
         return { role, n: Number(n) };
@@ -79,9 +83,10 @@ export interface ListPage {
 /** Histoires d'un auteur, par date, éventuellement filtrées par rôle. */
 export async function personStories(
   code: string,
-  opts: { role?: string; order?: "asc" | "desc"; offset?: number; limit?: number },
+  opts: { role?: string; order?: "asc" | "desc"; offset?: number; limit?: number; only?: "stories" | "all" },
 ): Promise<ListPage> {
   const where = ["code = ?"];
+  if (opts.only !== "all") where.push("kind IN ('n', 'k')");
   const params: (string | number)[] = [code];
   if (opts.role === "write") where.push("(roles LIKE '%p%' OR roles LIKE '%w%')");
   else if (opts.role === "draw") where.push("(roles LIKE '%a%' OR roles LIKE '%i%')");

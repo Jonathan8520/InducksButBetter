@@ -109,15 +109,32 @@ export function Creators() {
 
 const PAGE = 30;
 
+/** Histoires seulement, ou aussi couvertures, illustrations et articles. */
+export function OnlyToggle({ value, onChange }: { value: "stories" | "all"; onChange: (v: "stories" | "all") => void }) {
+  const { t } = useTranslation();
+  return (
+    <Segmented
+      label={t("common.contentKind")}
+      value={value}
+      onChange={onChange}
+      items={[
+        { value: "stories", label: t("common.onlyStories") },
+        { value: "all", label: t("common.everything") },
+      ]}
+    />
+  );
+}
+
 function CreatorStories({ code, total }: { code: string; total: number }) {
   const { t } = useTranslation();
   const [role, setRole] = useState("");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const [only, setOnly] = useState<"stories" | "all">("stories");
   const [offset, setOffset] = useState(0);
-  useEffect(() => setOffset(0), [role, order, code]);
+  useEffect(() => setOffset(0), [role, order, code, only]);
   const page = useQuery({
-    queryKey: ["person-stories", code, role, order, offset],
-    queryFn: () => personStories(code, { role, order, offset, limit: PAGE }),
+    queryKey: ["person-stories", code, role, order, offset, only],
+    queryFn: () => personStories(code, { role, order, offset, limit: PAGE, only }),
     placeholderData: keepPreviousData,
     staleTime: Infinity,
   });
@@ -127,6 +144,7 @@ function CreatorStories({ code, total }: { code: string; total: number }) {
       title={t("creator.stories", { count: page.data?.total ?? total, n: formatNumber(page.data?.total ?? total) })}
       aside={
         <div className="section__tools">
+          <OnlyToggle value={only} onChange={setOnly} />
           <Select aria-label={t("search.role")} value={role} onChange={(e) => setRole(e.target.value)}>
             <option value="">{t("creator.allRoles")}</option>
             <option value="write">{t("search.roleWrite")}</option>
