@@ -12,6 +12,17 @@ import { routes } from "../lib/routes";
 
 const TAG = /<(creator|studio|hero|universe|publication|issue|story)\s+([^>]*)>([^<]*)<\/\1>/g;
 
+/** Liens HTML d'Inducks (« <a href='publication.php?c=it/TG'>…</a> ») ramenés aux balises maison. */
+const PHP_LINK = /<a\s+href=['"](?:https?:\/\/(?:www\.)?inducks\.org\/)?(story|issue|publication|creator|character|universe)\.php\?c=([^'"&]+)[^'"]*['"][^>]*>([^<]*)<\/a>/gi;
+const PHP_ENTITY: Record<string, string> = {
+  story: "story",
+  issue: "issue",
+  publication: "publication",
+  creator: "creator",
+  character: "hero",
+  universe: "universe",
+};
+
 function hrefFor(entity: string, code: string): string | null {
   switch (entity) {
     case "creator":
@@ -34,7 +45,20 @@ function hrefFor(entity: string, code: string): string | null {
 export function InducksText({ text: raw, className }: { text: string | null | undefined; className?: string }) {
   if (!raw) return null;
   // Les sauts de ligne d'Inducks sont parfois écrits « <br> ».
-  const text = raw.replace(/<br\s*\/?>/gi, "\n");
+  const text = raw
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(PHP_LINK, (_m, page: string, code: string, label: string) => {
+      const entity = PHP_ENTITY[page.toLowerCase()];
+      let c = code;
+      try {
+        c = decodeURIComponent(code.replace(/\+/g, " "));
+      } catch {
+        /* code laissé tel quel */
+      }
+      return `<${entity} ${c}>${label}</${entity}>`;
+    })
+    // Toute autre balise HTML résiduelle est retirée, son texte conservé.
+    .replace(/<(?!\/?(?:creator|studio|hero|universe|publication|issue|story)\b)[^>]+>/gi, "");
   const parts: React.ReactNode[] = [];
   let last = 0;
   TAG.lastIndex = 0;

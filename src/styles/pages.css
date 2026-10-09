@@ -682,7 +682,7 @@
 
 .facts {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(150px, 45%), 1fr));
   gap: 14px 24px;
   margin: 0;
 }

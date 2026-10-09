@@ -73,7 +73,7 @@ function Import({ onDone }: { onDone: () => void }) {
         <Button icon={<FileUp size={16} />} onClick={() => file.current?.click()}>
           {t("collection.fromFile")}
         </Button>
-        <span className="muted num">{parsed.length ? t("collection.detected", { n: formatNumber(parsed.length) }) : ""}</span>
+        <span className="muted num">{parsed.length ? t("collection.detected", { count: parsed.length, n: formatNumber(parsed.length) }) : ""}</span>
         <span className="spacer" />
         {collection.get().issues.length > 0 && (
           <Button disabled={!parsed.length} onClick={() => save("merge")}>
@@ -115,7 +115,9 @@ export default function Collection() {
         ui.toast(t("collection.analyzed", { n: formatNumber(stories.length) }), "ok");
       })
       .catch((err) => ui.toast(String(err), "error"))
-      .finally(() => !cancelled && setProgress(null));
+      // Toujours libérer la barre : l'enregistrement du résultat relance l'effet (et
+      // annule ce tour) avant que cette promesse ne se termine.
+      .finally(() => setProgress(null));
     return () => {
       cancelled = true;
     };
