@@ -43,6 +43,27 @@ function hrefFor(entity: string, code: string): string | null {
   }
 }
 
+const URL_RE = /\b(?:https?:\/\/|www\.)[^\s<>"\]]+[^\s<>"\].,;:!?)]/gi;
+
+/** Adresses web en clair (« www.wizardsofmickey.com ») rendues cliquables. */
+function linkify(text: string, key: () => number): React.ReactNode[] {
+  const out: React.ReactNode[] = [];
+  let last = 0;
+  for (const m of text.matchAll(URL_RE)) {
+    const i = m.index ?? 0;
+    if (i > last) out.push(<Fragment key={key()}>{text.slice(last, i)}</Fragment>);
+    const href = m[0].startsWith("www.") ? `https://${m[0]}` : m[0];
+    out.push(
+      <a key={key()} className="link" href={href} target="_blank" rel="noreferrer nofollow">
+        {m[0]}
+      </a>,
+    );
+    last = i + m[0].length;
+  }
+  if (last < text.length) out.push(<Fragment key={key()}>{text.slice(last)}</Fragment>);
+  return out;
+}
+
 export function InducksText({ text: raw, className }: { text: string | null | undefined; className?: string }) {
   if (!raw) return null;
   // Les sauts de ligne d'Inducks sont parfois écrits « <br> ».
@@ -61,8 +82,8 @@ export function InducksText({ text: raw, className }: { text: string | null | un
     // Toute autre balise HTML résiduelle est retirée, son texte conservé.
     .replace(/<(?!\/?(?:creator|studio|hero|universe|publication|issue|story)\b)[^>]+>/gi, "");
   const trimmed = text.trim();
-  if (/^(?:\[[^[\]]*\]\s*)+$/.test(trimmed)) {
-    text = trimmed.slice(1, -1).replace(/\]\s*\[/g, "\n");
+  if (/^(?:\[[^[\]]*\][\s;]*)+$/.test(trimmed)) {
+    text = trimmed.replace(/[\s;]+$/, "").slice(1, -1).replace(/\][\s;]*\[/g, "\n");
   }
   const parts: React.ReactNode[] = [];
   let last = 0;
@@ -70,7 +91,7 @@ export function InducksText({ text: raw, className }: { text: string | null | un
   let m: RegExpExecArray | null;
   let k = 0;
   while ((m = TAG.exec(text))) {
-    if (m.index > last) parts.push(<Fragment key={k++}>{text.slice(last, m.index)}</Fragment>);
+    if (m.index > last) parts.push(...linkify(text.slice(last, m.index), () => k++));
     const href = hrefFor(m[1], m[2].trim());
     const label = m[3].trim() || m[2].trim();
     parts.push(
@@ -84,6 +105,6 @@ export function InducksText({ text: raw, className }: { text: string | null | un
     );
     last = m.index + m[0].length;
   }
-  if (last < text.length) parts.push(<Fragment key={k++}>{text.slice(last)}</Fragment>);
+  if (last < text.length) parts.push(...linkify(text.slice(last), () => k++));
   return <p className={["prose", className].filter(Boolean).join(" ")}>{parts}</p>;
 }

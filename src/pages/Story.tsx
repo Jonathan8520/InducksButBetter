@@ -14,7 +14,7 @@ import { IconButton } from "../components/ui/Button";
 import { Disclosure, Segmented } from "../components/ui/Controls";
 import { Dialog } from "../components/ui/Overlay";
 import { ErrorState, NotFound, Skeleton } from "../components/ui/States";
-import { storyDetail, storyPublications, type Publication } from "../data/stories";
+import { storyDetail, storyPublications, type Publication, type StoryDetail } from "../data/stories";
 import { decodeSegment, inducksUrl, routes } from "../lib/routes";
 import { formatDate, formatNumber } from "../lib/format";
 import { countryName, fullUrl, kindLabel, languageName, rolesLabel } from "../lib/inducks";
@@ -188,6 +188,46 @@ function Publications({ sid, total }: { sid: number; total: number }) {
             </li>
           )}
         />
+      )}
+    </Section>
+  );
+}
+
+/** Versions d'une histoire (découpages, adaptations) : la version de référence en tête. */
+function Versions({ versions }: { versions: StoryDetail["versions"] }) {
+  const { t } = useTranslation();
+  const [all, setAll] = useState(false);
+  const sorted = [...versions].sort((a, b) => (a.what === "s" ? -1 : b.what === "s" ? 1 : 0));
+  const shown = all ? sorted : sorted.slice(0, 10);
+  return (
+    <Section title={t("story.versions", { count: versions.length })}>
+      <div className="table-wrap">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>{t("story.version")}</th>
+              <th>{t("story.kind")}</th>
+              <th>{t("story.pages")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((v) => (
+              <tr key={v.svc}>
+                <td>
+                  <Code>{v.svc}</Code>
+                  {v.what === "s" && <span className="first-tag version-main">{t("story.versionMain")}</span>}
+                </td>
+                <td>{kindLabel(v.kind)}</td>
+                <td className="num">{v.pages}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {sorted.length > shown.length && (
+        <button className="more-btn" onClick={() => setAll(true)}>
+          {t("common.showAll", { n: formatNumber(sorted.length) })}
+        </button>
       )}
     </Section>
   );
@@ -409,47 +449,37 @@ export default function Story() {
 
       {s.refs.length > 0 && (
         <Section title={t("story.references", { count: s.refCount })}>
-          <ul className="ref-list">
-            {s.refs.slice(0, 60).map((r) => (
-              <li key={r.dir + r.sid + (r.reason ?? "")}>
-                <span className={`ref-dir ref-dir--${r.dir}`}>{t(`story.ref.${r.dir}`)}</span>
-                <Link className="link" to={routes.story(r.storycode)}>
-                  {r.title || r.storycode}
-                </Link>
-                <Code>{r.storycode}</Code>
-                {r.reason && r.reason !== "unknown" && <span className="muted">{r.reason}</span>}
-              </li>
-            ))}
-          </ul>
-        </Section>
-      )}
-
-      {s.versions.length > 1 && (
-        <Section title={t("story.versions", { count: s.versions.length })}>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>{t("story.version")}</th>
-                  <th>{t("story.kind")}</th>
-                  <th>{t("story.pages")}</th>
-                  <th>{t("story.notes")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {s.versions.map((v) => (
-                  <tr key={v.svc}>
-                    <td><Code>{v.svc}</Code></td>
-                    <td>{kindLabel(v.kind)}</td>
-                    <td className="num">{v.pages}</td>
-                    <td>{v.what ?? ""}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="ref-groups">
+            {(["out", "in"] as const).map((dir) => {
+              const list = s.refs.filter((r) => r.dir === dir);
+              if (!list.length) return null;
+              return (
+                <div key={dir} className="ref-group">
+                  <h3>
+                    {t(`story.ref.${dir}`)} <span className="muted num">{formatNumber(list.length)}</span>
+                  </h3>
+                  <LongList
+                    className="ref-list"
+                    max={12}
+                    items={list}
+                    render={(r) => (
+                      <li key={r.sid + (r.reason ?? "")}>
+                        <Link className="link" to={routes.story(r.storycode)}>
+                          {r.title || r.storycode}
+                        </Link>
+                        <Code>{r.storycode}</Code>
+                        {r.reason && r.reason !== "unknown" && <span className="muted">{r.reason}</span>}
+                      </li>
+                    )}
+                  />
+                </div>
+              );
+            })}
           </div>
         </Section>
       )}
+
+      {s.versions.length > 1 && <Versions versions={s.versions} />}
 
       {(s.comment || s.links.length > 0) && (
         <Section title={t("story.notesTitle")}>

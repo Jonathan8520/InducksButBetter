@@ -887,13 +887,24 @@
   gap: 4px 12px;
   font-size: var(--t-sm);
 }
-.ref-dir {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 1px 7px;
-  border-radius: 4px;
-  background: var(--surface-2);
-  color: var(--ink-2);
+.ref-groups {
+  display: grid;
+  gap: var(--s-5);
+}
+@media (min-width: 960px) {
+  .ref-groups {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  }
+}
+.ref-group h3 {
+  font-size: var(--t-md);
+  margin: 0 0 var(--s-3);
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.ref-group .more-btn {
+  margin-top: var(--s-3);
 }
 
 .zoom .zoom__body {
@@ -1764,4 +1775,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+.version-main {
+  margin-left: 10px;
 }

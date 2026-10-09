@@ -237,6 +237,7 @@ const es: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     versions_one: "{{count}} versión",
     versions_other: "{{count}} versiones",
     version: "Versión",
+    versionMain: "referencia",
     notes: "Notas",
     notesTitle: "Notas de Inducks",
   },

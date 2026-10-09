@@ -233,6 +233,7 @@ const fr = {
     versions_one: "{{count}} version",
     versions_other: "{{count}} versions",
     version: "Version",
+    versionMain: "référence",
     notes: "Notes",
     notesTitle: "Notes d'Inducks",
   },
