@@ -63,6 +63,7 @@ export default function SqlEditor({
     () => [
       sql({ dialect: SQLite, schema, upperCaseKeywords: true }),
       EditorView.lineWrapping,
+      EditorView.contentAttributes.of({ "aria-label": "SQL" }),
       Prec.highest(
         keymap.of([
           {
