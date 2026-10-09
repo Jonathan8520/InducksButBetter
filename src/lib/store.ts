@@ -70,10 +70,11 @@ export function applyTheme(theme: Theme) {
   const root = document.documentElement;
   if (theme === "system") root.removeAttribute("data-theme");
   else root.setAttribute("data-theme", theme);
-  const dark =
-    theme === "dark" ||
-    (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-  document
-    .querySelector('meta[name="theme-color"]')
-    ?.setAttribute("content", dark ? "#0f172e" : "#ffffff");
+  // Deux balises theme-color (claire, sombre) : en thème forcé, les deux prennent la même
+  // couleur ; en thème système, chacune reprend celle de son media.
+  document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
+    const forDark = (meta.getAttribute("media") ?? "").includes("dark");
+    const dark = theme === "system" ? forDark : theme === "dark";
+    meta.setAttribute("content", dark ? "#0f172e" : "#ffffff");
+  });
 }
