@@ -158,8 +158,9 @@ jobs:
       - name: Tester le site dans un navigateur
         run: |
           pnpm exec playwright install --with-deps chromium
-          pnpm exec vite preview --port 4173 --strictPort &
-          for i in $(seq 1 30); do curl -sf http://127.0.0.1:4173/ > /dev/null && break; sleep 1; done
+          pnpm exec vite preview --host 127.0.0.1 --port 4173 --strictPort > preview.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:4173/ > /dev/null && break; sleep 1; done
+          curl -sf http://127.0.0.1:4173/ > /dev/null || { cat preview.log; exit 1; }
           node scripts/smoke.mjs http://127.0.0.1:4173
 
       - name: Conserver le site construit

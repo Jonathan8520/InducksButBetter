@@ -85,7 +85,7 @@ ln -s ../data/db public/db
 
 pnpm dev        # http://localhost:5173
 pnpm test       # tests unitaires
-pnpm build && pnpm exec vite preview --port 4173 &
+pnpm build && pnpm exec vite preview --host 127.0.0.1 --port 4173 &
 node scripts/smoke.mjs   # test de fumée dans Chromium
 pnpm build      # site statique dans dist/
 ```
