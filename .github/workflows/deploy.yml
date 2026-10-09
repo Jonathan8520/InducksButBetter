@@ -191,8 +191,27 @@ jobs:
 
   # Miroir GitHub Pages, actif dès que Pages est activé dans les réglages du dépôt
   # (Settings > Pages > Source : GitHub Actions). Sans activation, cette étape échoue seule.
+  # Le miroir GitHub Pages ne part que si Pages est activé dans les réglages du dépôt
+  # (Settings > Pages > Source : GitHub Actions). Sinon la tâche est simplement sautée.
+  pages-check:
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${{ github.repository }}/pages" --jq .build_type 2>/dev/null | grep -q workflow; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::GitHub Pages n'est pas activé (source : GitHub Actions), miroir sauté."
+          fi
+
   github-pages:
-    needs: build
+    needs: [build, pages-check]
+    if: needs.pages-check.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     continue-on-error: true
