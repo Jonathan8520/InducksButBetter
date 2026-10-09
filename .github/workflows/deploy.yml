@@ -217,8 +217,6 @@ jobs:
           mv wrangler.toml wrangler.toml.off
           npx --yes wrangler@4 pages deploy dist --project-name=inducksbutbetter-demo --branch=main --commit-dirty=true
 
-  # Miroir GitHub Pages, actif dès que Pages est activé dans les réglages du dépôt
-  # (Settings > Pages > Source : GitHub Actions). Sans activation, cette étape échoue seule.
   # Le miroir GitHub Pages ne part que si Pages est activé dans les réglages du dépôt
   # (Settings > Pages > Source : GitHub Actions). Sinon la tâche est simplement sautée.
   pages-check:
