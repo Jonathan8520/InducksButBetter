@@ -28,6 +28,8 @@ export interface OpenRequest {
   id: number;
   type: "open";
   manifestUrl: string;
+  /** Mémoire allouée au cache de tranches de ce worker, en octets. */
+  cacheBytes?: number;
 }
 
 export type Request = QueryRequest | OpenRequest;
@@ -59,18 +61,20 @@ let db: Any = null;
 let reader: ChunkReader | null = null;
 let deadline = 0;
 
-async function open(manifestUrl: string) {
+async function open(manifestUrl: string, cacheBytes?: number) {
   if (!sqlite3) {
     const init = sqlite3InitModule as unknown as (o?: Any) => Promise<Any>;
     sqlite3 = await init({ print: () => {}, printErr: (m: string) => console.warn("[sqlite]", m) });
   }
   reader = await ChunkReader.load(manifestUrl);
+  if (cacheBytes) reader.budget = cacheBytes;
   installVfs(sqlite3, reader);
   db?.close?.();
   db = new sqlite3.oo1.DB({ filename: "/inducks.sqlite", flags: "r", vfs: VFS_NAME });
   // Une page relue est une requête réseau évitée : cache SQLite généreux, et pas de
   // fichiers temporaires (le VFS n'en sert pas).
-  db.exec("PRAGMA cache_size = -16000; PRAGMA temp_store = MEMORY;");
+  const pageCacheKib = cacheBytes && cacheBytes < 32 * 1024 * 1024 ? 8000 : 16000;
+  db.exec(`PRAGMA cache_size = -${pageCacheKib}; PRAGMA temp_store = MEMORY;`);
   // Garde-fou de durée : SQLite appelle ce gestionnaire régulièrement, et l'interruption
   // rend la main proprement au lieu de figer le worker sur une requête sans fin.
   sqlite3.capi.sqlite3_progress_handler(
@@ -119,7 +123,7 @@ self.onmessage = async (event: MessageEvent<Request>) => {
   const req = event.data;
   try {
     if (req.type === "open") {
-      const manifest = await open(req.manifestUrl);
+      const manifest = await open(req.manifestUrl, req.cacheBytes);
       self.postMessage({ id: req.id, ok: true, manifest } satisfies OpenResponse);
     } else {
       const result = query(req);

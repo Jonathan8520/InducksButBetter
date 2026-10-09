@@ -44,7 +44,7 @@ export interface IoStats {
 /** Message d'erreur convenu : la base a changé de version pendant la visite. */
 export const STALE = "DB_STALE";
 
-/** Plafond mémoire du cache de tranches décompressées, par worker. */
+/** Plafond mémoire par défaut du cache de tranches décompressées, par worker. */
 const CACHE_BUDGET = 48 * 1024 * 1024;
 
 export class ChunkReader {
@@ -52,6 +52,8 @@ export class ChunkReader {
   private base: string;
   private cache = new Map<number, Uint8Array>();
   private cachedBytes = 0;
+  /** Réduit sur les appareils modestes (cf. client.ts) : le cache HTTP garde les tranches. */
+  budget = CACHE_BUDGET;
   stats: IoStats = { requests: 0, bytes: 0, hits: 0 };
   /**
    * Vrai quand une tranche a disparu : le site a été republié avec une nouvelle base et
@@ -110,7 +112,7 @@ export class ChunkReader {
     const data = this.fetchChunk(index);
     this.cache.set(index, data);
     this.cachedBytes += data.length;
-    while (this.cachedBytes > CACHE_BUDGET && this.cache.size > 1) {
+    while (this.cachedBytes > this.budget && this.cache.size > 1) {
       const [oldest, bytes] = this.cache.entries().next().value as [number, Uint8Array];
       this.cache.delete(oldest);
       this.cachedBytes -= bytes.length;

@@ -47,7 +47,16 @@ const MANIFEST_URL =
   (import.meta.env.VITE_DB_URL as string | undefined) ??
   `${import.meta.env.BASE_URL.replace(/\/?$/, "/")}db/manifest.json`;
 
-const POOL_SIZE = Math.max(2, Math.min(4, (navigator.hardwareConcurrency || 4) - 1));
+/**
+ * Téléphones et appareils à peu de mémoire : deux workers et des caches plus petits. Les
+ * tranches restent dans le cache HTTP du navigateur, une relecture ne coûte qu'une
+ * décompression.
+ */
+const MODEST =
+  ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) <= 4 ||
+  (typeof matchMedia !== "undefined" && matchMedia("(pointer: coarse)").matches);
+const POOL_SIZE = MODEST ? 2 : Math.max(2, Math.min(4, (navigator.hardwareConcurrency || 4) - 1));
+const CACHE_BYTES = (MODEST ? 16 : 48) * 1024 * 1024;
 
 let nextId = 1;
 const pool: Slot[] = [];
@@ -79,7 +88,7 @@ function spawn(): Slot {
     pending.clear();
   };
   const slot: Slot = { worker, busy: 0, pending, ready: Promise.resolve(null as never) };
-  slot.ready = send<OpenResponse>(slot, { type: "open", manifestUrl: MANIFEST_URL }).then(
+  slot.ready = send<OpenResponse>(slot, { type: "open", manifestUrl: MANIFEST_URL, cacheBytes: CACHE_BYTES }).then(
     (r) => r.manifest,
   );
   return slot;
