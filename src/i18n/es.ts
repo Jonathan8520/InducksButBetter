@@ -449,6 +449,9 @@ const es: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     removed: "{{what}} eliminado de tu colección",
   },
   lab: {
+    share: "Enlace",
+    shareHint: "Copiar un enlace que abre el laboratorio con esta consulta",
+    linkCopied: "Enlace de la consulta copiado",
     title: "Laboratorio SQL",
     lead: "Consulta directamente la base de datos, o describe lo que buscas y el asistente escribe la consulta.",
     askPlaceholder: "p. ej., Don Rosa nunca publicado en España",

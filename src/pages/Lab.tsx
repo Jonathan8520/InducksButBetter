@@ -1,9 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "motion/react";
-import { Database, Download, Play, Sparkles, Square, Table2, Wand2 } from "lucide-react";
+import { Database, Download, Link2, Play, Sparkles, Square, Table2, Wand2 } from "lucide-react";
 import { Page, PageHead } from "../components/page";
 import { Button } from "../components/ui/Button";
 import { Select } from "../components/ui/Controls";
@@ -15,6 +15,7 @@ import { SQL_EXAMPLES } from "../lib/schemaDoc";
 import { formatBytes, formatNumber } from "../lib/format";
 import { settings } from "../lib/store";
 import { routes } from "../lib/routes";
+import { ui } from "../lib/ui";
 
 const SqlEditor = lazy(() => import("../components/SqlEditor"));
 const MAX_ROWS = 1000;
@@ -64,7 +65,10 @@ function linkFor(col: string, v: unknown): string | null {
 export default function Lab() {
   const { t } = useTranslation();
   const dark = useDark();
-  const [sql, setSql] = useState(SQL_EXAMPLES[0].sql);
+  // Une requête partagée arrive dans l'adresse (/lab?sql=…) : elle remplace l'exemple.
+  const [params] = useSearchParams();
+  const shared = params.get("sql");
+  const [sql, setSql] = useState(shared ?? SQL_EXAMPLES[0].sql);
   const [result, setResult] = useState<QueryResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
@@ -100,6 +104,22 @@ export default function Lab() {
   const runRef = useRef(run);
   runRef.current = run;
   const onRun = useCallback(() => void runRef.current(), []);
+
+  // Requête partagée : exécutée à l'ouverture (lecture seule, comme toutes les requêtes).
+  useEffect(() => {
+    if (shared && isReadOnly(shared)) void runRef.current(shared);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const shareQuery = async () => {
+    const url = `${window.location.origin}${routes.lab()}?sql=${encodeURIComponent(sql.trim())}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      ui.toast(t("lab.linkCopied"), "ok");
+    } catch {
+      ui.toast(url);
+    }
+  };
 
   const generate = async () => {
     const qn = question.trim();
@@ -232,6 +252,9 @@ export default function Lab() {
               ))}
             </Select>
             <span className="spacer" />
+            <Button icon={<Link2 size={15} />} onClick={() => void shareQuery()} title={t("lab.shareHint")}>
+              <span className="hide-sm">{t("lab.share")}</span>
+            </Button>
             {running ? (
               <Button variant="danger" icon={<Square size={14} />} onClick={() => cancelLab()}>
                 {t("lab.stop")}

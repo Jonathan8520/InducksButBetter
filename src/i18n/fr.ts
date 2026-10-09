@@ -445,6 +445,9 @@ const fr = {
     removed: "{{what}} retiré de votre collection",
   },
   lab: {
+    share: "Lien",
+    shareHint: "Copier un lien qui ouvre le labo avec cette requête",
+    linkCopied: "Lien de la requête copié",
     title: "Labo SQL",
     lead: "Interrogez directement la base, ou décrivez ce que vous cherchez et l'assistant écrit la requête.",
     askPlaceholder: "Ex. : Don Rosa jamais publié en France",
