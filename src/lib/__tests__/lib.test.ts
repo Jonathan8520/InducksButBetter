@@ -57,3 +57,15 @@ describe("assistant", () => {
     expect(isReadOnly("SELECT 'drop table' AS x")).toBe(true);
   });
 });
+
+describe("graphique par année", () => {
+  it("comble les années vides et ignore les valeurs absurdes", async () => {
+    const { parseYears } = await import("../years");
+    expect(parseYears("1950:2,1952:5,0:9,1951:x")).toEqual([
+      { year: 1950, n: 2 },
+      { year: 1951, n: 0 },
+      { year: 1952, n: 5 },
+    ]);
+    expect(parseYears(null)).toEqual([]);
+  });
+});
