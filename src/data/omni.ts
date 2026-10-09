@@ -138,13 +138,19 @@ async function issues(q: string) {
   if (!pubs.length) return [];
   const [lang] = dataLanguages();
   const preferred = pubs.sort((a, b) => Number(b.startsWith(lang + "/")) - Number(a.startsWith(lang + "/")));
-  return rows<OmniResults["issues"][number]>(
+  const found = await rows<OmniResults["issues"][number]>(
     `SELECT i.issuecode, i.publicationcode, i.number, i.title, i.date, i.img, p.title AS publicationTitle
      FROM issue i JOIN publication_label p ON p.code = i.publicationcode
      WHERE i.publicationcode IN (${placeholders(preferred.length)}) AND i.number = ?
      LIMIT 5`,
     [...preferred.slice(0, 6), number],
   );
+  // Titre exact d'abord (« Micky Maus 1 » avant « Micky Maus Comics 1 »), puis l'ordre de
+  // préférence (pays de l'interface, publications les plus longues).
+  const want = norm(pubPart);
+  const rank = (x: OmniResults["issues"][number]) =>
+    (norm(x.publicationTitle ?? "") === want ? 0 : 100) + preferred.indexOf(x.publicationcode);
+  return found.sort((a, b) => rank(a) - rank(b));
 }
 
 export async function omniSearch(input: string): Promise<OmniResults> {

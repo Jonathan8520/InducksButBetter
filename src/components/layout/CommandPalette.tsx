@@ -26,6 +26,17 @@ interface Item {
   group: string;
 }
 
+/** Une saisie de chaque sorte : titre, auteur, numéro, code d'histoire, personnage. */
+const EXAMPLES: Record<string, string[]> = {
+  fr: ["Donald nage dans l'or", "Don Rosa", "Picsou Magazine 300", "W OS 386-02", "Géo Trouvetou"],
+  en: ["Only a Poor Old Man", "Don Rosa", "Uncle Scrooge 219", "W OS 386-02", "Gyro Gearloose"],
+  de: ["Der arme reiche Mann", "Don Rosa", "Lustiges Taschenbuch 1", "W OS 386-02", "Daniel Düsentrieb"],
+  it: ["Zio Paperone", "Romano Scarpa", "Topolino 3000", "W OS 386-02", "Archimede"],
+  es: ["Tío Gilito", "Don Rosa", "Topolino 3000", "W OS 386-02", "Pato Donald"],
+  pt: ["Tio Patinhas", "Don Rosa", "Topolino 3000", "W OS 386-02", "Pato Donald"],
+  nl: ["Oom Dagobert", "Don Rosa", "Donald Duck 1952-01", "W OS 386-02", "Willie Wortel"],
+};
+
 function useDebounced<T>(value: T, ms: number): T {
   const [v, setV] = useState(value);
   useEffect(() => {
@@ -44,7 +55,7 @@ function Hl({ text, q }: { text: string; q: string }) {
 }
 
 export function CommandPalette() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const open = useUi((s) => s.palette);
   const initial = useUi((s) => s.paletteQuery);
   const [q, setQ] = useState("");
@@ -265,7 +276,7 @@ export function CommandPalette() {
           <div className="palette__hint">
             <p>{t("palette.hint")}</p>
             <div className="palette__examples">
-              {["Only a Poor Old Man", "Don Rosa", "Picsou Magazine 300", "W OS 386-02", "Gyro"].map((ex) => (
+              {(EXAMPLES[(i18n.resolvedLanguage || "en").split("-")[0]] ?? EXAMPLES.en).map((ex) => (
                 <button key={ex} onClick={() => setQ(ex)}>
                   {ex}
                 </button>
