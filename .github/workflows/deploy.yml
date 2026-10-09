@@ -137,6 +137,15 @@ jobs:
           du -sh dist dist/db
           echo "$(find dist -type f | wc -l) fichiers"
 
+      # Le site compilé et sa base, ouverts dans Chromium : les écrans principaux doivent
+      # s'afficher sans erreur JavaScript, sinon rien n'est publié.
+      - name: Tester le site dans un navigateur
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          pnpm exec vite preview --port 4173 --strictPort &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:4173/ > /dev/null && break; sleep 1; done
+          node scripts/smoke.mjs http://127.0.0.1:4173
+
       - name: Conserver le site construit
         uses: actions/upload-artifact@v4
         with:
