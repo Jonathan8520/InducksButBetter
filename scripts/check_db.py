@@ -101,6 +101,14 @@ def main() -> int:
     check("recherche plein texte", hits > 0, f"{hits} résultats")
     hits = db.execute("SELECT COUNT(*) FROM fts_person WHERE fts_person MATCH '\"rosa\"'").fetchone()[0]
     check("recherche d'auteur (trigrammes)", hits > 0, f"{hits} résultats")
+    n = one("SELECT COUNT(*) FROM toc WHERE first = 1")[0]
+    check("premières parutions", n > 100_000, f"{n:,}")
+    row = one("SELECT years FROM person WHERE code = 'CB'")
+    check("histogramme par année", bool(row and row[0] and row[0].startswith("19")), (row[0] or "")[:40] if row else "")
+    row = one("SELECT pubs FROM story WHERE storycode = 'W OS  386-02'")
+    n_issues = one("SELECT COUNT(DISTINCT issuecode) FROM story_pub WHERE sid = "
+                   "(SELECT sid FROM story WHERE storycode = 'W OS  386-02')")[0]
+    check("parutions = numéros distincts", bool(row) and row[0] == n_issues, f"{row[0] if row else None} / {n_issues}")
     imgs = one("SELECT COUNT(*) FROM issue WHERE img IS NOT NULL")[0]
     check("couvertures", imgs > 100_000, f"{imgs:,}")
 
