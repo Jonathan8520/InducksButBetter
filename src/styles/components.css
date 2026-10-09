@@ -152,7 +152,7 @@
 .textarea {
   height: auto;
   padding: 12px;
-  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.5;
   resize: vertical;

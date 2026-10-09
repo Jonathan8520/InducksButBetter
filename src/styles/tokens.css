@@ -25,8 +25,15 @@
   --shadow-color: 222 40% 20%;
   --scrim: rgb(14 22 46 / 0.42);
   --cover-bg: #e4e8f0;
+  --code-kw: #1f4bb3;
+  --code-str: #8a5300;
+  --code-num: #b1336c;
+  --code-fn: #0f7466;
+  --code-active: rgb(22 36 71 / 0.04);
+  --code-selection: #ffe8a3;
 
   --font-display: "Bricolage Grotesque Variable", "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, Consolas, monospace;
   --font-ui: "Instrument Sans Variable", "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
   --t-xs: 0.8125rem;   /* 13 */
@@ -86,6 +93,12 @@
   --shadow-color: 230 60% 3%;
   --scrim: rgb(4 8 20 / 0.6);
   --cover-bg: #1c2849;
+  --code-kw: #9cb7ff;
+  --code-str: #f4cf6b;
+  --code-num: #ff8fb6;
+  --code-fn: #6fd6c2;
+  --code-active: rgb(255 255 255 / 0.04);
+  --code-selection: rgb(255 210 63 / 0.28);
   color-scheme: dark;
 }
 
@@ -110,6 +123,12 @@
     --shadow-color: 230 60% 3%;
     --scrim: rgb(4 8 20 / 0.6);
     --cover-bg: #1c2849;
+    --code-kw: #9cb7ff;
+    --code-str: #f4cf6b;
+    --code-num: #ff8fb6;
+    --code-fn: #6fd6c2;
+    --code-active: rgb(255 255 255 / 0.04);
+    --code-selection: rgb(255 210 63 / 0.28);
     color-scheme: dark;
   }
 }
