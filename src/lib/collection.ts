@@ -3,6 +3,7 @@
  * qu'ils contiennent (calculées une fois après l'import, pour filtrer les recherches sans
  * relire la base).
  */
+import { useMemo } from "react";
 import { createStore } from "./store";
 
 export interface Collection {
@@ -84,4 +85,11 @@ export function compactNumbers(numbers: string[]): string {
   }
   flush();
   return out.join(", ");
+}
+
+
+/** Histoires de la collection (après analyse), en ensemble pour des tests rapides. */
+export function useOwnedStories(): Set<number> {
+  const stories = collection.use((c) => c.stories);
+  return useMemo(() => new Set(stories), [stories]);
 }

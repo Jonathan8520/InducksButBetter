@@ -9,6 +9,7 @@ import { kindLabel } from "../lib/inducks";
 import { Cover } from "./ui/Media";
 import { Skeleton, ErrorState } from "./ui/States";
 import { Code } from "./ui/Badges";
+import { useOwnedStories } from "../lib/collection";
 
 export function People({ list, max = 3 }: { list: { code: string; name: string }[]; max?: number }) {
   const shown = list.slice(0, max);
@@ -114,6 +115,9 @@ export function StoryRowSkeleton({ n = 6 }: { n?: number }) {
 
 /** Liste d'histoires à partir de leurs identifiants (les fiches sont chargées ici). */
 export function StoryList({ sids, ownedSet, empty }: { sids: number[]; ownedSet?: Set<number>; empty?: React.ReactNode }) {
+  // Sans ensemble fourni, les histoires de la collection du visiteur sont signalées.
+  const mine = useOwnedStories();
+  const owned = ownedSet ?? mine;
   const cards = useQuery({
     queryKey: ["cards", sids],
     queryFn: () => storyCards(sids),
@@ -126,7 +130,7 @@ export function StoryList({ sids, ownedSet, empty }: { sids: number[]; ownedSet?
   return (
     <ul className="story-list">
       {cards.data.map((s, i) => (
-        <StoryRow key={s.sid} s={s} index={i} owned={ownedSet?.has(s.sid)} />
+        <StoryRow key={s.sid} s={s} index={i} owned={owned.has(s.sid)} />
       ))}
     </ul>
   );
