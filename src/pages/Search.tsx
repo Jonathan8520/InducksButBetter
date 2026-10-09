@@ -399,7 +399,7 @@ export default function Search() {
         ],
         "inducks-search.csv",
       );
-      ui.toast(t("search.exported", { n: formatNumber(cards.length) }), "ok");
+      ui.toast(t("search.exported", { count: cards.length, n: formatNumber(cards.length) }), "ok");
     } catch (err) {
       ui.toast(String(err), "error");
     } finally {

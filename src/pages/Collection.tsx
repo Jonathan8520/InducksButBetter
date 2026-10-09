@@ -54,7 +54,7 @@ function Import({ onDone }: { onDone: () => void }) {
     const current = collection.get().issues;
     const issues = mode === "merge" ? [...new Set([...current, ...parsed])] : parsed;
     collection.set({ issues, stories: [], analyzed: null, updated: new Date().toISOString() });
-    ui.toast(t("collection.imported", { n: formatNumber(issues.length) }), "ok");
+    ui.toast(t("collection.imported", { count: issues.length, n: formatNumber(issues.length) }), "ok");
     onDone();
   };
   return (
@@ -122,7 +122,7 @@ export default function Collection() {
       .then((stories) => {
         if (cancelled) return;
         collection.set({ stories, analyzed: new Date().toISOString() });
-        ui.toast(t("collection.analyzed", { n: formatNumber(stories.length) }), "ok");
+        ui.toast(t("collection.analyzed", { count: stories.length, n: formatNumber(stories.length) }), "ok");
       })
       .catch((err) => ui.toast(String(err), "error"))
       // Toujours libérer la barre : l'enregistrement du résultat relance l'effet (et
@@ -240,7 +240,7 @@ export default function Collection() {
             </Link>
           }
           aside={
-            <span className="completion num" title={t("collection.completion", { n: formatNumber(g.list.length), total: formatNumber(g.total) })}>
+            <span className="completion num" title={t("collection.completion", { count: g.list.length, n: formatNumber(g.list.length), total: formatNumber(g.total) })}>
               <span className="completion__track" aria-hidden>
                 <span style={{ width: `${Math.min(100, (100 * g.list.length) / Math.max(1, g.total))}%` }} />
               </span>

@@ -123,9 +123,9 @@ export function Country() {
         lead={
           info.data
             ? t("country.lead", {
-                pubs: formatNumber(info.data.publications),
-                issues: formatNumber(info.data.issues),
-                stories: formatNumber(info.data.stories),
+                pubs: t("counts.publications", { count: info.data.publications, n: formatNumber(info.data.publications) }),
+                issues: t("counts.issues", { count: info.data.issues, n: formatNumber(info.data.issues) }),
+                stories: t("counts.stories", { count: info.data.stories, n: formatNumber(info.data.stories) }),
               })
             : undefined
         }

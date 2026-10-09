@@ -155,7 +155,10 @@ export function Publisher() {
       <PageHead
         crumbs={[{ label: t("nav.publications"), to: routes.countries() }, { label: p.name }]}
         title={p.name}
-        lead={t("publisher.lead", { pubs: formatNumber(p.publications), issues: formatNumber(p.issues ?? 0) })}
+        lead={t("publisher.lead", {
+          pubs: t("counts.publications", { count: p.publications, n: formatNumber(p.publications) }),
+          issues: t("counts.issues", { count: p.issues ?? 0, n: formatNumber(p.issues ?? 0) }),
+        })}
         actions={
           <a className="btn btn--ghost btn--md" href={inducksUrl.publisher(p.id)} target="_blank" rel="noreferrer">
             <span>{t("common.onInducks")}</span>
