@@ -7,7 +7,6 @@ import { ButtonLink } from "../components/ui/Button";
 import { dbInfo } from "../data/home";
 import { formatBytes, formatDate } from "../lib/format";
 import { routes } from "../lib/routes";
-import { sessionIo } from "../db/client";
 
 export default function About() {
   const { t } = useTranslation();
@@ -21,7 +20,6 @@ export default function About() {
           <p>
             {t("about.how2", {
               size: info.data ? formatBytes(info.data.totalBytes) : "…",
-              session: formatBytes(sessionIo.bytes),
             })}
           </p>
           <p>{t("about.how3", { date: info.data ? formatDate(info.data.dump ?? info.data.built) : "…" })}</p>

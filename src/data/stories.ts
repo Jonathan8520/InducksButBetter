@@ -49,7 +49,7 @@ async function toCards(list: StoryRow[]): Promise<StoryCard[]> {
   const credits = new Map(list.map((r) => [r.sid, parseCredits(r.creators)]));
   const codes = new Set<string>();
   for (const c of credits.values()) for (const x of c) codes.add(x.code);
-  for (const r of list) if (r.hero && !/^[A-Za-z0-9]/.test(r.hero)) r.hero = null;
+  for (const r of list) if (r.hero && /^[^\p{L}\p{N}]+$/u.test(r.hero)) r.hero = null;
   const heroes = list.map((r) => r.hero).filter((h): h is string => !!h);
   const [names, heroNames] = await Promise.all([personNames(codes), characterNames(heroes)]);
   return list.map((r) => {
@@ -157,7 +157,7 @@ export async function storyDetail(code: string): Promise<StoryDetail | null> {
   const row = await one<{ doc: string }>("SELECT doc FROM story_doc WHERE storycode = ?", [code]);
   if (!row) return null;
   const d = JSON.parse(row.doc) as StoryDoc;
-  if (d.hero && !/^[A-Za-z0-9]/.test(d.hero)) d.hero = null;
+  if (d.hero && /^[^\p{L}\p{N}]+$/u.test(d.hero)) d.hero = null;
   const titles = d.titles ?? {};
   const local = titles[lang] && titles[lang] !== d.title ? titles[lang] : null;
 

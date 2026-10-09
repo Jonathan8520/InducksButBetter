@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell";
 import { Skeleton } from "./components/ui/States";
 import Home from "./pages/Home";
@@ -25,6 +25,12 @@ const Settings = lazy(() => import("./pages/Settings"));
 const About = lazy(() => import("./pages/About"));
 const NotFoundPage = lazy(() => import("./pages/About").then((m) => ({ default: m.NotFoundPage })));
 
+/** Adresses « parentes » tapées à la main : on renvoie vers la page qui existe. */
+function ToCountry() {
+  const { country } = useParams();
+  return <Navigate to={country ? `/countries/${country}` : "/countries"} replace />;
+}
+
 function Fallback() {
   return (
     <div className="page" aria-busy="true">
@@ -47,6 +53,11 @@ export default function App() {
           <Route path="/issues/:country/:pub/:number" element={<Issue />} />
           <Route path="/issues/:country/:pub/" element={<Issue />} />
           <Route path="/publications/:country/:pub" element={<Publication />} />
+          <Route path="/publications/:country" element={<ToCountry />} />
+          <Route path="/publications" element={<ToCountry />} />
+          <Route path="/issues/:country" element={<ToCountry />} />
+          <Route path="/issues" element={<ToCountry />} />
+          <Route path="/stories" element={<Navigate to="/search" replace />} />
           <Route path="/countries" element={<Countries />} />
           <Route path="/countries/:code" element={<Country />} />
           <Route path="/creators" element={<Creators />} />

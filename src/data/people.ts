@@ -132,13 +132,13 @@ export function topPeople(nationality?: string, limit = 60, offset = 0): Promise
   if (nationality) {
     return rows<PersonListItem>(
       `SELECT code, name, nationality, stories, first, last, roles FROM person
-       WHERE nationality = ? AND stories > 0 ORDER BY stories DESC LIMIT ? OFFSET ?`,
+       WHERE nationality = ? AND stories > 0 AND code NOT IN ('?', '-') ORDER BY stories DESC LIMIT ? OFFSET ?`,
       [nationality, limit, offset],
     );
   }
   return rows<PersonListItem>(
     `SELECT code, name, nationality, stories, first, last, roles FROM person
-     WHERE stories > 0 ORDER BY stories DESC LIMIT ? OFFSET ?`,
+     WHERE stories > 0 AND code NOT IN ('?', '-') ORDER BY stories DESC LIMIT ? OFFSET ?`,
     [limit, offset],
   );
 }
@@ -146,6 +146,6 @@ export function topPeople(nationality?: string, limit = 60, offset = 0): Promise
 export function nationalities(): Promise<{ code: string; n: number }[]> {
   return rows<{ code: string; n: number }>(
     `SELECT nationality AS code, COUNT(*) AS n FROM person
-     WHERE nationality IS NOT NULL AND stories > 0 GROUP BY nationality ORDER BY n DESC`,
+     WHERE nationality IS NOT NULL AND stories > 0 AND code NOT IN ('?', '-') GROUP BY nationality ORDER BY n DESC`,
   );
 }

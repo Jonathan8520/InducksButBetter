@@ -1026,6 +1026,30 @@
   background: var(--marker);
   color: var(--marker-ink);
 }
+/* Sur téléphone, une seule rangée qui défile et reste sous la barre du haut : on saute
+   d'une année à l'autre sans remonter des milliers de pixels. */
+@media (max-width: 719px) {
+  .year-jump {
+    position: sticky;
+    top: var(--topbar);
+    z-index: 4;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    margin-inline: -16px;
+    padding: 8px 16px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+  }
+  .year-jump::-webkit-scrollbar {
+    display: none;
+  }
+  .year-jump a {
+    flex: none;
+    padding: 6px 10px;
+  }
+}
 .year-group {
   content-visibility: auto;
   contain-intrinsic-size: auto 400px;
@@ -1596,4 +1620,16 @@
   font-size: var(--t-sm);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+/* Téléphone : trois couvertures par rangée, et l'ancre d'année tient compte de la
+   rangée d'années collante. Placé en fin de fichier pour passer après les règles de base. */
+@media (max-width: 719px) {
+  .year-group {
+    scroll-margin-top: calc(var(--topbar) + 64px);
+  }
+  .issue-grid {
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 18px 12px;
+  }
 }

@@ -25,7 +25,9 @@ function groupByYear(list: IssueTile[]) {
     arr.push(it);
     map.set(y, arr);
   }
-  return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  // Les numéros sans date connue ferment la liste au lieu de l'ouvrir.
+  const key = (y: string) => (y === "?" ? "9999" : y);
+  return [...map.entries()].sort((a, b) => (key(a[0]) < key(b[0]) ? -1 : key(a[0]) > key(b[0]) ? 1 : 0));
 }
 
 export default function Publication() {

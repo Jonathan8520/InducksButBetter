@@ -104,7 +104,7 @@ export async function topCharacters(limit = 60, offset = 0): Promise<CharacterLi
             COALESCE((SELECT n.name FROM character_name n WHERE n.code = c.code AND n.lang = ?
                       ORDER BY n.preferred DESC LIMIT 1), c.name) AS name,
             c.stories, c.first
-     FROM (SELECT code, name, stories, first FROM character WHERE stories > 0
+     FROM (SELECT code, name, stories, first FROM character WHERE stories > 0 AND code <> '--'
            ORDER BY stories DESC LIMIT ? OFFSET ?) c
      ORDER BY c.stories DESC`,
     [lang, limit, offset],

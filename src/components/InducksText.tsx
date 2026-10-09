@@ -4,7 +4,8 @@
  *   Remplace <publication fr/MPHS>Mickey Parade Géant Hors-Série</publication>
  *
  * Chaque renvoi devient un lien vers la fiche correspondante, sans HTML injecté.
- * Les crochets « [texte] » des commentaires d'Inducks sont conservés tels quels.
+ * Un commentaire fait de notes entre crochets (« [Main Italian publication.] [Testata
+ * italiana principale.] ») est affiché une note par ligne, sans les crochets.
  */
 import { Fragment } from "react";
 import { Link } from "react-router-dom";
@@ -45,7 +46,7 @@ function hrefFor(entity: string, code: string): string | null {
 export function InducksText({ text: raw, className }: { text: string | null | undefined; className?: string }) {
   if (!raw) return null;
   // Les sauts de ligne d'Inducks sont parfois écrits « <br> ».
-  const text = raw
+  let text = raw
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(PHP_LINK, (_m, page: string, code: string, label: string) => {
       const entity = PHP_ENTITY[page.toLowerCase()];
@@ -59,6 +60,10 @@ export function InducksText({ text: raw, className }: { text: string | null | un
     })
     // Toute autre balise HTML résiduelle est retirée, son texte conservé.
     .replace(/<(?!\/?(?:creator|studio|hero|universe|publication|issue|story)\b)[^>]+>/gi, "");
+  const trimmed = text.trim();
+  if (/^(?:\[[^[\]]*\]\s*)+$/.test(trimmed)) {
+    text = trimmed.slice(1, -1).replace(/\]\s*\[/g, "\n");
+  }
   const parts: React.ReactNode[] = [];
   let last = 0;
   TAG.lastIndex = 0;

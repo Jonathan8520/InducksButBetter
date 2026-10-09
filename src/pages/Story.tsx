@@ -253,12 +253,12 @@ export default function Story() {
                       </Link>
                     ))}
                   </span>
-                ) : s.header ? (
-                  s.header.title
                 ) : (
                   ""
                 ),
               ],
+              // Préfixe du code d'histoire : qui l'a produite (Western, Egmont, Topolino…).
+              [t("story.origin"), s.header?.title ?? ""],
               [
                 t("story.reach"),
                 s.pubs ? t("story.reachN", { pubs: formatNumber(s.pubs), countries: formatNumber(s.countries), count: s.countries }) : "",
