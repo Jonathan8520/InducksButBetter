@@ -409,6 +409,7 @@ const de: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     storiesTitle_other: "{{n}} Geschichten",
   },
   collection: {
+    wants: "Geschichten, die dir fehlen:",
     seeMissing: "Fehlende ansehen",
     completion: "{{n}} von {{total}} Heften vorhanden",
     title: "Meine Sammlung",
@@ -422,7 +423,7 @@ const de: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     merge: "Zu meiner Sammlung hinzufügen",
     replace: "Meine Sammlung ersetzen",
     imported: "{{n}} Ausgaben in deiner Sammlung",
-    summary: "{{issues}} Ausgaben aus {{pubs}} Publikationen mit {{stories}} verschiedenen Geschichten.",
+    summary: "{{issues}} aus {{pubs}}, mit {{stories}}.",
     analyzing: "Geschichten in deinen Ausgaben werden gesucht: {{done}} von {{total}}",
     analyzed: "{{n}} Geschichten in deinen Ausgaben gefunden",
     reanalyze: "Neu berechnen",

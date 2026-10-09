@@ -405,6 +405,7 @@ const fr = {
     storiesTitle_other: "{{n}} histoires",
   },
   collection: {
+    wants: "Histoires qui vous manquent :",
     seeMissing: "Voir les manquants",
     completion: "{{n}} numéros possédés sur {{total}}",
     title: "Ma collection",
@@ -418,7 +419,7 @@ const fr = {
     merge: "Ajouter à ma collection",
     replace: "Remplacer ma collection",
     imported: "{{n}} numéros dans votre collection",
-    summary: "{{issues}} numéros dans {{pubs}} publications, soit {{stories}} histoires différentes.",
+    summary: "{{issues}} dans {{pubs}}, soit {{stories}}.",
     analyzing: "Recherche des histoires de vos numéros : {{done}} sur {{total}}",
     analyzed: "{{n}} histoires trouvées dans vos numéros",
     reanalyze: "Recalculer",

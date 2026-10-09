@@ -409,6 +409,7 @@ const pt: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     storiesTitle_other: "{{n}} histórias",
   },
   collection: {
+    wants: "Histórias que lhe faltam:",
     seeMissing: "Ver em falta",
     completion: "{{n}} de {{total}} números",
     title: "Minha coleção",
@@ -422,7 +423,7 @@ const pt: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     merge: "Adicionar à minha coleção",
     replace: "Substituir a minha coleção",
     imported: "{{n}} números na sua coleção",
-    summary: "{{issues}} números de {{pubs}} publicações, com {{stories}} histórias diferentes.",
+    summary: "{{issues}} de {{pubs}}, com {{stories}}.",
     analyzing: "Análise das histórias dos seus números: {{done}} de {{total}}",
     analyzed: "{{n}} histórias encontradas nos seus números",
     reanalyze: "Recalcular",

@@ -409,6 +409,7 @@ const nl: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     storiesTitle_other: "{{n}} verhalen",
   },
   collection: {
+    wants: "Verhalen die je mist:",
     seeMissing: "Ontbrekende bekijken",
     completion: "{{n}} van {{total}} nummers in bezit",
     title: "Mijn collectie",
@@ -422,7 +423,7 @@ const nl: DeepPartialStrings<typeof fr> & Record<string, unknown> = {
     merge: "Aan mijn collectie toevoegen",
     replace: "Mijn collectie vervangen",
     imported: "{{n}} nummers in je collectie",
-    summary: "{{issues}} nummers uit {{pubs}} publicaties, met {{stories}} verschillende verhalen.",
+    summary: "{{issues}} uit {{pubs}}, met {{stories}}.",
     analyzing: "Verhalen in je nummers opzoeken: {{done}} van {{total}}",
     analyzed: "{{n}} verhalen gevonden in je nummers",
     reanalyze: "Opnieuw berekenen",

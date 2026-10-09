@@ -1872,3 +1872,11 @@
   text-align: center;
   line-height: 1.2;
 }
+
+/* Collection : raccourcis vers les histoires manquantes d'un auteur. */
+.wants {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}

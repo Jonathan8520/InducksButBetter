@@ -17,6 +17,16 @@ import { routes } from "../lib/routes";
 import { formatNumber, formatDate } from "../lib/format";
 import { ui } from "../lib/ui";
 
+/** Raccourcis « ce qui me manque » : les grands noms que les collectionneurs suivent. */
+const WANT_CREATORS: [string, string][] = [
+  ["CB", "Carl Barks"],
+  ["DR", "Don Rosa"],
+  ["RSc", "Romano Scarpa"],
+  ["GCa", "Giorgio Cavazzano"],
+  ["FG", "Floyd Gottfredson"],
+  ["WVH", "William Van Horn"],
+];
+
 async function analyze(issues: string[], onProgress: (done: number) => void): Promise<number[]> {
   const sids = new Set<number>();
   const step = 120;
@@ -167,9 +177,9 @@ export default function Collection() {
       <PageHead
         title={t("collection.title")}
         lead={t("collection.summary", {
-          issues: formatNumber(state.issues.length),
-          pubs: formatNumber(groups.length),
-          stories: formatNumber(state.stories.length),
+          issues: t("counts.issues", { count: state.issues.length, n: formatNumber(state.issues.length) }),
+          pubs: t("counts.publications", { count: groups.length, n: formatNumber(groups.length) }),
+          stories: t("counts.stories", { count: state.stories.length, n: formatNumber(state.stories.length) }),
         })}
         actions={
           <>
@@ -205,6 +215,17 @@ export default function Collection() {
           {t("collection.clear")}
         </Button>
       </div>
+
+      {state.stories.length > 0 && (
+        <div className="wants">
+          <span className="muted">{t("collection.wants")}</span>
+          {WANT_CREATORS.map(([code, name]) => (
+            <Link key={code} className="example" to={routes.search({ by: code, owned: "missing", kind: "n", sort: "pubs" })}>
+              {name}
+            </Link>
+          ))}
+        </div>
+      )}
 
       {missing > 0 && tiles.data && <p className="muted">{t("collection.unknown", { count: missing })}</p>}
       {tiles.isError && <ErrorState error={tiles.error} retry={() => tiles.refetch()} />}
